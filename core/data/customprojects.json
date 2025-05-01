@@ -1,0 +1,34 @@
+[
+    {
+        "title": "Treasure Island",
+        "subtitle": "A game!",
+        "description": "Riddles & Puzzles - 2D game in Unity.",
+        "image": "core/images/vrgame.png",
+        "slug": "treasureisland",
+        "category": "game"
+    },
+    {
+        "title": "This Website",
+        "subtitle": "An amazing project!",
+        "description": "Built in Django and HTML / CSS, plus a bit of Javascript.",
+        "image": "core/images/vrgame.png",
+        "slug": "thiswebsite",
+        "category": "code"
+    },
+    {
+        "title": "The Island",
+        "subtitle": "An amazing project!",
+        "description": "A Puzzle VR Game in Unity.",
+        "image": "core/images/vrgame.png",
+        "slug": "theisland",
+        "category": "vr"
+    },
+    {
+        "title": "My upcoming game...",
+        "subtitle": "An amazing project!",
+        "description": "2D Platformer & Riddles.",
+        "image": "core/images/vrgame.png",
+        "slug": "steamgame",
+        "category": "game"
+    }
+]

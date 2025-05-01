@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block title %} Update {% endblock title %} 
+
+{% block content %}
+<body>
+<h2>{{ project.title }}</h2>
+<h3>{{ project.subtitle }}</h3>
+<br>
+<p>{{ project.description }}</p>
+{% if project.image %}
+    <p><img src="{{ project.image.url }}"></p>
+{% endif %}
+</body>
+<main></main>
+<a href="{% url 'index' %}">← Back</a>
+{% endblock content %}

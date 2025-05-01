@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block title %} Cookie! {% endblock title %} 
+
+{% block content %}
+{% load static %}
+<body>
+    <h1 id="main-heading">Hey, you found a cookie!</h1>
+
+    <p><img src="{% static 'core/images/cookie.png' %}", style="max-height: 300px;"></p>
+
+</body>
+<main></main>
+<a href="{% url 'index' %}">← Back</a>
+{% endblock content %}

@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+
+{% block title %} Paloma Liz {% endblock title %} 
+
+{% block content %}
+{% load static %}
+<body>
+    <h1 id="main-heading">Paloma Liz</h1>
+    <section id="socials">
+        <a href="https://github.com/palomaspbr" target="_blank"><i class="fab fa-github fa-2x"></i></a>
+        <a href="https://www.linkedin.com/in/paloma-liz-huebner-botana-2a0456252/" target="_blank"><i class="fab fa-linkedin fa-2x"></i></a>
+        <a href="https://www.instagram.com/palomita_liz/" target="_blank"><i class="fab fa-instagram fa-2x"></i></a>
+    </section>
+    <section id="introduction">
+    <p> Hey, my name is Paloma, I'm a graduate student in Mechatronics Engineering at the Polytechnic School of the University of São Paulo </p>
+    <p> I love Virtual Reality, coding and game development! I've been working as an XR Dev and I've dedicated myself to a couple of personal projects, like this website! </p>
+    <p> Out of curiosity, I'm also a Parkour athele and I've won medals at national competitions </p>
+    <p> Hope you like it! </p>
+    </section>
+
+    <h2>Professional Experience</h2>
+    <h3><a href="{% url 'curriculum' %}", id="curriculum-text", class="curriculum-card">My Curriculum</a></h3>
+    <span id="ptbr">eng-us / pt-br</span> 
+    <h3><a href="{% static 'core/files/PalomaLiz.pdf' %}", id="curriculum-text", class="curriculum-card">[Download PDF]</a></h3> 
+    <span id="ptbr">pt-br</span> 
+
+    <h2>Projects</h2>
+
+    <div class="filter-buttons">
+        <button onclick="filterProjects('all', this)">All</button>
+        <button onclick="filterProjects('game', this)">Games</button>
+        <button onclick="filterProjects('code', this)">Coding</button>
+        <button onclick="filterProjects('vr', this)">VR/AR</button>
+        <button onclick="filterProjects('personal', this)">Personal</button>
+    </div>
+
+    <div class="projects-grid">
+        {% for customproject in customprojects %}
+            <a href="{% url 'customproject_detail' slug=customproject.slug %}" class="project-card" data-category="{{ customproject.category|lower }}">
+                {% if customproject.image %}
+                    <div class="image-wrapper">
+                        <img src="{% static customproject.image %}">
+                    </div>
+                {% endif %}
+                <h3>{{ customproject.title }}</h3>
+                {% if customproject.subtitle %}
+                    <p>{{ customproject.subtitle|truncatewords:20 }}</p>
+                {% endif %}
+                <p>Category: {{ customproject.category }}</p>
+            </a>
+        {% endfor %}
+    </div>
+
+    <h2>Updates</h2>
+    <div class="projects-grid">
+        {% for project in projects %}
+            <a href="{% url 'project_detail' slug=project.slug %}" class="project-card">
+                {% if project.image %}
+                    <div class="image-wrapper">
+                        <img src="{{ project.image.url }}">
+                    </div>
+                {% endif %}
+                <h3>{{ project.title }}</h3>
+                {% if project.subtitle %}
+                    <p>{{ project.subtitle|truncatewords:20 }}</p>
+                {% endif %}
+            </a>
+        {% endfor %}
+    </div>
+</body>
+<!-- Try /cookie -->
+<main></main>
+
+<script>
+    function filterProjects(category, clickedBtn) {
+        const cards = document.querySelectorAll('.project-card');
+        const buttons = document.querySelectorAll('.filter-buttons button');
+
+        buttons.forEach(btn => btn.classList.remove('selected'));
+        clickedBtn.classList.add('selected');
+
+        cards.forEach(card => {
+            const cardCategory = card.getAttribute('data-category');
+            if (category === 'all' || cardCategory === category) {
+                card.style.display = 'block';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    }
+</script>
+
+{% endblock content %}
+
+
+

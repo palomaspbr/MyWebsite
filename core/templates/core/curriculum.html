@@ -1,0 +1,294 @@
+{% extends 'base.html' %}
+
+{% block title %} Curriculum {% endblock title %} 
+
+{% block content %}
+{% load static %}
+<head>
+<title>My Curriculum</title>
+</head>
+
+<div class="language-toggle">
+  <button onclick="switchLanguage('en', this)">English</button>
+  <button onclick="switchLanguage('pt', this)">Português</button>
+</div>
+
+<body id="curriculum">
+<div class="lang-content lang-en">
+    <h2>Experience</h2>
+    
+    <div class="entry">
+        <div class="date">Feb 2025 -- Present</div>
+        <div class="title">Intern - XR Developer</div>
+        <div class="place">VirtuliSurg</div>
+        <ul>
+        <li>Development and maintenance of Virtual and Augmented Reality projects for medical surgery training</li>
+        </ul>
+    </div>
+    
+    <div class="entry">
+        <div class="date">Apr 2024 -- Dec 2024</div>
+        <div class="title">Intern - Research and Development in Virtual Reality</div>
+        <div class="place">Caverna Digital at InovaUSP</div>
+        <ul>
+        <li>Development and maintenance of Virtual Reality projects</li>
+        <li>Daily use of Unity, C#, Object-Oriented Programming, 3D modeling, and Git</li>
+        <li>Development of an immersive exhibition for USP Museums, visiting 7 campuses, with over 20,000 visitors from 188 schools</li>
+        <li>Development of a virtual application to promote autonomy for intellectually disabled individuals navigating the city</li>
+        <li>Development of a playful application to assist in children's hospital treatments</li>
+        </ul>
+    </div>
+    
+    <div class="entry">
+        <div class="date">Dec 2023 -- Jul 2024</div>
+        <div class="title">Treasurer of Student Union</div>
+        <div class="place">Mechanical and Mechatronics Student Union at Poli-USP</div>
+        <ul>
+        <li>Leadership role managing various departments</li>
+        <li>Financial planning and control of the student organization</li>
+        <li>Cash flow management in collaboration with all departments</li>
+        <li>Student representation for over 900 students in central boards of the Polytechnic School</li>
+        </ul>
+    </div>
+    
+    <div class="entry">
+        <div class="date">Dec 2022 -- Dec 2023</div>
+        <div class="title">Scientific Initiation</div>
+        <div class="place">Department of Computer Engineering and Digital Systems at Poli-USP</div>
+        <ul>
+        <li>Development and maintenance of a Virtual Reality ballistic simulation environment in Unity</li>
+        <li>Programming in C# and 3D modeling</li>
+        <li>Presentations to project investors</li>
+        <li>Team collaboration for data transfer and analysis from the virtual environment</li>
+        </ul>
+    </div>
+    
+    <div class="entry">
+        <div class="date">Nov 2022 -- Nov 2023</div>
+        <div class="title">Board Member of Student Union</div>
+        <div class="place">Mechanical and Mechatronics Student Union at Poli-USP</div>
+        <ul>
+        <li>Creation, organization, and leadership of events for the university community</li>
+        <li>Organization of the Engineering of Movement Academic Week (SEMOV) with major companies participating via talks, workshops, and technical visits</li>
+        </ul>
+    </div>
+    
+    <h2>Education</h2>
+    
+    <div class="entry">
+        <div class="date">Feb 2022 -- Present</div>
+        <div class="title">Bachelor’s in Mechatronics Engineering</div>
+        <div class="place">Polytechnic School of the University of São Paulo</div>
+    </div>
+    
+    <div class="entry">
+        <div class="date">Jan 2019 -- Dec 2021</div>
+        <div class="title">High School</div>
+        <div class="place">Colégio Vértice</div>
+    </div>
+    
+    <h2>Tools</h2>
+    <div class="grid">
+        <div class="column">
+        <ul>
+            <li><strong>Unity 3D</strong> — Intermediate</li>
+            <li><strong>C#</strong> — Intermediate</li>
+            <li><strong>Git</strong> — Intermediate</li>
+        </ul>
+        </div>
+        <div class="column">
+        <ul>
+            <li><strong>C++</strong> — Intermediate</li>
+            <li><strong>Python</strong> — Intermediate</li>
+            <li><strong>Excel</strong> — Intermediate</li>
+        </ul>
+        </div>
+        <div class="column">
+        <ul>
+            <li><strong>POO</strong> — Intermediate</li>
+            <li><strong>Photoshop / SonyVegas</strong> — Intermediate</li>
+            <li><strong>HTML / CSS</strong> — Intermediate</li>
+        </ul>
+        </div>
+    </div>
+    
+    <h2>Languages</h2>
+    <div class="grid">
+        <div class="column"><strong>Portuguese</strong> — Native</div>
+        <div class="column"><strong>English</strong> — Fluent</div>
+        <div class="column"><strong>German</strong> — Basic</div>
+        <div class="column"><strong>Spanish</strong> — Basic</div>
+    </div>
+    
+    <h2>Additional Activities</h2>
+    
+    <div class="entry">
+        <div class="date">Dec 2023 -- Mar 2024</div>
+        <div class="title">IEEE Conference on Virtual Reality and 3D User Interfaces</div>
+        <div class="place">InovaUSP Project</div>
+        <ul>
+        <li>Participation in IEEE VR Conference, developing a playful 3D interface solution for learning simple math operations</li>
+        <li>Project developed in VR and showcased at the conference in Orlando</li>
+        </ul>
+    </div>
+    
+    <div class="entry">
+        <div class="date">Oct 2024 -- Nov 2024</div>
+        <div class="title">USP 90 Years Exhibition</div>
+        <div class="place">InovaUSP Project</div>
+        <ul>
+        <li>Personal playful VR project showcased at the USP 90 Years exhibition</li>
+        <li>Project ideated in an elective subject during undergrad at Poli, developed in Unity</li>
+        </ul>
+    </div>
+
+    
+    <h2>Social Activities</h2>
+    
+    <div class="entry">
+        <div class="date">Nov 2022 -- Jul 2024</div>
+        <div class="title">Toy and Soapbox Car Workshops</div>
+        <div class="place">Student Union Project</div>
+        <ul>
+        <li>Participation in toy and soapbox car workshops for children in communities near USP</li>
+        <li>Organization of the project in collaboration with Poli Cidadã entity</li>
+        </ul>
+    </div>
+
+</div>
+<div class="lang-content lang-pt" style="display:none">
+    <h2>Experiência</h2>
+
+  <div class="entry">
+    <div class="date">Fev 2025 -- Hoje</div>
+    Estágio - XR Developer — VirtuliSurg
+    <ul>
+      <li>Produção e manutenção de projetos em Realidade Virtual e Aumentada para treinamento médico em cirurgias</li>
+    </ul>
+  </div>
+
+  <div class="entry">
+    <div class="date">Abr 2024 -- Dez 2024</div>
+    Estágio - Desenvolvimento e Pesquisa em Realidade Virtual — Caverna Digital no InovaUSP
+    <ul>
+      <li>Produção e manutenção de projetos em Realidade Virtual</li>
+      <li>Uso cotidiano de Unity, C#, POO, Modelagem 3D e Git</li>
+      <li>Exposição imersiva dos Museus da USP — 20 mil visitantes</li>
+      <li>Aplicação para locomoção independente de deficientes intelectuais</li>
+      <li>Aplicação lúdica para tratamento hospitalar em crianças</li>
+    </ul>
+  </div>
+
+  <div class="entry">
+    <div class="date">Dez 2023 -- Jul 2024</div>
+    Tesouraria de Centro Acadêmico — Centro Acadêmico de Mecânica e Mecatrônica da Poli-USP
+    <ul>
+      <li>Cargo de liderança e gestão</li>
+      <li>Planejamento e controle financeiro</li>
+      <li>Administração de fluxo de caixa</li>
+      <li>Representação Discente de mais de 900 alunos</li>
+    </ul>
+  </div>
+
+  <div class="entry">
+    <div class="date">Dez 2022 -- Dez 2023</div>
+    Iniciação Científica — PCS/Poli-USP
+    <ul>
+      <li>Ambiente em Unity para simulação balística</li>
+      <li>Programação em C# e modelagem 3D</li>
+      <li>Apresentações para investidores</li>
+      <li>Transferência e análise de dados</li>
+    </ul>
+  </div>
+
+  <h2>Educação</h2>
+  <div class="entry">
+    <div class="date">Fev 2022 -- Hoje</div>
+    Habilitação em Engenharia Mecatrônica — Poli-USP
+  </div>
+  <div class="entry">
+    <div class="date">Jan 2019 -- Dez 2021</div>
+    Ensino Médio — Colégio Vértice
+  </div>
+
+  <h2>Ferramentas</h2>
+  <div class="grid">
+    <div class="column">
+      <ul>
+        <li><strong>Unity 3D</strong> — Intermediário</li>
+        <li><strong>C#</strong> — Intermediário</li>
+        <li><strong>Git</strong> — Intermediário</li>
+      </ul>
+    </div>
+    <div class="column">
+      <ul>
+        <li><strong>C++</strong> — Intermediário</li>
+        <li><strong>Python</strong> — Intermediário</li>
+        <li><strong>Excel</strong> — Intermediário</li>
+      </ul>
+    </div>
+    <div class="column">
+      <ul>
+        <li><strong>POO</strong> — Intermediário</li>
+        <li><strong>Photoshop / SonyVegas</strong> — Intermediário</li>
+        <li><strong>HTML / CSS</strong> — Intermediário</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>Idiomas</h2>
+  <div class="grid">
+    <div class="column"><strong>Português</strong> — Nativo</div>
+    <div class="column"><strong>Inglês</strong> — Fluente</div>
+    <div class="column"><strong>Alemão</strong> — Básico</div>
+    <div class="column"><strong>Espanhol</strong> — Básico</div>
+  </div>
+
+  <h2>Atividades Complementares</h2>
+  <div class="entry">
+    <div class="date">Dez 2023 -- Mar 2024</div>
+    Conferência IEEE em Realidade Virtual e 3D UI — Projeto no InovaUSP
+    <ul>
+      <li>Solução lúdica para ensino de matemática em VR</li>
+      <li>Projeto exibido em conferência em Orlando</li>
+    </ul>
+  </div>
+  <div class="entry">
+    <div class="date">Out 2024 -- Nov 2024</div>
+    Exposição USP 90 Anos — Projeto no InovaUSP
+    <ul>
+      <li>Projeto em VR exibido na exposição USP 90 Anos</li>
+      <li>Desenvolvido em Unity</li>
+    </ul>
+  </div>
+
+  <h2>Atividades Sociais</h2>
+  <div class="entry">
+    <div class="date">Nov 2022 -- Jul 2024</div>
+    Oficinas de Brinquedos e Carrinhos de Rolimã — Projeto no Centro Acadêmico
+    <ul>
+      <li>Oficinas para crianças de comunidades próximas à USP</li>
+      <li>Organização do projeto junto à Poli Cidadã</li>
+    </ul>
+  </div>
+</div>
+</body>
+
+<main></main>
+<a href="{% url 'index' %}">← Back</a>
+
+<script>
+  function switchLanguage(lang, clickedBtn) {
+      const allLangBlocks = document.querySelectorAll('.lang-content');
+      allLangBlocks.forEach(el => el.style.display = 'none');
+
+      const selectedLangBlocks = document.querySelectorAll('.lang-' + lang);
+      selectedLangBlocks.forEach(el => el.style.display = 'block');
+
+      const buttons = document.querySelectorAll('.language-toggle button');
+      buttons.forEach(btn => btn.classList.remove('selected'));
+      clickedBtn.classList.add('selected');
+  }
+</script>
+
+{% endblock content %}
