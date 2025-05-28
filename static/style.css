@@ -6,7 +6,7 @@ body {
     background-color: #fff9d5;
     font-family: 'Courier New', Courier, monospace;
     color: rgb(60, 0, 124);
-    text-align: center;
+    text-align: justify;
     font-size: large;
     height: 100%;
     margin: 0;
@@ -26,14 +26,18 @@ h2 {
 }
 .entry {
     margin-bottom: 1.5em;
+    text-align: justify;
 }
 .entry .date {
     font-weight: bold;
-    color: #593577;
 }
 ul {
     padding-left: 1.2em;
     margin: 0.5em 0;
+    text-align: justify;
+}
+li{
+    text-align: justify;
 }
 .grid {
     display: flex;
@@ -179,8 +183,9 @@ footer a:hover {
 #curriculum-text{
     text-decoration: none;
     font-size:fa-3x;
-    color: #3b0050;
     margin-bottom: 0px;
+    margin-left: 25%;
+    margin-right: 25%;
 }
 
 .curriculum-card:hover{
@@ -206,6 +211,17 @@ footer a:hover {
     transform: translateY(-15px);
     margin-bottom: 0;
 }
+
+.place{
+    text-align: justify;
+}
+.date{
+    text-align: justify;
+}
+.title{
+    text-align: justify;
+}
+
 
 /*#endregion Curriculum*/
 
