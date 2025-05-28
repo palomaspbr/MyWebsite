@@ -1,6 +1,5 @@
 from django.shortcuts import render
 from django.shortcuts import render, get_object_or_404
-from .models import Project
 import json
 import os
 from django.conf import settings
@@ -11,15 +10,10 @@ def curriculum(request):
     return render(request, 'core/curriculum.html')
 
 def list_projects(request):
-    projects = Project.objects.all()
     json_path = os.path.join(settings.BASE_DIR, 'core', 'data', 'customprojects.json')
     with open(json_path, 'r', encoding='utf-8') as file:
         customprojects = json.load(file)
-    return render(request, 'core/index.html', {'projects': projects, 'customprojects': customprojects})
-
-def detail_project(request, slug):
-    project = get_object_or_404(Project, slug=slug)
-    return render(request, 'core/detail.html', {'project': project})
+    return render(request, 'core/index.html', {'customprojects': customprojects})
 
 def customproject_detail(request, slug):
     json_path = os.path.join(settings.BASE_DIR, 'core', 'data', 'customprojects.json')
