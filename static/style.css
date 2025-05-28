@@ -184,8 +184,6 @@ footer a:hover {
     text-decoration: none;
     font-size:fa-3x;
     margin-bottom: 0px;
-    margin-left: 25%;
-    margin-right: 25%;
 }
 
 .curriculum-card:hover{
@@ -211,17 +209,6 @@ footer a:hover {
     transform: translateY(-15px);
     margin-bottom: 0;
 }
-
-.place{
-    text-align: justify;
-}
-.date{
-    text-align: justify;
-}
-.title{
-    text-align: justify;
-}
-
 
 /*#endregion Curriculum*/
 
