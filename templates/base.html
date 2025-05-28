@@ -1,25 +1,25 @@
 {% load static %}
 <!DOCTYPE html>
 <html>
-
-<head>
-    <title>{% block title %}{% endblock title %}</title>
-    <link rel="stylesheet" type="text/css" href="{% static 'style.css' %}">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-</head>
-<main>
-{% block content %}
-{% endblock content %}
-</main>
-<a href="{% url 'index' %}">← Back</a>
-<footer>
-    <p>Paloma Liz</p>
-    <p class="links">
-        <a href="{% url 'index' %}">Home</a> |
-        <a href="https://github.com/palomaspbr" target="_blank">GitHub</a> |
-        <a href="https://www.linkedin.com/in/paloma-liz-huebner-botana-2a0456252/" target="_blank">LinkedIn</a> |
-        <a href="https://www.instagram.com/palomita_liz/" target="_blank">Instagram</a>
-    </p>
-</footer>
-
+<div id="wrapper">
+    <head>
+        <title>{% block title %}{% endblock title %}</title>
+        <link rel="stylesheet" type="text/css" href="{% static 'style.css' %}">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    </head>
+    <main>
+    {% block content %}
+    {% endblock content %}
+    </main>
+    <a href="{% url 'index' %}">← Back</a>
+    <footer>
+        <p>Paloma Liz</p>
+        <p class="links">
+            <a href="{% url 'index' %}">Home</a> |
+            <a href="https://github.com/palomaspbr" target="_blank">GitHub</a> |
+            <a href="https://www.linkedin.com/in/paloma-liz-huebner-botana-2a0456252/" target="_blank">LinkedIn</a> |
+            <a href="https://www.instagram.com/palomita_liz/" target="_blank">Instagram</a>
+        </p>
+    </footer>
+</div>
 </html>
