@@ -30,5 +30,13 @@
         "image": "media/vrgame.png",
         "slug": "steamgame",
         "category": "game"
+    },
+    {
+        "title": "Parkour",
+        "subtitle": "I'm actually a parkour athelet",
+        "description": "Sports",
+        "image": "media/vrgame.png",
+        "slug": "parkour",
+        "category": "personal"
     }
 ]
