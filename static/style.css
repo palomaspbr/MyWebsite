@@ -16,11 +16,13 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  justify-content: space-between;
 }
 
 main {
     height: 100%;
     padding-bottom:70px;
+    flex: 1;
 }
 
 h2 {
@@ -57,8 +59,6 @@ footer {
     padding: 20px 20px;
     font-size: 0.9em;
     height: 50px;
-    margin-top: auto;
-    padding-bottom: 10px;
 }
 
 footer a {
