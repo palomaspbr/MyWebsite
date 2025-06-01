@@ -11,7 +11,7 @@
         "title": "This Website",
         "subtitle": "A personal portfolio",
         "description": "Built in Django and HTML / CSS, plus a bit of Javascript.",
-        "image": "media/placeholder.png",
+        "image": "media/website/website.png",
         "slug": "thiswebsite",
         "category": "code"
     },
