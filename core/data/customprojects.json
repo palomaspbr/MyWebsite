@@ -17,7 +17,7 @@
     },
     {
         "title": "The Island",
-        "subtitle": "A VR game made during college",
+        "subtitle": "A VR game made during College",
         "description": "A Puzzle VR Game in Unity.",
         "image": "media/placeholder.png",
         "slug": "theisland",
@@ -27,7 +27,7 @@
         "title": "My upcoming game...",
         "subtitle": "My work-in-progress steam game",
         "description": "2D Platformer & Riddles.",
-        "image": "media/placeholder.png",
+        "image": "media/steamgame/main-char.png",
         "slug": "steamgame",
         "category": "game"
     },
