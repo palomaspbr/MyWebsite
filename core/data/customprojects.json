@@ -1,7 +1,7 @@
 [
     {
         "title": "Treasure Island",
-        "subtitle": "A game!",
+        "subtitle": "A small puzzle game",
         "description": "Riddles & Puzzles - 2D game in Unity.",
         "image": "media/vrgame.png",
         "slug": "treasureisland",
@@ -9,33 +9,33 @@
     },
     {
         "title": "This Website",
-        "subtitle": "An amazing project!",
+        "subtitle": "A personal portfolio",
         "description": "Built in Django and HTML / CSS, plus a bit of Javascript.",
-        "image": "media/vrgame.png",
+        "image": "media/placeholder.png",
         "slug": "thiswebsite",
         "category": "code"
     },
     {
         "title": "The Island",
-        "subtitle": "An amazing project!",
+        "subtitle": "A VR game made during college",
         "description": "A Puzzle VR Game in Unity.",
-        "image": "media/vrgame.png",
+        "image": "media/placeholder.png",
         "slug": "theisland",
         "category": "vr"
     },
     {
         "title": "My upcoming game...",
-        "subtitle": "An amazing project!",
+        "subtitle": "My work-in-progress steam game",
         "description": "2D Platformer & Riddles.",
-        "image": "media/vrgame.png",
+        "image": "media/placeholder.png",
         "slug": "steamgame",
         "category": "game"
     },
     {
         "title": "Parkour",
-        "subtitle": "I'm actually a parkour athelet",
-        "description": "Sports",
-        "image": "media/vrgame.png",
+        "subtitle": "I'm actually a parkour athlete",
+        "description": "I participate in national competitions!",
+        "image": "media/placeholder.png",
         "slug": "parkour",
         "category": "personal"
     }
