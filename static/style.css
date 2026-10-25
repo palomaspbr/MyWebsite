@@ -25,6 +25,11 @@ main {
     flex: 1;
 }
 
+main img {
+    max-width: 100%;
+    height: auto;
+}
+
 h2 {
     color: #3b0050;
     border-bottom: 1px solid #e0d9be;
@@ -239,6 +244,10 @@ footer a:hover {
     color: white;
     font-weight: bold;
     border-radius: 0.5rem;
+}
+
+.lang-pt {
+    display: none;
 }
 
 /*#endregion Language*/

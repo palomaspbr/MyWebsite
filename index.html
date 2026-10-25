@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Paloma Liz</title>
+    <meta name="description" content="Paloma Liz - XR developer, game developer and parkour athlete.">
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+<div id="wrapper">
+    <main>
+        <h1 id="main-heading">Paloma Liz</h1>
+        <section id="socials">
+            <a href="https://github.com/palomaspbr" target="_blank"><i class="fab fa-github fa-2x"></i></a>
+            <a href="https://www.linkedin.com/in/paloma-liz-huebner-botana-2a0456252/" target="_blank"><i class="fab fa-linkedin fa-2x"></i></a>
+            <a href="https://www.instagram.com/palomita_liz/" target="_blank"><i class="fab fa-instagram fa-2x"></i></a>
+        </section>
+        <section id="introduction">
+            <p> Hey, my name is Paloma, I'm a graduate student in Mechatronics Engineering at the Polytechnic School of the University of São Paulo </p>
+            <p> I love Virtual Reality, coding and game development! I've been working as an XR Dev and I've dedicated myself to a couple of personal projects, like this website! </p>
+            <p> Out of curiosity, I'm also a Parkour athlete: I've competed at the SPL5 Parkour World Championships and won medals at national and South American competitions </p>
+            <p> Hope you like it! </p>
+        </section>
+
+        <h2>Professional Experience</h2>
+        <h3><a href="/static/files/PalomaLiz.pdf" id="curriculum-text" class="curriculum-card">[Download PDF]</a></h3>
+        <span id="ptbr">pt-br</span>
+
+        <h2>Projects</h2>
+
+        <div class="filter-buttons">
+            <button onclick="filterProjects('all', this)">All</button>
+            <button onclick="filterProjects('game', this)">Games</button>
+            <button onclick="filterProjects('code', this)">Coding</button>
+            <button onclick="filterProjects('vr', this)">VR/AR</button>
+            <button onclick="filterProjects('personal', this)">Personal</button>
+        </div>
+
+        <div class="projects-grid">
+            <a href="/customprojects/treasureisland/" class="project-card" data-category="game">
+                <div class="image-wrapper">
+                    <img src="/static/media/treasureisland/capa.png" alt="Treasure Island">
+                </div>
+                <h3>Treasure Island</h3>
+                <p>A small puzzle game</p>
+            </a>
+            <a href="/customprojects/thiswebsite/" class="project-card" data-category="code">
+                <div class="image-wrapper">
+                    <img src="/static/media/website/website.png" alt="This Website">
+                </div>
+                <h3>This Website</h3>
+                <p>A personal portfolio</p>
+            </a>
+            <a href="/customprojects/theisland/" class="project-card" data-category="vr">
+                <div class="image-wrapper">
+                    <img src="/static/media/theisland/island2.png" alt="The Island">
+                </div>
+                <h3>The Island</h3>
+                <p>A VR game made during College</p>
+            </a>
+            <a href="/customprojects/steamgame/" class="project-card" data-category="game">
+                <div class="image-wrapper">
+                    <img src="/static/media/steamgame/main-char.png" alt="My upcoming game">
+                </div>
+                <h3>My upcoming game...</h3>
+                <p>My work-in-progress steam game</p>
+            </a>
+            <a href="/customprojects/parkour/" class="project-card" data-category="personal">
+                <div class="image-wrapper">
+                    <img src="/static/media/parkour/voltz2024.jpg" alt="Parkour">
+                </div>
+                <h3>Parkour</h3>
+                <p>I'm actually a parkour athlete</p>
+            </a>
+        </div>
+    </main>
+    <!-- Try /cookie -->
+    <footer>
+        <p>Paloma Liz</p>
+        <p class="links">
+            <a href="/">Home</a> |
+            <a href="https://github.com/palomaspbr" target="_blank">GitHub</a> |
+            <a href="https://www.linkedin.com/in/paloma-liz-huebner-botana-2a0456252/" target="_blank">LinkedIn</a> |
+            <a href="https://www.instagram.com/palomita_liz/" target="_blank">Instagram</a>
+        </p>
+        <p></p>
+    </footer>
+</div>
+<script src="/static/script.js"></script>
+</body>
+</html>
