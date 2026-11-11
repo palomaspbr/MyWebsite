@@ -73,6 +73,13 @@
       y += b.h - 2;
     });
     // desk line
+    ctx.fillStyle = '#ead6b8';
+    ctx.fillRect(0, y + 4, LT.W, 900);
+    ctx.strokeStyle = 'rgba(150,110,70,0.25)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let k = 0; k < 6; k++) { const gy = y + 34 + k * 46; ctx.moveTo(0, gy + H(k, 1, 0) * 4); ctx.bezierCurveTo(240, gy - 8, 480, gy + 10, LT.W, gy + H(k, 2, 0) * 4); }
+    ctx.stroke();
     D.line(ctx, [[-20, y + 6], [LT.W + 20, y + 2]], { seed: 350, boil, lw: 3.5 });
     // cushion
     const cush = D.roundRect(PLAT_W + 6, PLAT_H + 6, 20, 5).map((p) => [p[0] + CX, p[1] + GROUND_Y + PLAT_H / 2]);
@@ -123,7 +130,7 @@
     const oy = h.off ? h.off[1] : 0;
     const catTop = h.y + (oy - t.h / 2) * s, catBot = h.y + (oy + t.h / 2) * s;
     // string + clothes peg
-    D.line(ctx, [[h.x, topY], [h.x, (topY + catTop) / 2], [h.x, catTop - 16]], { seed: 401, boil, lw: 2.6, passes: 1 });
+    if (snap.state !== 'demo') D.line(ctx, [[h.x, topY], [h.x, (topY + catTop) / 2], [h.x, catTop - 16]], { seed: 401, boil, lw: 2.6, passes: 1 });
     const peg = D.roundRect(16, 30, 5, 2).map((p) => [p[0] + h.x, p[1] + catTop - 12]);
     D.shape(ctx, peg, { fill: '#f08c00', seed: 402, boil, lw: 2.6 });
     // aiming guide
@@ -259,8 +266,9 @@
         D.text(ctx, b.text, 0, 0, { size: 68, color: b.color || '#2b2520', stroke: '#fffdf5', strokeWidth: 12, seed: 23, boil });
       } else if (b.kind === 'unlock') {
         const slide = (1 - LT.ease.outCubic(inA)) * -40;
-        ctx.translate(360, 380 + slide);
+        ctx.translate(360, (view.unlockY || 380) + slide);
         ctx.rotate(-0.025);
+        if (view.unlockScale) ctx.scale(view.unlockScale, view.unlockScale);
         const card = D.roundRect(470, 150, 16, 4);
         D.shape(ctx, card, { fill: '#fffdf5', seed: 31, boil, lw: 3 });
         // tape
@@ -274,7 +282,10 @@
         LT.Cats.drawCat(ctx, { type: b.type, pal: b.pal, seed: 77, face: 'happy', x: -160, y: 8, a: 0, scale: sc }, T, boil);
         if (b.isNew) D.text(ctx, L.newCat, -78, -40, { size: 34, color: '#e8590c', align: 'left', seed: 32, boil });
         D.text(ctx, C.catLabel(b.type, snap.lang), -78, b.isNew ? 2 : -16, { size: 40, align: 'left', seed: 33, boil });
-        D.text(ctx, C.catDesc(b.type, snap.lang), -78, b.isNew ? 44 : 30, { size: 24, font: LT.FONT_TEXT, align: 'left', color: '#5c5248', seed: 34, boil, jitter: 0.03 });
+        const desc = C.catDesc(b.type, snap.lang);
+        ctx.font = `24px ${LT.FONT_TEXT}`;
+        const dsz = Math.min(24, (24 * 300) / Math.max(1, ctx.measureText(desc).width));
+        D.text(ctx, desc, -78, b.isNew ? 44 : 30, { size: dsz, font: LT.FONT_TEXT, align: 'left', color: '#5c5248', seed: 34, boil, jitter: 0.03 });
       }
       ctx.restore();
     }
@@ -331,7 +342,14 @@
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.scale(view.scale, view.scale);
     if (view.hud !== false && snap.state !== 'demo') drawHUD(ctx, snap, T, boil);
-    if (view.banners !== false) drawBanners(ctx, snap, T, boil, view);
+    if (view.banners !== false) {
+      let bv = view;
+      if (view.unlockY == null && snap.held) {
+        const hy = snap.held.y - snap.camY, ty = (snap.towerTop == null ? K().GROUND_Y : snap.towerTop) - snap.camY;
+        bv = Object.assign({}, view, { unlockY: LT.clamp((hy + ty) / 2 + 20, 330, viewH - 260), unlockScale: 0.78 });
+      }
+      drawBanners(ctx, snap, T, boil, bv);
+    }
     for (const x of snap.toasts) {
       if (!x.screen || view.noScreenToasts) continue;
       const a = x.k > 0.7 ? (1 - x.k) / 0.3 : 1;
@@ -343,5 +361,5 @@
     ctx.restore();
   }
 
-  LT.Render = { draw, drawPaper, drawFish };
+  LT.Render = { draw, drawPaper, drawFish, drawBanners };
 })();

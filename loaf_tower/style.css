@@ -174,3 +174,23 @@ canvas#game {
   border-radius: 14px;
   font-size: min(2.8vh, 5vw);
 }
+
+/* ---- multi-mode title + extras ---- */
+#title { justify-content: flex-start; padding-top: 4.5vh; gap: 1.1vh; }
+#title .logo { font-size: min(11vh, 18vw); }
+#title .tag { margin-bottom: 1vh; }
+.mode-btn { display: flex; flex-direction: column; align-items: center; line-height: 1.05; width: min(74vw, 42vh); padding: 0.22em 0.6em; }
+.mode-btn .mode-sub { font-family: 'Patrick Hand', cursive; font-size: 0.52em; color: #5c5248; min-height: 1em; }
+.btn.mode-btn.big { font-size: min(4.6vh, 8vw); }
+.btn.mode-btn.yarn { background: #ffdeeb; font-size: min(4vh, 7vw); }
+.btn.mode-btn.merge { background: #d0ebff; font-size: min(4vh, 7vw); }
+.btn.corner2 { position: absolute; bottom: 1.6%; right: 3%; opacity: 0.85; font-size: min(2.6vh, 4.6vw); }
+#dex-grid h3 { grid-column: 1 / -1; margin: 1.2vh 0 0; font-family: 'Caveat Brush', cursive; font-weight: normal;
+  font-size: min(3.4vh, 6vw); color: #c2255c; text-align: left; border-bottom: 2px dashed rgba(43, 37, 32, 0.25); }
+/* start hint: keep clear of the corner buttons */
+.hint { left: 17%; right: 17%; bottom: 3%; font-size: min(3.2vh, 5.6vw); line-height: 1.05; }
+/* game-over panel fades in and ignores taps while "arming" */
+#over:not(.hidden) .card { animation: popin 0.35s ease-out; }
+#over.arming { pointer-events: none; }
+@keyframes popin { from { opacity: 0; transform: rotate(-1deg) scale(0.92); } to { opacity: 1; transform: rotate(-1deg) scale(1); } }
+.hint { background: rgba(255, 253, 245, 0.92); border: 2px solid rgba(43, 37, 32, 0.6); border-radius: 18px; padding: 0.15em 0.4em; }

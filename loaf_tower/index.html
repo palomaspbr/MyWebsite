@@ -4,10 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>Loaf Tower</title>
-  <meta name="description" content="Stack hand-drawn cats as high as you can. Don't let them fall. A free browser game by Paloma Liz.">
+  <meta name="description" content="Three cozy cat games in one notebook: stack the cats, connect them with yarn, merge them into bigger cats. Free, in your browser. By Paloma Liz.">
   <meta name="theme-color" content="#fbf6ea">
   <meta property="og:title" content="Loaf Tower">
-  <meta property="og:description" content="Stack the cats. Don't let them fall.">
+  <meta property="og:description" content="Stack, connect and merge hand-drawn cats. 3 free games, 29 cats to collect.">
   <meta property="og:image" content="https://palomaliz.com.br/loaf_tower/cover.png">
   <meta property="og:url" content="https://palomaliz.com.br/loaf_tower/">
   <meta name="twitter:card" content="summary_large_image">
@@ -21,28 +21,30 @@
     <div id="title" class="screen">
       <h1 class="logo">Loaf<br>Tower</h1>
       <p class="tag" data-i18n="tagline"></p>
-      <button id="btn-play" class="btn big" data-i18n="play"></button>
-      <button id="btn-dex" class="btn"><span data-i18n="catdex"></span> <span id="dex-count"></span></button>
-      <p class="best-line" id="title-best"></p>
+      <button id="btn-play" class="btn big mode-btn"><span class="mode-name">🐱 <span data-i18n="modeTower"></span></span><span class="mode-sub" id="sub-tower"></span></button>
+      <button id="btn-yarn" class="btn mode-btn yarn"><span class="mode-name">🧶 <span data-i18n="modeYarn"></span></span><span class="mode-sub" id="sub-yarn"></span></button>
+      <button id="btn-merge" class="btn mode-btn merge"><span class="mode-name">📦 <span data-i18n="modeMerge"></span></span><span class="mode-sub" id="sub-merge"></span></button>
       <div class="row small">
+        <button id="btn-dex" class="btn"><span data-i18n="catdex"></span> <span id="dex-count"></span></button>
         <button id="btn-sound" class="btn icon" aria-label="Sound">🔊</button>
       </div>
       <a class="credit" href="/">palomaliz.com.br</a>
     </div>
 
-    <div id="hint" class="hint hidden" data-i18n="tapToDrop"></div>
+    <div id="hint" class="hint hidden"></div>
 
+    <button id="btn-home" class="btn icon corner2 hidden" aria-label="Menu">🏠</button>
     <button id="btn-pause-sound" class="btn icon corner hidden" aria-label="Sound">🔊</button>
 
     <div id="over" class="screen hidden">
       <div class="card">
-        <h2 data-i18n="over"></h2>
+        <h2 id="over-title"></h2>
         <p id="over-tower" class="big-text"></p>
         <p id="over-culprit" class="culprit"></p>
         <p id="over-height" class="muted"></p>
         <button id="btn-clip" class="btn yellow" data-i18n="clip"></button>
         <div class="row">
-          <button id="btn-again" class="btn" data-i18n="again"></button>
+          <button id="btn-again" class="btn"></button>
           <button id="btn-share" class="btn" data-i18n="share"></button>
         </div>
         <div class="row">
@@ -84,6 +86,8 @@
   <script src="js/game.js"></script>
   <script src="js/render.js"></script>
   <script src="js/clip.js"></script>
+  <script src="js/yarn.js"></script>
+  <script src="js/merge.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

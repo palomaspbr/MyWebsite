@@ -23,6 +23,15 @@
     pudim: { fill: '#f7c552', caramel: '#8d4a1c', ear: '#8d4a1c', inner: '#c8773c', kind: 'pudim' },
     cupcake: { fill: '#f6c27a', wrapper: '#8ccdf0', frosting: '#ffc4d8', ear: '#f6c27a', inner: PINK, kind: 'cupcake' },
     box: { fill: '#bf9466', inner: PINK, kind: 'box', cat: '#f4a65c' },
+    // Yarn Lines exclusives
+    knit: { fill: '#fdf3dc', stripe: '#6fa8dc', inner: PINK, kind: 'knit' },
+    yarnball: { fill: '#ff8787', stripe: '#e03131', inner: '#ffd6d6', kind: 'wrap' },
+    sock: { fill: '#fffaf0', band: '#e8590c', inner: PINK, kind: 'bands' },
+    scarf: { fill: '#aeb0bf', stripe: '#7c7f93', scarf: '#e03131', scarf2: '#ffd43b', inner: PINK, kind: 'scarf' },
+    sweater: { fill: '#f4a65c', sweater: '#2f9e44', inner: PINK, kind: 'sweater' },
+    gold: { fill: '#f7c948', stripe: '#e0a800', ear: '#e0a800', inner: '#fff3bf', kind: 'gold' },
+    // Purr Merge tiers
+    mochi: { fill: '#ffe3ec', inner: '#ff8fab', kind: 'solid' },
   };
   const COMMON_PALS = ['orange', 'gray', 'cream', 'white', 'black', 'calico', 'tuxedo', 'siamese'];
 
@@ -64,8 +73,51 @@
     galaxy: { shape: 'rr', w: 126, h: 68, r: 30, density: 1.4, face: [0, -4], fs: 1, paws: true, tail: 1, pal: 'galaxy',
       label: { en: 'Galaxy Cat', pt: 'Gato Galáxia' },
       desc: { en: 'Floats down and calms the whole tower.', pt: 'Desce flutuando e acalma a torre toda.' } },
+
+    /* ---- Yarn Lines exclusives (unlocked by solving levels) ---- */
+    y1: { shape: 'rr', w: 118, h: 66, r: 28, density: 1.4, face: [0, -4], fs: 1, paws: true, tail: 1, pal: 'knit',
+      label: { en: 'Knit Cat', pt: 'Gato de Tricô' }, desc: { en: 'Hand-knitted. Slightly itchy.', pt: 'Feito à mão. Pinica um pouco.' } },
+    y2: { shape: 'rr', w: 84, h: 84, r: 42, density: 1.4, face: [0, 0], fs: 0.9, pal: 'yarnball',
+      label: { en: 'Yarn Ball Cat', pt: 'Gato Novelo' }, desc: { en: 'Became the thing it loved most.', pt: 'Virou o que mais amava.' } },
+    y3: { shape: 'rr', w: 176, h: 52, r: 24, density: 1.3, face: [54, -3], fs: 0.85, paws: true, tail: -1, earSpread: 19, pal: 'sock',
+      label: { en: 'Sock Cat', pt: 'Gato Meia' }, desc: { en: 'Lost its pair. Doesn’t care.', pt: 'Perdeu o par. Nem liga.' } },
+    y4: { shape: 'rr', w: 118, h: 70, r: 28, density: 1.4, face: [0, -8], fs: 1, paws: true, tail: 1, pal: 'scarf',
+      label: { en: 'Scarf Cat', pt: 'Gato de Cachecol' }, desc: { en: 'Always cold. Always cozy.', pt: 'Sempre com frio. Sempre quentinho.' } },
+    y5: { shape: 'rr', w: 150, h: 92, r: 42, density: 2, face: [0, -12], fs: 1.2, paws: true, tail: 1, pal: 'sweater',
+      label: { en: 'Sweater Cat', pt: 'Gato de Suéter' }, desc: { en: 'Grandma made it. It fits.', pt: 'A vó que fez. Serviu.' } },
+    y6: { shape: 'rr', w: 128, h: 70, r: 30, density: 1.4, face: [0, -4], fs: 1, paws: true, tail: 1, pal: 'gold',
+      label: { en: 'Golden Yarn Cat', pt: 'Gato Fio de Ouro' }, desc: { en: 'Woven from pure gold thread.', pt: 'Tecido com fio de ouro.' } },
   };
-  const DEX_ORDER = ['loaf', 'curl', 'long', 'kitten', 'chonk', 'box', 'zoomies', 'perfect', 'cupcake', 'pudim', 'rainbow', 'galaxy'];
+
+  /* ---- Purr Merge tiers: round cats that merge into the next tier ---- */
+  const MERGE = [
+    ['bean', 24, 'cream', 'Bean', 'Feijãozinho', 'Smallest cat. Biggest dreams.', 'Menor gato. Maiores sonhos.'],
+    ['kit', 32, 'white', 'Kitty', 'Gatinho', 'Fits in a teacup.', 'Cabe numa xícara.'],
+    ['mochi', 41, 'mochi', 'Mochi', 'Mochi', 'Soft. Squishy. Pink.', 'Macio. Fofo. Rosa.'],
+    ['orange', 51, 'orange', 'Orange Ball', 'Bola Laranja', 'One brain cell, fully round.', 'Um neurônio, bem redondo.'],
+    ['gray', 62, 'gray', 'Smoky', 'Fumaça', 'Grumbles politely.', 'Resmunga com educação.'],
+    ['calico', 73, 'calico', 'Patches', 'Retalhos', 'Three colors, zero chill.', 'Três cores, zero calma.'],
+    ['siamese', 85, 'siamese', 'Duchess', 'Duquesa', 'Expects to be served.', 'Espera ser servida.'],
+    ['tuxedo', 98, 'tuxedo', 'Tux', 'Smoking', 'Dressed for the occasion.', 'Pronto para a festa.'],
+    ['black', 112, 'black', 'Big Void', 'Vazio', 'Stares into your soul.', 'Encara sua alma.'],
+    ['rainbow', 127, 'rainbow', 'Rainbow Orb', 'Orbe Arco-íris', 'Pure joy, compressed.', 'Alegria pura, compactada.'],
+    ['galaxy', 144, 'galaxy', 'Cosmic Orb', 'Orbe Cósmico', 'The final cat. Merge two to win big.', 'O gato final. Junte dois para ganhar.'],
+  ];
+  MERGE.forEach(([key, r, pal, en, pt, den, dpt], i) => {
+    TYPES['m' + (i + 1)] = {
+      shape: 'rr', w: r * 2, h: r * 2, r, density: 1, face: [0, r * 0.08], fs: Math.max(0.55, r / 46), pal,
+      // ear size/spread get multiplied by fs (= r/46) in drawStd, so constants here scale with the cat
+      ear: 17.5, earSpread: 23, tier: i + 1, radius: r, ball: true,
+      label: { en, pt }, desc: { en: den, pt: dpt },
+    };
+  });
+
+  const DEX_SECTIONS = [
+    { id: 'tower', label: { en: 'Loaf Tower', pt: 'Torre' }, types: ['loaf', 'curl', 'long', 'kitten', 'chonk', 'box', 'zoomies', 'perfect', 'cupcake', 'pudim', 'rainbow', 'galaxy'] },
+    { id: 'yarn', label: { en: 'Yarn Lines', pt: 'Linhas de Lã' }, types: ['y1', 'y2', 'y3', 'y4', 'y5', 'y6'] },
+    { id: 'merge', label: { en: 'Purr Merge', pt: 'Junta Gato' }, types: MERGE.map((_, i) => 'm' + (i + 1)) },
+  ];
+  const DEX_ORDER = DEX_SECTIONS.reduce((a, s) => a.concat(s.types), []);
   const SPECIAL = { box: 1, zoomies: 1, perfect: 1, cupcake: 1, pudim: 1, rainbow: 1, galaxy: 1 };
 
   const NAMES = [
@@ -379,6 +431,70 @@
         D.sparkle(ctx, x, y, 2 + tw * 3.5, k % 4 === 0 ? '#ffe9a0' : '#ffffff');
       }
     }
+    if (P.kind === 'knit' || P.kind === 'sweater') {
+      const sweater = P.kind === 'sweater';
+      const y0 = sweater ? fy + 18 * u : -h / 2 + 8;
+      if (sweater) {
+        // green sweater over the lower body, with a white diamond band
+        ctx.fillStyle = P.sweater;
+        ctx.fillRect(-w / 2 - 6, y0 - 8, w + 12, h);
+        ctx.fillStyle = '#fffdf5';
+        for (let x = -w / 2 + 8; x < w / 2; x += 22) {
+          ctx.beginPath(); ctx.moveTo(x, y0 + 2); ctx.lineTo(x + 6, y0 + 8); ctx.lineTo(x, y0 + 14); ctx.lineTo(x - 6, y0 + 8); ctx.closePath(); ctx.fill();
+        }
+      }
+      // rows of little knit "V" stitches
+      ctx.save();
+      ctx.strokeStyle = sweater ? 'rgba(255,255,255,0.45)' : P.stripe;
+      ctx.lineWidth = 2.4;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      for (let y = sweater ? y0 + 24 : y0, row = 0; y < h / 2; y += 11, row++) {
+        for (let x = -w / 2 + (row % 2 ? 5 : 0); x < w / 2; x += 10) {
+          if (!sweater && Math.abs(x - fx) < 30 * u && Math.abs(y - fy) < 20 * u) continue;
+          ctx.moveTo(x - 4, y - 3); ctx.lineTo(x, y + 2); ctx.lineTo(x + 4, y - 3);
+        }
+      }
+      ctx.stroke();
+      ctx.restore();
+    } else if (P.kind === 'wrap') {
+      ctx.save();
+      ctx.strokeStyle = P.stripe;
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      for (let k = 0; k < 5; k++) {
+        const a = -0.9 + k * 0.45;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, w * 0.48, h * 0.2, a, Math.PI * 0.15, Math.PI * 0.85);
+        ctx.stroke();
+      }
+      ctx.restore();
+      // loose thread
+      D.line(ctx, [[w * 0.32, h * 0.32], [w * 0.5, h * 0.42], [w * 0.62, h * 0.36]], { seed: seed + 9, boil, lw: 2.6, ink: P.stripe, passes: 1 });
+    } else if (P.kind === 'bands') {
+      for (let k = 0, x = -w / 2; x < w / 2 + 10; x += 22, k++) {
+        if (k % 2) { ctx.fillStyle = P.band; ctx.fillRect(x, -h / 2 - 4, 22, h + 8); }
+      }
+      ctx.fillStyle = 'rgba(255,255,255,0.0)';
+    } else if (P.kind === 'scarf') {
+      const sy = fy + 20 * u;
+      ctx.fillStyle = P.scarf;
+      ctx.fillRect(-w / 2 - 6, sy - 6, w + 12, 13);
+      ctx.fillStyle = P.scarf2;
+      for (let x = -w / 2; x < w / 2; x += 16) ctx.fillRect(x, sy - 6, 6, 13);
+    } else if (P.kind === 'gold') {
+      const g = ctx.createLinearGradient(-w / 2, -h / 2, w / 2, h / 2);
+      g.addColorStop(0, 'rgba(255,255,255,0.45)');
+      g.addColorStop(0.5, 'rgba(255,255,255,0)');
+      g.addColorStop(1, 'rgba(180,120,0,0.25)');
+      ctx.fillStyle = g;
+      ctx.fillRect(-w / 2 - 6, -h / 2 - 6, w + 12, h + 12);
+      for (let k = 0; k < 5; k++) {
+        const x = rnd.range(-w / 2 + 8, w / 2 - 8), y = rnd.range(-h / 2 + 6, h / 2 - 6);
+        if (Math.abs(x - fx) < 26 && Math.abs(y - fy) < 14) continue;
+        D.sparkle(ctx, x, y, 2 + (H(seed, k, boil) + 1) * 2, '#fffbe6');
+      }
+    }
     if (t.belly) {
       D.fill(ctx, D.ellipse(w * 0.3, h * 0.24, 16, fx, h / 2 - h * 0.12), { fill: 'rgba(255,255,255,0.28)', seed: seed + 77, boil, off: [0, 0] });
     }
@@ -434,7 +550,15 @@
     if (t.paws) drawPaws(ctx, fx, h, u, P.paw || (P.kind === 'siamese' ? P.point : P.fill), seed, boil);
     drawFace(ctx, fx, fy, u, c.face, P, seed, boil, t.bigEyes, T);
 
-    if (P.kind === 'bread' || P.kind === 'rainbow') {
+    if (P.kind === 'scarf') {
+      // scarf end hanging over the side
+      const sx = w / 2 - 22, sy = fy + 20 * u;
+      const tailPts = D.subdiv([[sx - 6, sy], [sx + 8, sy], [sx + 12, sy + 30], [sx - 2, sy + 32]], 3, true);
+      D.shape(ctx, tailPts, { fill: P.scarf, seed: seed + 41, boil, lw: 2.6 });
+      ctx.fillStyle = P.scarf2;
+      ctx.fillRect(sx - 1, sy + 10, 9, 5);
+    }
+    if (P.kind === 'bread' || P.kind === 'rainbow' || P.kind === 'gold') {
       const tw = (H(seed, 3, boil) + 1) * 0.5;
       D.sparkle(ctx, w / 2 - 4, -h / 2 - 6, 5 + tw * 4, '#ffd43b');
     }
@@ -619,5 +743,5 @@
     ctx.restore();
   }
 
-  LT.Cats = { TYPES, PALS, COMMON_PALS, DEX_ORDER, SPECIAL, NAMES, createBody, drawCat, drawSilhouette, getPts, getOff, catLabel, catDesc };
+  LT.Cats = { TYPES, PALS, COMMON_PALS, DEX_ORDER, DEX_SECTIONS, MERGE_TIERS: MERGE.length, SPECIAL, NAMES, createBody, drawCat, drawSilhouette, getPts, getOff, catLabel, catDesc };
 })();

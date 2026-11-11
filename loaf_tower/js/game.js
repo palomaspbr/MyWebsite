@@ -15,6 +15,7 @@
   const DROP_GAP = 430; // max distance between the held cat and the tower top
   const LAZY_SPIN = 0.84, LAZY_SLIDE = 0.86;
   const FREEZE_DEPTH = 260;
+  const LIFE_GRACE = 2.5; // one collapse = one lost fish, not three
   // Side-to-side peg speed (radians/s): base + extra per cm of tower height, capped.
   const DROP_SPEED = 1.4, DROP_SPEED_PER_CM = 0.0065, DROP_SPEED_MAX_EXTRA = 1.9;
   const STEP = 1 / 60;
@@ -72,6 +73,8 @@
       this.firstFallT = null;
       this.collapseShownAt = -99;
       this.camY = 0;
+      this.lastLifeLossT = -99;
+      this.maxPlaced = 0;
       this.topSmooth = null;
       this.shake = 0;
       this.dropPhase = this.opts.demo ? 0.4 : 0;
@@ -229,7 +232,7 @@
         }
         if (c.zoomUntil > this.t && this.frame % 9 === 0) {
           M.Sleeping.set(b, false);
-          const dir = this.rng() < 0.5 ? -1 : 1;
+          const dir = (b.position.x > CX ? -1 : 1) * (this.rng() < 0.75 ? 1 : -1);
           M.Body.applyForce(b, b.position, { x: dir * b.mass * 0.0035, y: -b.mass * 0.004 });
           M.Body.setAngularVelocity(b, b.angularVelocity + dir * 0.015);
         }
@@ -279,6 +282,7 @@
       c.landed = true;
       c.landedT = this.t;
       this.placed++;
+      this.maxPlaced = Math.max(this.maxPlaced, this.placed);
       const t = C.TYPES[c.type];
       const size = (t.w * t.h) / (118 * 66) * (t.density / 1.4);
       this.sfx(c.type === 'box' ? 'box' : 'thud', { size: Math.max(0.5, Math.min(2.4, size)), vol: Math.min(1.2, 0.5 + speed * 0.08) });
@@ -377,7 +381,7 @@
         const h = this.topSmooth == null ? 0 : Math.max(0, (GROUND_Y - this.topSmooth) * CM_PER_PX);
         const speed = DROP_SPEED + Math.min(DROP_SPEED_MAX_EXTRA, h * DROP_SPEED_PER_CM);
         this.dropPhase += dt * speed;
-        this.dropX = this.manualX != null ? this.manualX : CX + 222 * Math.sin(this.dropPhase);
+        this.dropX = this.manualX != null ? this.manualX : CX + 222 * (Math.asin(0.97 * Math.sin(this.dropPhase)) / Math.asin(0.97));
         if (!this.held) {
           this.heldTimer -= dt;
           if (this.heldTimer <= 0) this.spawnHeld();
@@ -513,9 +517,13 @@
         this.shake = 18;
       }
       if (this.state === 'play') {
-        this.lives--;
-        this.emit('life', this.lives);
-        if (this.lives <= 0) this.gameOver();
+        const grace = !this.opts.strictLives && this.t - this.lastLifeLossT < LIFE_GRACE;
+        if (!grace) {
+          this.lives--;
+          this.lastLifeLossT = this.t;
+          this.emit('life', this.lives);
+          if (this.lives <= 0) this.gameOver();
+        }
       }
     }
 
@@ -530,7 +538,8 @@
 
     summary() {
       return {
-        cats: this.dropped,
+        cats: Math.max(this.maxPlaced, this.placed),
+        dropped: this.dropped,
         placed: this.placed,
         height: Math.round(this.bestRun),
         best: Math.max(this.best, Math.round(this.bestRun)),
