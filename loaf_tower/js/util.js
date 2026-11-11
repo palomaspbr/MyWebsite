@@ -49,7 +49,7 @@
   LT.I18N = {
     en: {
       tagline: 'stack the cats. don’t let them fall.',
-      play: 'Play', again: 'Again', catdex: 'Catdex', share: 'Share',
+      play: 'Play', again: 'Again', menu: 'Menu', catdex: 'Catdex', share: 'Share',
       clip: '🎬 Save the collapse', clipMaking: 'Making your clip…',
       clipReady: 'Your clip is ready!', download: 'Download', shareClip: 'Share clip', close: 'Close',
       clipUnsupported: 'This browser can’t record clips. Try Chrome.',
@@ -66,7 +66,7 @@
     },
     pt: {
       tagline: 'empilhe os gatos. não deixe cair.',
-      play: 'Jogar', again: 'De novo', catdex: 'Gatodéx', share: 'Compartilhar',
+      play: 'Jogar', again: 'De novo', menu: 'Menu', catdex: 'Gatodéx', share: 'Compartilhar',
       clip: '🎬 Salvar o desabamento', clipMaking: 'Fazendo seu vídeo…',
       clipReady: 'Seu vídeo está pronto!', download: 'Baixar', shareClip: 'Compartilhar vídeo', close: 'Fechar',
       clipUnsupported: 'Este navegador não grava vídeos. Tente o Chrome.',

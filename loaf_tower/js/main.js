@@ -93,6 +93,20 @@
     show('btn-pause-sound', true);
   }
 
+  // Back to the title screen (with the self-playing demo tower behind it).
+  function backToMenu() {
+    if (clipBusy) return;
+    audio.stopMusic();
+    mode = 'title';
+    show('over', false);
+    show('clip', false);
+    show('hint', false);
+    show('btn-pause-sound', false);
+    newGame(true);
+    updateTitle();
+    show('title', true);
+  }
+
   function gameOver(sum) {
     lastSummary = sum;
     if (sum.height > best) { best = sum.height; store.set('best', best); }
@@ -217,6 +231,7 @@
 
   $('btn-play').onclick = startPlay;
   $('btn-again').onclick = startPlay;
+  $('btn-menu').onclick = backToMenu;
   $('btn-share').onclick = shareScore;
   $('btn-clip').onclick = makeClip;
   $('btn-dex').onclick = openDex;
