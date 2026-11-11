@@ -500,7 +500,13 @@
       for (const b of this.buttons) {
         const pts = D.roundRect(b.w, b.h, 16, 3).map((q) => [q[0] + b.x, q[1] + b.y]);
         D.shape(ctx, pts, { fill: b.id === 'hint' ? '#ffd43b' : '#fffdf5', seed: 950 + b.x, boil, lw: 3 });
-        D.text(ctx, b.id === 'hint' ? `💡 ${L.hint}` : `↺ ${L.restart}`, b.x, b.y + 2, { size: 34, seed: 960 + b.x, boil });
+        // hand-drawn icon + label, centred together
+        const label = b.id === 'hint' ? L.hint : L.restart;
+        ctx.font = `34px ${LT.FONT_TITLE}`;
+        const tw = ctx.measureText(label).width, iw = 40, gap = 8;
+        const x0 = b.x - (iw + gap + tw) / 2;
+        LT.Icons.draw(ctx, b.id === 'hint' ? 'bulb' : 'restart', x0 + iw / 2, b.y + 1, iw, { boil });
+        D.text(ctx, label, x0 + iw + gap, b.y + 2, { size: 34, seed: 960 + b.x, boil, align: 'left' });
       }
 
       // particles

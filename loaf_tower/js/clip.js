@@ -55,7 +55,8 @@
       ctx.scale(k, k);
       const card = D.roundRect(600, 170, 20, 4);
       D.shape(ctx, card, { fill: '#fffdf5', seed: 63, boil, lw: 3.4 });
-      D.text(ctx, L.destroyedBy(info.culprit.name), 0, -18, { size: 54, color: '#e03131', seed: 64, boil });
+      const tw = D.text(ctx, L.destroyedBy(info.culprit.name), -24, -18, { size: 54, color: '#e03131', seed: 64, boil });
+      LT.Icons.draw(ctx, 'skull', tw / 2 + 12, -20, 54, { boil });
       D.text(ctx, `${info.height} cm`, 0, 46, { size: 40, font: LT.FONT_TEXT, color: '#5c5248', seed: 65, boil });
     }
     ctx.restore();
@@ -125,7 +126,9 @@
     rec.stop();
     await done;
     if (o.audio) {
+      // restart the background loop (it was restarted from bar 0 for the clip)
       o.audio.stopMusic();
+      o.audio.startMusic();
       if (tap) o.audio.untap(tap);
     }
     const type = (rec.mimeType || mime || 'video/webm').split(';')[0];

@@ -330,7 +330,9 @@
       const wallR = wallL.map((p) => [p[0] + (BOX.r - BOX.l) + 30, p[1]]);
       const floor = D.roundRect(BOX.r - BOX.l + 60, 34, 8, 2).map((p) => [p[0] + 360, p[1] + BOX.floor + 17]);
       for (const [pts, s] of [[wallL, 1], [wallR, 2], [floor, 3]]) D.shape(ctx, pts, { fill: '#c99a62', seed: 1000 + s, boil, lw: 3.2 });
-      D.text(ctx, 'FRAGILE ↑', 360, BOX.floor + 18, { size: 24, font: LT.FONT_TEXT, color: '#c0392b', seed: 7, boil });
+      D.text(ctx, 'FRAGILE', 348, BOX.floor + 18, { size: 24, font: LT.FONT_TEXT, color: '#c0392b', seed: 7, boil });
+      D.line(ctx, [[400, BOX.floor + 28], [400, BOX.floor + 8]], { seed: 8, boil, lw: 2.6, ink: '#c0392b', passes: 1 });
+      D.line(ctx, [[393, BOX.floor + 15], [400, BOX.floor + 7], [407, BOX.floor + 15]], { seed: 9, boil, lw: 2.6, ink: '#c0392b', passes: 1 });
 
       // evolution strip
       // evolution strip (kept between the two corner buttons)

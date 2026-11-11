@@ -20,7 +20,11 @@
   let yarnLevel = store.get('yarnLevel', 1);
   const dex = new Set(store.get('dex', []));
   const audio = new LT.AudioEngine();
-  audio.muted = store.get('muted', false);
+  const wasMuted = store.get('muted', false); // older versions had one mute switch
+  audio.musicOn = store.get('musicOn', !wasMuted);
+  audio.sfxOn = store.get('sfxOn', !wasMuted);
+  const CALM = { keys: 1, bass: 1, mel: 1, drums: 0 };
+  const musicParts = (id) => (id === 'yarn' ? CALM : null);
 
   const stage = $('stage');
   const canvas = $('game');
@@ -33,6 +37,7 @@
   let history = [];
   let lastSummary = null;
   let paused = false;
+  let menuPaused = false; // the audio menu pauses the game while it's open
   let clipBusy = false;
 
   function L() { return LT.I18N[lang] || LT.I18N.en; }
@@ -56,9 +61,50 @@
     $('sub-tower').textContent = best > 0 ? `${l.best} ${best} ${l.cm}` : l.subTower;
     $('sub-yarn').textContent = l.lvlShort(yarnLevel);
     $('sub-merge').textContent = mergeBest > 0 ? `${l.best} ${mergeBest}` : l.subMerge;
-    const icon = audio.muted ? '🔇' : '🔊';
-    $('btn-sound').textContent = icon;
-    $('btn-pause-sound').textContent = icon;
+    // speaker icon shows a red X only when music and sound effects are both off
+    const src = LT.Icons.url('speaker', { off: !audio.musicOn && !audio.sfxOn });
+    document.querySelectorAll('img.sound-ico').forEach((im) => { im.src = src; });
+    updateAudioMenu();
+  }
+
+  /* ---------- hand-drawn icons + audio menu ---------- */
+  function placeIcons(root) {
+    (root || document).querySelectorAll('i[data-icon]').forEach((el) => {
+      const im = LT.Icons.img(el.dataset.icon, {}, el.className);
+      el.replaceWith(im);
+    });
+  }
+
+  function updateAudioMenu() {
+    const l = L();
+    const set = (id, icon, on) => {
+      const b = $(id);
+      b.classList.toggle('is-off', !on);
+      b.querySelector('.t-ico').src = LT.Icons.url(icon, { off: !on });
+      const st = b.querySelector('.t-state');
+      st.innerHTML = '';
+      st.appendChild(LT.Icons.img('check', { on }, 't-check'));
+      st.appendChild(document.createTextNode(on ? l.on : l.off));
+    };
+    set('btn-music-toggle', 'music', audio.musicOn);
+    set('btn-sfx-toggle', 'sfx', audio.sfxOn);
+  }
+
+  function openAudio() {
+    show('audio', true);
+    menuPaused = mode === 'play';
+    updateAudioMenu();
+  }
+  function closeAudio() {
+    show('audio', false);
+    menuPaused = false;
+  }
+
+  // Background music plays everywhere (title, menus, every mode) once the browser allows audio.
+  function ensureMusic() {
+    audio.init();
+    audio.setMusicParts(musicParts(mode === 'play' ? current : 'title'));
+    audio.startMusic();
   }
 
   function resize() {
@@ -92,12 +138,9 @@
 
   function startMode(id) {
     if (clipBusy) return;
-    audio.init();
-    audio.setMuted(audio.muted);
-    audio.stopMusic();
-    audio.startMusic(id === 'yarn' ? { keys: 1, bass: 1, mel: 1, drums: 0 } : null);
     mode = 'play';
     current = id;
+    ensureMusic();
     if (id === 'tower') newTower(false);
     else if (id === 'yarn') game = new LT.YarnGame(Object.assign(common(), { level: yarnLevel }));
     else game = new LT.MergeGame(Object.assign(common(), { best: mergeBest }));
@@ -120,9 +163,10 @@
       if (current === 'tower' && Math.round(game.bestRun || 0) > best) { best = Math.round(game.bestRun); store.set('best', best); }
       if (current === 'merge' && game.score > mergeBest) { mergeBest = game.score; store.set('mergeBest', mergeBest); }
     }
-    audio.stopMusic();
     mode = 'title';
     current = 'tower';
+    ensureMusic();
+    closeAudio();
     ['over', 'clip', 'hint', 'btn-pause-sound', 'btn-home', 'dex'].forEach((id) => show(id, false));
     newTower(true);
     updateTitle();
@@ -138,6 +182,7 @@
     $('over-title').textContent = o.title;
     $('over-tower').textContent = o.line1 || '';
     $('over-culprit').textContent = o.line2 || '';
+    if (o.skull) $('over-culprit').appendChild(LT.Icons.img('skull', {}, 'inline'));
     $('over-height').textContent = o.line3 || '';
     $('btn-again').textContent = o.again;
     show('btn-clip', !!o.clip);
@@ -156,6 +201,7 @@
       title: l.over,
       line1: l.towerOf(sum.cats),
       line2: sum.culprit ? l.destroyedBy(sum.culprit.name) : '',
+      skull: !!sum.culprit,
       line3: `${sum.height} ${l.cm} · ${l.best} ${best} ${l.cm}` + (sum.newBest && sum.height > 0 ? ` — ${l.newRecord}` : ''),
       again: l.again,
       clip: LT.Clip.supported(),
@@ -303,7 +349,7 @@
     const r = canvas.getBoundingClientRect();
     return [((e.clientX - r.left) / r.width) * LT.W, ((e.clientY - r.top) / r.height) * viewH];
   }
-  function playing() { return mode === 'play' && game && !paused; }
+  function playing() { return mode === 'play' && game && !paused && !menuPaused; }
 
   // Yarn/Merge follow exactly one finger: the one that touched first. Extra fingers are ignored
   // until it lifts (a resting palm or second finger can't hijack a line).
@@ -341,7 +387,7 @@
   window.addEventListener('keydown', (e) => {
     if (e.code === 'Space' || e.code === 'Enter' || e.code === 'ArrowDown') {
       e.preventDefault();
-      if (!$('dex').classList.contains('hidden') || !$('clip').classList.contains('hidden')) return;
+      if (!$('dex').classList.contains('hidden') || !$('clip').classList.contains('hidden') || !$('audio').classList.contains('hidden')) return;
       if (mode === 'title') { startMode('tower'); return; }
       if (!$('over').classList.contains('hidden')) { if (e.code === 'Enter' && !$('over').classList.contains('arming')) again(); return; }
       if (!playing()) return;
@@ -354,7 +400,12 @@
     }
   });
 
-  // Every menu button makes a little tap (pointerdown = instant feedback, also unlocks audio on mobile).
+  // The first touch/click/key anywhere unlocks audio (browser rule) and starts the music.
+  const unlockAudio = () => { ensureMusic(); };
+  window.addEventListener('pointerdown', unlockAudio, true);
+  window.addEventListener('keydown', unlockAudio, true);
+
+  // Every menu button makes a little tap (pointerdown = instant feedback).
   document.addEventListener('pointerdown', (e) => {
     const b = e.target.closest && e.target.closest('.btn');
     if (!b) return;
@@ -374,13 +425,24 @@
   $('btn-over-dex').onclick = openDex;
   $('btn-dex-close').onclick = () => show('dex', false);
   $('btn-clip-close').onclick = () => { if (!clipBusy) show('clip', false); };
-  const toggleSound = () => {
-    audio.setMuted(!audio.muted);
-    store.set('muted', audio.muted);
+  // audio menu: separate switches for background music and sound effects
+  $('btn-sound').onclick = openAudio;
+  $('btn-pause-sound').onclick = (e) => { e.stopPropagation(); openAudio(); };
+  $('btn-audio-close').onclick = closeAudio;
+  $('btn-music-toggle').onclick = () => {
+    audio.init();
+    audio.setMusicOn(!audio.musicOn);
+    store.set('musicOn', audio.musicOn);
+    if (audio.musicOn) ensureMusic();
     updateTitle();
   };
-  $('btn-sound').onclick = toggleSound;
-  $('btn-pause-sound').onclick = (e) => { e.stopPropagation(); toggleSound(); };
+  $('btn-sfx-toggle').onclick = () => {
+    audio.init();
+    audio.setSfxOn(!audio.sfxOn);
+    store.set('sfxOn', audio.sfxOn);
+    if (audio.sfxOn) audio.play('tap');
+    updateTitle();
+  };
 
   document.addEventListener('visibilitychange', () => {
     paused = document.hidden;
@@ -393,7 +455,7 @@
   function frame(now) {
     const dt = Math.min(0.1, (now - last) / 1000);
     last = now;
-    if (!paused && game && !clipBusy) {
+    if (!paused && !menuPaused && game && !clipBusy) {
       acc += dt;
       let n = 0;
       while (acc >= STEP && n < 5) {
@@ -422,6 +484,7 @@
         new Promise((r) => setTimeout(r, 2500)),
       ]);
     } catch (e) { /* fonts are optional */ }
+    placeIcons();
     applyLang();
     newTower(true);
     requestAnimationFrame(frame);

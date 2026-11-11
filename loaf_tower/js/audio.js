@@ -460,12 +460,14 @@
   };
 
   /* ---------------- live engine ---------------- */
+  // Music and sound effects are separate buses with their own on/off switch (audio menu).
   class AudioEngine {
     constructor() {
       this.ctx = null;
-      this.muted = false;
+      this.musicOn = true;
+      this.sfxOn = true;
       this.music = null;
-      this.taps = [];
+      this.parts = null;
     }
     init() {
       if (this.ctx) {
@@ -476,22 +478,35 @@
       if (!AC) return;
       const ctx = (this.ctx = new AC());
       this.master = ctx.createGain();
-      this.master.gain.value = this.muted ? 0 : 1;
       const comp = ctx.createDynamicsCompressor();
       comp.threshold.value = -14;
       comp.ratio.value = 4;
       this.out = comp;
       this.master.connect(comp).connect(ctx.destination);
       this.sfx = ctx.createGain();
-      this.sfx.gain.value = 0.8;
+      this.sfx.gain.value = this.sfxOn ? 0.8 : 0;
       this.sfx.connect(this.master);
+      this.musicOut = ctx.createGain();
+      this.musicOut.gain.value = 1;
+      this.musicOut.connect(this.master);
     }
-    setMuted(m) {
-      this.muted = m;
-      if (this.master) this.master.gain.setTargetAtTime(m ? 0 : 1, this.ctx.currentTime, 0.03);
+    setSfxOn(on) {
+      this.sfxOn = on;
+      if (this.sfx) this.sfx.gain.setTargetAtTime(on ? 0.8 : 0, this.ctx.currentTime, 0.03);
+    }
+    setMusicOn(on) {
+      this.musicOn = on;
+      if (!this.ctx) return;
+      if (on) this.startMusic(this.parts);
+      else this.stopMusic();
+    }
+    // Change the arrangement of the running loop at the next bar (e.g. calmer for puzzles).
+    setMusicParts(parts) {
+      this.parts = parts || null;
+      if (this.music) this.music.parts = this.parts;
     }
     play(name, o) {
-      if (!this.ctx || !LT.SFX[name]) return;
+      if (!this.ctx || !this.sfxOn || !LT.SFX[name]) return;
       try { LT.SFX[name](this.ctx, this.sfx, this.ctx.currentTime + 0.01, o || {}); } catch (e) { /* ignore */ }
     }
     // Route everything (after the compressor) into a MediaStream for clip recording.
@@ -503,9 +518,10 @@
     }
     untap(d) { try { this.out.disconnect(d); } catch (e) { /* ignore */ } }
     startMusic(parts) {
-      if (!this.ctx || this.music) return;
-      const bus = Music.bus(this.ctx, this.master, 0.5);
-      const m = (this.music = { bus, bar: 0, next: this.ctx.currentTime + 0.1, parts: parts || null });
+      if (parts !== undefined) this.parts = parts || null;
+      if (!this.ctx || this.music || !this.musicOn) return;
+      const bus = Music.bus(this.ctx, this.musicOut, 0.5);
+      const m = (this.music = { bus, bar: 0, next: this.ctx.currentTime + 0.1, parts: this.parts });
       m.timer = setInterval(() => {
         if (!this.ctx) return;
         while (m.next < this.ctx.currentTime + 0.7) {
