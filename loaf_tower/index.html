@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Loaf Tower</title>
+  <meta name="description" content="Stack hand-drawn cats as high as you can. Don't let them fall. A free browser game by Paloma Liz.">
+  <meta name="theme-color" content="#fbf6ea">
+  <meta property="og:title" content="Loaf Tower">
+  <meta property="og:description" content="Stack the cats. Don't let them fall.">
+  <meta property="og:image" content="https://palomaliz.com.br/loaf_tower/cover.png">
+  <meta property="og:url" content="https://palomaliz.com.br/loaf_tower/">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="icon.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="stage">
+    <canvas id="game" aria-label="Loaf Tower game"></canvas>
+
+    <div id="title" class="screen">
+      <h1 class="logo">Loaf<br>Tower</h1>
+      <p class="tag" data-i18n="tagline"></p>
+      <button id="btn-play" class="btn big" data-i18n="play"></button>
+      <button id="btn-dex" class="btn"><span data-i18n="catdex"></span> <span id="dex-count"></span></button>
+      <p class="best-line" id="title-best"></p>
+      <div class="row small">
+        <button id="btn-sound" class="btn icon" aria-label="Sound">🔊</button>
+      </div>
+      <a class="credit" href="/">palomaliz.com.br</a>
+    </div>
+
+    <div id="hint" class="hint hidden" data-i18n="tapToDrop"></div>
+
+    <button id="btn-pause-sound" class="btn icon corner hidden" aria-label="Sound">🔊</button>
+
+    <div id="over" class="screen hidden">
+      <div class="card">
+        <h2 data-i18n="over"></h2>
+        <p id="over-tower" class="big-text"></p>
+        <p id="over-culprit" class="culprit"></p>
+        <p id="over-height" class="muted"></p>
+        <button id="btn-clip" class="btn yellow" data-i18n="clip"></button>
+        <div class="row">
+          <button id="btn-again" class="btn" data-i18n="again"></button>
+          <button id="btn-share" class="btn" data-i18n="share"></button>
+        </div>
+        <button id="btn-over-dex" class="btn small-btn"><span data-i18n="catdex"></span> <span class="dex-count2"></span></button>
+      </div>
+    </div>
+
+    <div id="dex" class="screen hidden">
+      <div class="card wide">
+        <h2 data-i18n="catdex"></h2>
+        <div id="dex-grid"></div>
+        <button id="btn-dex-close" class="btn" data-i18n="close"></button>
+      </div>
+    </div>
+
+    <div id="clip" class="screen hidden">
+      <div class="card">
+        <p id="clip-status" class="big-text"></p>
+        <div class="progress"><div id="clip-bar"></div></div>
+        <video id="clip-video" class="hidden" playsinline loop muted controls></video>
+        <div class="row">
+          <button id="btn-clip-share" class="btn hidden" data-i18n="shareClip"></button>
+          <a id="btn-clip-dl" class="btn hidden" data-i18n="download"></a>
+        </div>
+        <button id="btn-clip-close" class="btn small-btn" data-i18n="close"></button>
+      </div>
+    </div>
+
+    <div id="toast" class="toast hidden"></div>
+  </div>
+
+  <script src="lib/matter.min.js"></script>
+  <script src="js/util.js"></script>
+  <script src="js/doodle.js"></script>
+  <script src="js/cats.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/render.js"></script>
+  <script src="js/clip.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

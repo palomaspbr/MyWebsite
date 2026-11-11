@@ -10,6 +10,7 @@ customprojects/<slug>/index.html  One page per project
 cookie.html                    Easter egg (/cookie)
 curriculum.html                Curriculum (EN / PT)
 404.html                       Not found page
+loaf_tower/                    Loaf Tower, a cat-stacking browser game (/loaf_tower)
 static/style.css               Styles
 static/script.js               Project filter + language toggle
 static/media/, static/files/   Images and the PDF curriculum
