@@ -15,6 +15,8 @@
   const DROP_GAP = 430; // max distance between the held cat and the tower top
   const LAZY_SPIN = 0.84, LAZY_SLIDE = 0.86;
   const FREEZE_DEPTH = 260;
+  // Side-to-side peg speed (radians/s): base + extra per cm of tower height, capped.
+  const DROP_SPEED = 1.4, DROP_SPEED_PER_CM = 0.0065, DROP_SPEED_MAX_EXTRA = 1.9;
   const STEP = 1 / 60;
 
   // First guaranteed appearance (cat number) of each special in a run.
@@ -70,6 +72,7 @@
       this.firstFallT = null;
       this.collapseShownAt = -99;
       this.camY = 0;
+      this.topSmooth = null;
       this.shake = 0;
       this.dropPhase = this.opts.demo ? 0.4 : 0;
       this.dropX = CX;
@@ -182,15 +185,19 @@
       return !ld || ld.landed || ld.gone || this.t - this.lastDropT > 1.1;
     }
 
+    // The peg follows a smoothed tower top, so it glides instead of jumping when cats land or wobble.
     dropY() {
-      const top = this.towerTop == null ? GROUND_Y : this.towerTop;
+      const top = this.topSmooth == null ? GROUND_Y : this.topSmooth;
       return Math.max(this.camY + DROP_SCREEN_Y, top - DROP_GAP);
     }
+
+    heldAngle() { return Math.sin(this.t * 2.4) * 0.035; }
 
     drop() {
       if (!this.canDrop()) return false;
       const s = this.held;
       const { body, off } = C.createBody(M, s.type, this.dropX, this.dropY());
+      M.Body.setAngle(body, this.heldAngle());
       const cat = {
         id: body.id, type: s.type, pal: s.pal, name: s.name, seed: s.seed, body, off,
         landed: false, landedT: 0, gone: false, wob: 0, wobT: 0, zoomUntil: 0, face: 'startle',
@@ -367,7 +374,8 @@
 
       // dropper
       if (this.state === 'play' || this.state === 'demo') {
-        const speed = 1.4 + Math.min(1.2, this.dropped * 0.028);
+        const h = this.topSmooth == null ? 0 : Math.max(0, (GROUND_Y - this.topSmooth) * CM_PER_PX);
+        const speed = DROP_SPEED + Math.min(DROP_SPEED_MAX_EXTRA, h * DROP_SPEED_PER_CM);
         this.dropPhase += dt * speed;
         this.dropX = this.manualX != null ? this.manualX : CX + 222 * Math.sin(this.dropPhase);
         if (!this.held) {
@@ -405,10 +413,16 @@
 
         if (b.position.y > FALL_Y) { this.fallen(c); continue; }
 
-        if (c.landed && b.speed < 1.2 && b.position.y < GROUND_Y + 10) top = Math.min(top, b.bounds.min.y);
+        if (c.landed && b.speed < 3 && b.position.y < GROUND_Y + 10) top = Math.min(top, b.bounds.min.y);
         this.updateFace(c);
       }
       this.towerTop = top;
+      if (this.topSmooth == null) { this.topSmooth = top; this.topVel = 0; }
+      // Critically damped spring: position AND velocity stay continuous, so the peg and camera
+      // glide with no kicks. Rises briskly, sinks gently after collapses.
+      const k = top < this.topSmooth ? 6 : 3;
+      this.topVel += ((top - this.topSmooth) * k * k - 2 * k * this.topVel) * dt;
+      this.topSmooth += this.topVel * dt;
 
       // Settle the base: cats buried deep below the top that have stopped moving become solid.
       if (this.opts.freeze !== false) {
@@ -432,7 +446,7 @@
       }
 
       // camera
-      const target = Math.min(0, top - 610);
+      const target = Math.min(0, this.topSmooth - 610);
       this.camY += (target - this.camY) * Math.min(1, dt * 2.2);
       this.shake *= 0.86;
 
@@ -557,7 +571,7 @@
         });
       }
       const held = this.held
-        ? { type: this.held.type, pal: this.held.pal, seed: this.held.seed, name: this.held.name, x: this.dropX, y: this.dropY(),
+        ? { type: this.held.type, pal: this.held.pal, seed: this.held.seed, name: this.held.name, x: this.dropX, y: this.dropY(), a: this.heldAngle(), off: C.getOff(this.held.type),
             pop: LT.clamp((this.t - this.held.popT) / 0.3, 0, 1), face: 'open' }
         : null;
       const towerTop = this.towerTop == null ? GROUND_Y : this.towerTop;

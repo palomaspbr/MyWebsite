@@ -119,9 +119,12 @@
     const t = C.TYPES[h.type];
     const s = LT.ease.outBack(h.pop);
     const topY = snap.camY - 10;
+    // where the drawn cat's top and bottom actually are (centroid offset + pop-in scale)
+    const oy = h.off ? h.off[1] : 0;
+    const catTop = h.y + (oy - t.h / 2) * s, catBot = h.y + (oy + t.h / 2) * s;
     // string + clothes peg
-    D.line(ctx, [[h.x, topY], [h.x + Math.sin(T * 3) * 2, (topY + h.y - t.h / 2) / 2], [h.x, h.y - t.h / 2 - 16]], { seed: 401, boil, lw: 2.6, passes: 1 });
-    const peg = D.roundRect(16, 30, 5, 2).map((p) => [p[0] + h.x, p[1] + h.y - t.h / 2 - 12]);
+    D.line(ctx, [[h.x, topY], [h.x, (topY + catTop) / 2], [h.x, catTop - 16]], { seed: 401, boil, lw: 2.6, passes: 1 });
+    const peg = D.roundRect(16, 30, 5, 2).map((p) => [p[0] + h.x, p[1] + catTop - 12]);
     D.shape(ctx, peg, { fill: '#f08c00', seed: 402, boil, lw: 2.6 });
     // aiming guide
     ctx.save();
@@ -129,11 +132,11 @@
     ctx.strokeStyle = 'rgba(43,37,32,0.22)';
     ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.moveTo(h.x, h.y + t.h / 2 + 10);
-    ctx.lineTo(h.x, Math.max(h.y + t.h / 2 + 12, (snap.towerTop || K().GROUND_Y) - 6));
+    ctx.moveTo(h.x, catBot + 10);
+    ctx.lineTo(h.x, Math.max(catBot + 12, (snap.towerTop || K().GROUND_Y) - 6));
     ctx.stroke();
     ctx.restore();
-    LT.Cats.drawCat(ctx, { type: h.type, pal: h.pal, seed: h.seed, face: 'open', x: h.x, y: h.y, a: Math.sin(T * 2.4) * 0.035, scale: s, off: null }, T, boil);
+    LT.Cats.drawCat(ctx, { type: h.type, pal: h.pal, seed: h.seed, face: 'open', x: h.x, y: h.y, a: h.a || 0, scale: s, off: h.off || null }, T, boil);
   }
 
   function drawTrails(ctx, cats) {

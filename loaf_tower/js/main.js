@@ -229,6 +229,14 @@
     }
   });
 
+  // Every menu button makes a little tap (pointerdown = instant feedback, also unlocks audio on mobile).
+  document.addEventListener('pointerdown', (e) => {
+    const b = e.target.closest && e.target.closest('.btn');
+    if (!b) return;
+    audio.init();
+    audio.play('tap', { pitch: b.classList.contains('big') || b.classList.contains('yellow') ? 0.85 : 1 + Math.random() * 0.08 });
+  });
+
   $('btn-play').onclick = startPlay;
   $('btn-again').onclick = startPlay;
   $('btn-menu').onclick = backToMenu;

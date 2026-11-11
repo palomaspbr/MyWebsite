@@ -178,6 +178,25 @@
     osc.start(t); osc.stop(t + 0.15);
   };
 
+  // UI button: a soft papery "tock" with a little pitch blip.
+  S.tap = function (ctx, out, t, o) {
+    const p = (o && o.pitch) || 1;
+    const osc = ctx.createOscillator();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(740 * p, t);
+    osc.frequency.exponentialRampToValueAtTime(420 * p, t + 0.07);
+    const g = gainEnv(ctx, t, 0.32, 0.003, 0.09);
+    osc.connect(g).connect(out);
+    osc.start(t); osc.stop(t + 0.15);
+    const n = noise(ctx, t, 0.04);
+    const f = ctx.createBiquadFilter();
+    f.type = 'bandpass';
+    f.frequency.value = 2600 * p;
+    f.Q.value = 1.2;
+    const ng = gainEnv(ctx, t, 0.22, 0.001, 0.03);
+    n.connect(f).connect(ng).connect(out);
+  };
+
   S.sparkle = function (ctx, out, t, o) {
     const notes = [88, 91, 95, 100];
     notes.forEach((n, i) => {

@@ -128,6 +128,16 @@
     return { body, off: [-c.x, -c.y] };
   }
 
+  // Offset from the box centre to the physics centroid (same as createBody's `off`).
+  const offCache = {};
+  function getOff(type) {
+    if (!offCache[type]) {
+      const c = window.Matter.Vertices.centre(getPts(type).map((p) => ({ x: p[0], y: p[1] })));
+      offCache[type] = [-c.x, -c.y];
+    }
+    return offCache[type];
+  }
+
   function catLabel(type, lang) { return TYPES[type].label[lang] || TYPES[type].label.en; }
   function catDesc(type, lang) { return TYPES[type].desc[lang] || TYPES[type].desc.en; }
 
@@ -609,5 +619,5 @@
     ctx.restore();
   }
 
-  LT.Cats = { TYPES, PALS, COMMON_PALS, DEX_ORDER, SPECIAL, NAMES, createBody, drawCat, drawSilhouette, getPts, catLabel, catDesc };
+  LT.Cats = { TYPES, PALS, COMMON_PALS, DEX_ORDER, SPECIAL, NAMES, createBody, drawCat, drawSilhouette, getPts, getOff, catLabel, catDesc };
 })();
