@@ -17,7 +17,8 @@
   let lang = params.get('lang') === 'pt' ? 'pt' : 'en';
   let best = store.get('best', 0);
   let mergeBest = store.get('mergeBest', 0);
-  let yarnLevel = store.get('yarnLevel', 1);
+  let yarnLevel = store.get('yarnLevel', 1); // highest unlocked Yarn Lines level
+  let yarnPlaying = yarnLevel;                // the level being played right now
   const dex = new Set(store.get('dex', []));
   const audio = new LT.AudioEngine();
   const wasMuted = store.get('muted', false); // older versions had one mute switch
@@ -136,19 +137,21 @@
     if (name === 'won' && current === 'yarn') yarnWon(data);
   }
 
-  function startMode(id) {
+  function startMode(id, level) {
     if (clipBusy) return;
+    if (id === 'yarn') yarnPlaying = LT.clamp(level || yarnLevel, 1, yarnLevel);
     mode = 'play';
     current = id;
     ensureMusic();
     if (id === 'tower') newTower(false);
-    else if (id === 'yarn') game = new LT.YarnGame(Object.assign(common(), { level: yarnLevel }));
+    else if (id === 'yarn') game = new LT.YarnGame(Object.assign(common(), { level: yarnPlaying }));
     else game = new LT.MergeGame(Object.assign(common(), { best: mergeBest }));
     const l = L();
     $('hint').textContent = id === 'tower' ? l.tapToDrop : id === 'yarn' ? l.hintYarn : l.hintMerge;
     show('title', false);
     show('over', false);
     show('dex', false);
+    show('levels', false);
     show('hint', true);
     show('btn-pause-sound', true);
     show('btn-home', true);
@@ -167,7 +170,7 @@
     current = 'tower';
     ensureMusic();
     closeAudio();
-    ['over', 'clip', 'hint', 'btn-pause-sound', 'btn-home', 'dex'].forEach((id) => show(id, false));
+    ['over', 'clip', 'hint', 'btn-pause-sound', 'btn-home', 'dex', 'levels'].forEach((id) => show(id, false));
     newTower(true);
     updateTitle();
     show('title', true);
@@ -186,6 +189,7 @@
     $('over-height').textContent = o.line3 || '';
     $('btn-again').textContent = o.again;
     show('btn-clip', !!o.clip);
+    show('btn-over-levels', current === 'yarn');
     updateTitle();
     show('over', true);
     show('btn-pause-sound', false);
@@ -238,8 +242,56 @@
   }
 
   function again() {
-    if (current === 'yarn') startMode('yarn');
+    if (current === 'yarn') startMode('yarn', yarnPlaying + 1);
     else startMode(current);
+  }
+
+  /* ---------- yarn level menu ---------- */
+  function openLevels() {
+    const l = L();
+    const grid = $('levels-grid');
+    grid.innerHTML = '';
+    const total = Math.max(60, Math.ceil(yarnLevel / 10) * 10 + 10);
+    const rewards = LT.YarnGame.REWARDS;
+    $('levels-sub').textContent = l.levelsSub(yarnLevel - 1, total);
+    let group = null, header = null;
+    let currentTile = null;
+    for (let n = 1; n <= total; n++) {
+      const size = LT.YarnGame.levelSpec(n).size;
+      if (size !== group) {
+        group = size;
+        header = document.createElement('h3');
+        header.dataset.from = n;
+        grid.appendChild(header);
+      }
+      header.textContent = l.boardSize(size, +header.dataset.from, n);
+      const b = document.createElement('button');
+      const locked = n > yarnLevel, solved = n < yarnLevel;
+      b.className = 'btn lvl' + (locked ? ' locked' : solved ? ' solved' : ' current');
+      b.style.rotate = (LT.hash(n, 7, 3) * 2.5).toFixed(2) + 'deg';
+      if (locked) b.appendChild(LT.Icons.img('lock', {}, 'lock'));
+      else b.textContent = n;
+      if (solved) b.appendChild(LT.Icons.img('check', { on: true }, 'badge done'));
+      if (rewards[n]) {
+        b.appendChild(LT.Icons.img('paw', {}, 'badge reward'));
+        b.title = l.rewardCat;
+      }
+      b.onclick = () => {
+        if (locked) {
+          b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake');
+          audio.play('thud', { pitch: 1.4, vol: 0.5 });
+          toast(l.levelLocked(yarnLevel));
+          return;
+        }
+        startMode('yarn', n);
+      };
+      if (n === yarnLevel) currentTile = b;
+      grid.appendChild(b);
+    }
+    show('over', false);
+    show('dex', false);
+    show('levels', true);
+    if (currentTile) currentTile.scrollIntoView({ block: 'center' });
   }
 
   /* ---------- catdex ---------- */
@@ -387,7 +439,7 @@
   window.addEventListener('keydown', (e) => {
     if (e.code === 'Space' || e.code === 'Enter' || e.code === 'ArrowDown') {
       e.preventDefault();
-      if (!$('dex').classList.contains('hidden') || !$('clip').classList.contains('hidden') || !$('audio').classList.contains('hidden')) return;
+      if (['dex', 'clip', 'audio', 'levels'].some((id) => !$(id).classList.contains('hidden'))) return;
       if (mode === 'title') { startMode('tower'); return; }
       if (!$('over').classList.contains('hidden')) { if (e.code === 'Enter' && !$('over').classList.contains('arming')) again(); return; }
       if (!playing()) return;
@@ -395,6 +447,9 @@
       else if (current === 'merge') game.drop();
     } else if (current === 'merge' && playing() && (e.code === 'ArrowLeft' || e.code === 'ArrowRight')) {
       game.aimX = LT.clamp(game.aimX + (e.code === 'ArrowLeft' ? -24 : 24), LT.MergeGame.BOX.l, LT.MergeGame.BOX.r);
+    } else if (current === 'yarn' && playing() && (e.code === 'KeyZ' || e.code === 'Backspace')) {
+      e.preventDefault();
+      game.undo();
     } else if (e.code === 'Escape' && mode === 'play') {
       backToMenu();
     }
@@ -414,7 +469,9 @@
   });
 
   $('btn-play').onclick = () => startMode('tower');
-  $('btn-yarn').onclick = () => startMode('yarn');
+  $('btn-yarn').onclick = openLevels;
+  $('btn-over-levels').onclick = openLevels;
+  $('btn-levels-close').onclick = () => { if (mode === 'play') backToMenu(); else show('levels', false); };
   $('btn-merge').onclick = () => startMode('merge');
   $('btn-again').onclick = again;
   $('btn-menu').onclick = backToMenu;

@@ -94,6 +94,26 @@
       const ex = Math.cos(-Math.PI * 0.35) * 30, ey = Math.sin(-Math.PI * 0.35) * 30;
       D.shape(ctx, poly([[ex - 18, ey - 8], [ex + 8, ey - 14], [ex + 2, ey + 12]]), { fill: '#69db7c', seed: 72, boil: b, lw: 4.5 });
     },
+    undo(ctx, o) {
+      // curved arrow sweeping back to the left
+      const b = o.boil;
+      D.line(ctx, [[26, 40]].concat(arc(4, 14, 30, -Math.PI * 0.95, Math.PI * 0.05, 14).reverse()), { seed: 75, boil: b, lw: 7 });
+      const ex = 4 + Math.cos(-Math.PI * 0.95) * 30, ey = 14 + Math.sin(-Math.PI * 0.95) * 30;
+      D.shape(ctx, poly([[ex - 15, ey - 2], [ex + 15, ey - 2], [ex, ey + 22]]), { fill: '#74c0fc', seed: 76, boil: b, lw: 4.5 });
+    },
+    lock(ctx, o) {
+      const b = o.boil;
+      D.line(ctx, arc(0, -8, 20, Math.PI, Math.PI * 2, 10).concat([[20, 6]]).reverse().concat([[-20, 6]]), { seed: 111, boil: b, lw: 7 });
+      D.shape(ctx, D.roundRect(60, 46, 10, 3).map((p) => [p[0], p[1] + 18]), { fill: '#ffd43b', seed: 112, boil: b, lw: 5 });
+      ctx.fillStyle = D.INK;
+      ctx.beginPath(); ctx.arc(0, 14, 6, 0, Math.PI * 2); ctx.fill();
+      ctx.fillRect(-2.5, 14, 5, 14);
+    },
+    paw(ctx, o) {
+      const b = o.boil, c = o.color || '#f783ac';
+      D.shape(ctx, D.ellipse(24, 20, 12, 0, 16), { fill: c, seed: 121, boil: b, lw: 4.5 });
+      [[-27, -8], [-10, -26], [10, -26], [27, -8]].forEach(([x, y], k) => D.shape(ctx, D.ellipse(9, 11, 10, x, y), { fill: c, seed: 122 + k, boil: b, lw: 4 }));
+    },
     check(ctx, o) {
       const b = o.boil;
       D.shape(ctx, D.roundRect(70, 70, 12, 3), { fill: o.on ? '#d3f9d8' : '#fffdf5', seed: 81, boil: b, lw: 5 });

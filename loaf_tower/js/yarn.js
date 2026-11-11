@@ -170,9 +170,11 @@
       this.by = 640 - this.boardW / 2;
       const by2 = this.by + this.boardW;
       this.buttons = [
-        { id: 'restart', x: 240, y: by2 + 86, w: 210, h: 80 },
-        { id: 'hint', x: 480, y: by2 + 86, w: 210, h: 80 },
+        { id: 'undo', x: 146, y: by2 + 86, w: 196, h: 80 },
+        { id: 'restart', x: 360, y: by2 + 86, w: 196, h: 80 },
+        { id: 'hint', x: 574, y: by2 + 86, w: 196, h: 80 },
       ];
+      this.undoStack = []; // line layouts before each move, newest last
     }
 
     get L() { return LT.I18N[this.lang] || LT.I18N.en; }
@@ -207,7 +209,7 @@
       y -= this.offY || 0;
       if (type === 'down') {
         for (const b of this.buttons) {
-          if (Math.abs(x - b.x) < b.w / 2 && Math.abs(y - b.y) < b.h / 2) { this.button(b.id); return; }
+          if (Math.abs(x - b.x) < b.w / 2 + 6 && Math.abs(y - b.y) < b.h / 2 + 10) { this.button(b.id); return; }
         }
         const c = this.cellAt(x, y);
         if (c < 0) return;
@@ -248,6 +250,7 @@
         if (!d) return;
         this.drag = null;
         if (d.moved) {
+          if (this.paths.some((p, i) => p.join() !== d.base[i].join())) this.pushUndo(d.base);
           this.moves++;
           this.checkWin();
         }
@@ -330,15 +333,38 @@
       this.burst(x, y, 12, COLORS[p % COLORS.length].c);
     }
 
+    pushUndo(paths) {
+      this.undoStack.push(paths.map((p) => p.slice()));
+      if (this.undoStack.length > 200) this.undoStack.shift();
+    }
+    canUndo() { return this.undoStack.length > 0; }
+    undo() {
+      if (this.state !== 'play' || !this.undoStack.length) return false;
+      if (this.drag) this.pointer('up', 0, 0);
+      this.paths = this.undoStack.pop();
+      this.rebuildOwner();
+      this.undoT = this.t;
+      this.sfx('pop', { pitch: 0.6 });
+      return true;
+    }
+
     button(id) {
+      if (this.drag) this.pointer('up', 0, 0);
+      this.pressT = { id, t: this.t };
+      if (id === 'undo') {
+        if (!this.undo()) this.sfx('tap', { pitch: 0.7 });
+        return;
+      }
       this.sfx('tap');
-      this.drag = null;
       if (id === 'restart') {
+        if (this.paths.every((p) => !p.length)) return;
+        this.pushUndo(this.paths);
         this.paths = this.lv.pairs.map(() => []);
         this.rebuildOwner();
       } else if (id === 'hint') {
         const p = this.lv.pairs.findIndex((pr, i) => !this.isComplete(i) || this.paths[i].join() !== pr.sol.join());
         if (p < 0) return;
+        this.pushUndo(this.paths);
         const sol = this.lv.pairs[p].sol;
         for (const c of sol) {
           const o = this.owner[c];
@@ -498,15 +524,24 @@
 
       // buttons
       for (const b of this.buttons) {
+        const off = b.id === 'undo' && !this.canUndo();
+        const pressed = this.pressT && this.pressT.id === b.id && this.t - this.pressT.t < 0.12;
+        ctx.save();
+        if (off) ctx.globalAlpha = 0.45;
+        ctx.translate(pressed ? 2 : 0, pressed ? 3 : 0);
         const pts = D.roundRect(b.w, b.h, 16, 3).map((q) => [q[0] + b.x, q[1] + b.y]);
         D.shape(ctx, pts, { fill: b.id === 'hint' ? '#ffd43b' : '#fffdf5', seed: 950 + b.x, boil, lw: 3 });
-        // hand-drawn icon + label, centred together
-        const label = b.id === 'hint' ? L.hint : L.restart;
+        // hand-drawn icon + label, centred together (label shrinks to fit longer translations)
+        const label = L[b.id];
+        const iw = 40, gap = 6;
         ctx.font = `34px ${LT.FONT_TITLE}`;
-        const tw = ctx.measureText(label).width, iw = 40, gap = 8;
+        const size = Math.min(34, (34 * (b.w - 26 - iw - gap)) / ctx.measureText(label).width);
+        ctx.font = `${size}px ${LT.FONT_TITLE}`;
+        const tw = ctx.measureText(label).width;
         const x0 = b.x - (iw + gap + tw) / 2;
-        LT.Icons.draw(ctx, b.id === 'hint' ? 'bulb' : 'restart', x0 + iw / 2, b.y + 1, iw, { boil });
-        D.text(ctx, label, x0 + iw + gap, b.y + 2, { size: 34, seed: 960 + b.x, boil, align: 'left' });
+        LT.Icons.draw(ctx, b.id === 'hint' ? 'bulb' : b.id, x0 + iw / 2, b.y + 1, iw, { boil });
+        D.text(ctx, label, x0 + iw + gap, b.y + 2, { size, seed: 960 + b.x, boil, align: 'left' });
+        ctx.restore();
       }
 
       // particles
@@ -575,6 +610,7 @@
   }
 
   YarnGame.generate = generate;
+  YarnGame.levelSpec = levelSpec;
   YarnGame.REWARDS = REWARDS;
   YarnGame.COLORS = COLORS;
   LT.YarnGame = YarnGame;
