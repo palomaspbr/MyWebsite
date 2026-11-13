@@ -350,7 +350,7 @@
       cons.forEach((k) => { k.ltA = c; k.ltB = oc || null; });
       M.Composite.add(this.engine.world, cons);
       c.welds++;
-      this.sfx('ding', { note: 88 + c.welds * 3 });
+      this.sfx('ding', { note: 88 + Math.min(c.welds, 6) * 3 }); // capped: keeps the partials audible
       this.burst((a.position.x + other.position.x) / 2, (a.position.y + other.position.y) / 2, 8, 'rainbow');
     }
 

@@ -14,7 +14,7 @@
     { c: '#b8e05a', d: '#5c940d' }, { c: '#adb5bd', d: '#495057' },
   ]; // one colour per pair: levels never use more pairs than there are colours
   // Yarn-exclusive cats, unlocked when a level is solved.
-  const REWARDS = { 1: 'y1', 3: 'y2', 5: 'y3', 8: 'y4', 12: 'y5', 16: 'y6' };
+  const REWARDS = { 1: 'y1', 3: 'y2', 5: 'y3', 8: 'y4', 12: 'y5', 16: 'y6', 20: 'y7', 25: 'y8', 30: 'y9', 35: 'y10', 40: 'y11', 50: 'y12' };
   const SCALE = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24];
 
   function levelSpec(n) {
@@ -90,7 +90,7 @@
       return cuts;
     };
     // Fixed attempt counts (not a time budget) so every device builds the exact same level.
-    const ATTEMPTS = size <= 6 ? 60 : 14, TRIES = 16;
+    const ATTEMPTS = size <= 6 ? 60 : size >= 9 ? 30 : 14, TRIES = 16;
     let bestSegs = null, bestScore = Infinity;
     for (let attempt = 0; attempt < ATTEMPTS && bestScore > 0; attempt++) {
       // serpentine Hamiltonian path, then scramble with backbite moves
@@ -404,8 +404,8 @@
           this.emit('dex', type);
         }
       }
-      // at most two cards are shown here; the rest are listed on the win panel
-      unlocked.slice(0, 2).forEach((type, i) => this.banners.push({ kind: 'unlock', type, pal: 'orange', isNew: true, t0: this.t + 0.5 + i * 1.9, dur: 2.0 }));
+      // at most two cards are shown here (the rarest); the rest are listed on the win panel
+      unlocked.slice(-2).reverse().forEach((type, i) => this.banners.push({ kind: 'unlock', type, pal: 'orange', isNew: true, t0: this.t + 0.5 + i * 1.9, dur: 2.0 }));
       this.unlocked = unlocked;
       this.overDelay = 1.4 + Math.min(2, unlocked.length) * 1.9;
     }

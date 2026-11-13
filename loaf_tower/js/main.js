@@ -1,4 +1,4 @@
-/* Loaf Tower - app shell: title + 3 game modes (Tower, Yarn Lines, Purr Merge), input, loop,
+/* Loaf Tower - app shell: title + 4 game modes (Tower, Yarn Lines, Purr Merge, Meow Match), input, loop,
    storage, Catdex and collapse clips. */
 (function () {
   'use strict';
@@ -17,15 +17,18 @@
   let lang = params.get('lang') === 'pt' ? 'pt' : 'en';
   let best = store.get('best', 0);
   let mergeBest = store.get('mergeBest', 0);
-  let yarnLevel = store.get('yarnLevel', 1); // highest unlocked Yarn Lines level
+  const lvlNum = (v) => Math.max(1, Math.floor(+v) || 1); // guard against junk in storage
+  let yarnLevel = lvlNum(store.get('yarnLevel', 1)); // highest unlocked Yarn Lines level
   let yarnPlaying = yarnLevel;                // the level being played right now
+  let tileLevel = lvlNum(store.get('tileLevel', 1));  // highest unlocked Meow Match level
+  let tilePlaying = tileLevel;
   const dex = new Set(store.get('dex', []));
   const audio = new LT.AudioEngine();
   const wasMuted = store.get('muted', false); // older versions had one mute switch
   audio.musicOn = store.get('musicOn', !wasMuted);
   audio.sfxOn = store.get('sfxOn', !wasMuted);
   const CALM = { keys: 1, bass: 1, mel: 1, drums: 0 };
-  const musicParts = (id) => (id === 'yarn' ? CALM : null);
+  const musicParts = (id) => (id === 'yarn' || id === 'tiles' ? CALM : null);
 
   const stage = $('stage');
   const canvas = $('game');
@@ -34,7 +37,7 @@
 
   let game = null;        // the active game object (tower demo on the title screen)
   let mode = 'title';     // 'title' | 'play'
-  let current = 'tower';  // which game mode is running: 'tower' | 'yarn' | 'merge'
+  let current = 'tower';  // which game mode is running: 'tower' | 'yarn' | 'merge' | 'tiles'
   let history = [];
   let lastSummary = null;
   let paused = false;
@@ -53,7 +56,23 @@
     updateTitle();
   }
 
-  function dexText() { return `${dex.size}/${C.DEX_ORDER.length}`; }
+  function dexText() { return `${C.DEX_ORDER.filter((t) => dex.has(t)).length}/${C.DEX_ORDER.length}`; }
+  // win-panel line for newly unlocked cats (a long list becomes a count)
+  function newCatsLine(list) {
+    if (!list || !list.length) return '';
+    if (list.length > 3) return L().newCats(list.length);
+    return `${list.length > 1 ? L().newCatsWord : L().newCat} ${list.map((t) => C.catLabel(t, lang)).join(', ')}`;
+  }
+  // Players who were already past a reward level before that reward existed get it at start-up.
+  function catchUpRewards() {
+    let added = false;
+    const grant = (rewards, solvedUpTo) => {
+      for (const [lvl, type] of Object.entries(rewards)) if (+lvl <= solvedUpTo && !dex.has(type)) { dex.add(type); added = true; }
+    };
+    grant(LT.YarnGame.REWARDS, yarnLevel - 1);
+    grant(LT.TileGame.REWARDS, tileLevel - 1);
+    if (added) store.set('dex', Array.from(dex));
+  }
 
   function updateTitle() {
     const l = L();
@@ -62,6 +81,7 @@
     $('sub-tower').textContent = best > 0 ? `${l.best} ${best} ${l.cm}` : l.subTower;
     $('sub-yarn').textContent = l.lvlShort(yarnLevel);
     $('sub-merge').textContent = mergeBest > 0 ? `${l.best} ${mergeBest}` : l.subMerge;
+    $('sub-tiles').textContent = l.lvlShort(tileLevel);
     // speaker icon shows a red X only when music and sound effects are both off
     const src = LT.Icons.url('speaker', { off: !audio.musicOn && !audio.sfxOn });
     document.querySelectorAll('img.sound-ico').forEach((im) => { im.src = src; });
@@ -135,19 +155,28 @@
     if (name === 'over' && current === 'tower') towerOver(data);
     if (name === 'over' && current === 'merge') mergeOver(data);
     if (name === 'won' && current === 'yarn') yarnWon(data);
+    if (name === 'over' && current === 'tiles') tilesOver(data);
+    if (name === 'won' && current === 'tiles') tilesWon(data);
   }
 
   function startMode(id, level) {
     if (clipBusy) return;
     if (id === 'yarn') yarnPlaying = LT.clamp(level || yarnLevel, 1, yarnLevel);
+    if (id === 'tiles') tilePlaying = LT.clamp(level || tileLevel, 1, tileLevel);
     mode = 'play';
     current = id;
     ensureMusic();
     if (id === 'tower') newTower(false);
     else if (id === 'yarn') game = new LT.YarnGame(Object.assign(common(), { level: yarnPlaying }));
+    else if (id === 'tiles') game = new LT.TileGame(Object.assign(common(), { level: tilePlaying }));
     else game = new LT.MergeGame(Object.assign(common(), { best: mergeBest }));
     const l = L();
-    $('hint').textContent = id === 'tower' ? l.tapToDrop : id === 'yarn' ? l.hintYarn : l.hintMerge;
+    // Meow Match: the hint sits over the (still empty) tray instead of on the buttons or tiles
+    $('hint').style.top = id === 'tiles' ? ((Math.max(0, (viewH - LT.H) * 0.45) + 960) / viewH) * 100 + '%' : '';
+    $('hint').style.bottom = id === 'tiles' ? 'auto' : '';
+    startedAt = performance.now();
+    clearTimeout(startMode.hintT);
+    $('hint').textContent = id === 'tower' ? l.tapToDrop : id === 'yarn' ? l.hintYarn : id === 'tiles' ? l.hintTiles : l.hintMerge;
     show('title', false);
     show('over', false);
     show('dex', false);
@@ -155,7 +184,7 @@
     show('hint', true);
     show('btn-pause-sound', true);
     show('btn-home', true);
-    if (id !== 'tower') setTimeout(() => { if (current === id) show('hint', false); }, 3500);
+    if (id !== 'tower') startMode.hintT = setTimeout(() => { if (current === id) show('hint', false); }, 3500);
   }
 
   // Back to the title screen (with the self-playing demo tower behind it).
@@ -235,14 +264,41 @@
     openOver({
       title: l.solved,
       line1: l.solvedLine(sum.level),
-      line2: sum.unlocked && sum.unlocked.length ? `${l.newCat} ${sum.unlocked.map((t) => C.catLabel(t, lang)).join(', ')}` : '',
+      line2: newCatsLine(sum.unlocked),
       line3: l.movesLine(sum.moves, sum.hints),
+      again: l.nextLevel,
+    });
+  }
+
+  function tilesOver(sum) {
+    lastSummary = Object.assign({ mode: 'tiles', won: false }, sum);
+    const l = L();
+    openOver({
+      title: l.trayFull,
+      line1: `${l.level} ${sum.level}`,
+      line2: '',
+      line3: l.tilesLeft(sum.left),
+      again: l.tryAgain,
+    });
+  }
+
+  function tilesWon(sum) {
+    lastSummary = Object.assign({ mode: 'tiles', won: true }, sum);
+    tileLevel = Math.max(tileLevel, sum.level + 1);
+    store.set('tileLevel', tileLevel);
+    const l = L();
+    openOver({
+      title: l.solved,
+      line1: l.clearedLine(sum.level),
+      line2: newCatsLine(sum.unlocked),
+      line3: l.tilesLine(sum.undos, sum.shuffles),
       again: l.nextLevel,
     });
   }
 
   function again() {
     if (current === 'yarn') startMode('yarn', yarnPlaying + 1);
+    else if (current === 'tiles') startMode('tiles', lastSummary && lastSummary.mode === 'tiles' && lastSummary.won ? tilePlaying + 1 : tilePlaying);
     else startMode(current);
   }
 
@@ -386,6 +442,7 @@
     const l = L();
     const s = lastSummary;
     const text = s.mode === 'yarn' ? l.yarnShare(s.level)
+      : s.mode === 'tiles' ? (s.won ? l.tileShare(s.level) : l.tileStuck(s.level))
       : s.mode === 'merge' ? l.mergeShare(s.score, s.maxTier ? C.catLabel('m' + s.maxTier, lang) : 'cat')
       : l.shareText(s.cats, s.height);
     const url = 'https://palomaliz.com.br/loaf_tower/';
@@ -406,17 +463,19 @@
   // Yarn/Merge follow exactly one finger: the one that touched first. Extra fingers are ignored
   // until it lifts (a resting palm or second finger can't hijack a line).
   let activePointer = null;
+  let startedAt = 0; // taps right after a level starts are leftovers from the panel button (double tap)
   canvas.addEventListener('pointerdown', (e) => {
     e.preventDefault();
     if (!playing()) return;
     audio.init();
+    if (performance.now() - startedAt < 350) return;
     if (current === 'tower') { game.drop(); return; }
     if (activePointer != null && activePointer !== e.pointerId) return;
     activePointer = e.pointerId;
     try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
     const [x, y] = toLogical(e);
     game.pointer('down', x, y);
-    if (current === 'yarn') show('hint', false);
+    if (current === 'yarn' || current === 'tiles') show('hint', false);
   });
   canvas.addEventListener('pointermove', (e) => {
     if (!playing() || current === 'tower') return;
@@ -447,9 +506,14 @@
       else if (current === 'merge') game.drop();
     } else if (current === 'merge' && playing() && (e.code === 'ArrowLeft' || e.code === 'ArrowRight')) {
       game.aimX = LT.clamp(game.aimX + (e.code === 'ArrowLeft' ? -24 : 24), LT.MergeGame.BOX.l, LT.MergeGame.BOX.r);
-    } else if (current === 'yarn' && playing() && (e.code === 'KeyZ' || e.code === 'Backspace')) {
+    } else if ((current === 'yarn' || current === 'tiles') && playing() && (e.code === 'KeyZ' || e.code === 'Backspace')) {
       e.preventDefault();
       game.undo();
+    } else if (e.code === 'Escape' && ['dex', 'audio', 'levels'].some((id) => !$(id).classList.contains('hidden'))) {
+      // Escape closes the top overlay first
+      if (!$('audio').classList.contains('hidden')) closeAudio();
+      else if (!$('dex').classList.contains('hidden')) show('dex', false);
+      else $('btn-levels-close').click();
     } else if (e.code === 'Escape' && mode === 'play') {
       backToMenu();
     }
@@ -473,6 +537,7 @@
   $('btn-over-levels').onclick = openLevels;
   $('btn-levels-close').onclick = () => { if (mode === 'play') backToMenu(); else show('levels', false); };
   $('btn-merge').onclick = () => startMode('merge');
+  $('btn-tiles').onclick = () => startMode('tiles');
   $('btn-again').onclick = again;
   $('btn-menu').onclick = backToMenu;
   $('btn-home').onclick = (e) => { e.stopPropagation(); backToMenu(); };
@@ -541,6 +606,7 @@
         new Promise((r) => setTimeout(r, 2500)),
       ]);
     } catch (e) { /* fonts are optional */ }
+    catchUpRewards();
     placeIcons();
     applyLang();
     newTower(true);

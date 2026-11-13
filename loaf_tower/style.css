@@ -232,3 +232,15 @@ canvas#game {
 .lvl.shake { animation: lvlshake 0.35s; }
 @keyframes lvlbob { 50% { translate: 0 -3px; } }
 @keyframes lvlshake { 25% { translate: -5px 0; } 75% { translate: 5px 0; } }
+
+/* ---- 4 modes on the title ---- */
+#title { padding-top: 3.5vh; gap: 0.9vh; }
+#title .logo { font-size: min(9.5vh, 16vw); margin-bottom: 0.5vh; }
+#title .tag { margin-bottom: 0.6vh; font-size: min(2.8vh, 5vw); }
+.btn.mode-btn.big { font-size: min(4.1vh, 7.2vw); }
+.btn.mode-btn.yarn, .btn.mode-btn.merge, .btn.mode-btn.tiles { font-size: min(3.6vh, 6.4vw); }
+.btn.mode-btn.tiles { background: #d3f9d8; }
+/* long lists: keep the close/menu button reachable without scrolling to the end */
+#dex .card > #btn-dex-close, #levels .card > .row:last-child { position: sticky; bottom: 0; z-index: 1; }
+#levels .card > .row:last-child { background: #fffdf5; width: 100%; bottom: -3vh; padding: 8px 0 3vh; margin-bottom: -3vh; }
+#dex .card > #btn-dex-close { bottom: 1vh; box-shadow: 3px 4px 0 var(--ink), 0 0 0 12px #fffdf5; }

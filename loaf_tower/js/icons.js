@@ -137,6 +137,35 @@
       D.shape(ctx, D.roundRect(16, 24, 8, 3).map((p) => [p[0] - 30, p[1] + 20]), { fill: skin, seed: 107, boil: b, lw: 4.5 });
       D.line(ctx, [[-6, -38], [6, -38]], { seed: 108, boil: b, lw: 3, passes: 1 });
     },
+    shuffle(ctx, o) {
+      // two crossing arrows
+      const b = o.boil;
+      D.line(ctx, [[-40, 24], [-20, 24], [12, -22], [28, -22]], { seed: 131, boil: b, lw: 7 });
+      D.line(ctx, [[-40, -22], [-20, -22], [12, 24], [28, 24]], { seed: 132, boil: b, lw: 7 });
+      D.shape(ctx, poly([[24, -38], [46, -22], [24, -6]]), { fill: '#b197fc', seed: 133, boil: b, lw: 4.5 });
+      D.shape(ctx, poly([[24, 8], [46, 24], [24, 40]]), { fill: '#ffa94d', seed: 134, boil: b, lw: 4.5 });
+    },
+    tiles(ctx, o) {
+      // two stacked game tiles, the front one with a paw print
+      const b = o.boil;
+      const tile = (x, y, rot, fill, seed) => {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(rot);
+        D.shape(ctx, D.roundRect(48, 58, 9, 3).map((p) => [p[0] + 4, p[1] + 5]), { fill: '#69db7c', seed, boil: b, lw: 4.5 });
+        D.shape(ctx, D.roundRect(48, 58, 9, 3), { fill, seed: seed + 1, boil: b, lw: 4.5 });
+        ctx.restore();
+      };
+      tile(-14, -8, -0.18, '#fff3bf', 141);
+      tile(14, 6, 0.12, '#fffdf5', 143);
+      ctx.save();
+      ctx.translate(14, 6);
+      ctx.rotate(0.12);
+      ctx.fillStyle = '#f783ac';
+      ctx.beginPath(); ctx.ellipse(0, 6, 10, 8, 0, 0, Math.PI * 2); ctx.fill();
+      [[-11, -5], [-4, -12], [4, -12], [11, -5]].forEach(([x, y]) => { ctx.beginPath(); ctx.ellipse(x, y, 3.6, 4.4, 0, 0, Math.PI * 2); ctx.fill(); });
+      ctx.restore();
+    },
     cat(ctx, o) {
       LT.Cats.drawCat(ctx, { type: 'loaf', pal: 'orange', seed: 9, face: 'happy', x: -6, y: 8, a: 0, scale: 0.7 }, 0, o.boil || 0);
     },

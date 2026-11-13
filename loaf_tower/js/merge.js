@@ -1,5 +1,5 @@
 /* Purr Merge: drop round cats into a box; two of the same cat merge into the next, bigger cat.
-   11 tiers (m1..m11). Two Cosmic Orbs merging vanish for a big bonus. Box overflows -> game over. */
+   12 tiers (m1..m12): two Cosmic Orbs make the Sun King; two Sun Kings vanish in a SUPERNOVA bonus. Box overflows -> game over. */
 (function () {
   'use strict';
   const LT = window.LT;
@@ -11,7 +11,7 @@
   const BOX = { l: 96, r: 624, floor: 1100, top: 360, danger: 410 };
   const DROP_Y = 270;
   const TIERS = C.MERGE_TIERS;
-  const POINTS = [0, 1, 3, 6, 10, 15, 21, 28, 36, 45, 55, 66];
+  const POINTS = [0, 1, 3, 6, 10, 15, 21, 28, 36, 45, 55, 66, 78];
   const DROP_WEIGHTS = [34, 28, 20, 12, 6]; // tiers 1..5 can be dropped
   const COMBO_CAP = 5;
   const MERGE_TOLERANCE = 6; // px of "close enough" (matches the drawn outlines) between two equal cats
@@ -145,9 +145,9 @@
       this.comboT = this.t;
       if (tier >= TIERS) {
         this.cosmics++;
-        this.score += 500;
+        this.score += 1000;
         this.burst(x, y, 50, 'star');
-        this.banners.push({ kind: 'collapse', text: this.L.cosmic, t0: this.t, dur: 1.8 });
+        this.banners.push({ kind: 'collapse', text: this.L.supernova, t0: this.t, dur: 1.8 });
         this.sfx('record');
         this.sfx('crash');
         return;
@@ -161,7 +161,7 @@
       this.sfx(nt >= 4 ? 'meow' : 'mrrp', { pitch: Math.max(0.55, 1.7 - nt * 0.1), vol: 0.8 });
       if (this.combo >= 2) {
         this.banners.push({ kind: 'word', text: `${this.L.combo} x${Math.min(COMBO_CAP, this.combo)}!`, color: '#e8590c', t0: this.t, dur: 1.1 });
-        this.sfx('ding', { note: 84 + this.combo * 2 });
+        this.sfx('ding', { note: 84 + Math.min(this.combo, 8) * 2 }); // capped: keeps the partials audible
       }
     }
 
@@ -229,7 +229,7 @@
       let over = false;
       for (const c of this.cats) {
         const b = c.body, r = this.radius(c.tier);
-        if (this.t - c.born > 1.2 && b.position.y - r < BOX.danger && b.speed < 1) { over = true; break; }
+        if (this.t - c.born > (c.tier >= 11 ? 2.6 : 1.2) && b.position.y - r < BOX.danger && b.speed < 1) { over = true; break; }
       }
       this.dangerT = over ? this.dangerT + dt : Math.max(0, this.dangerT - dt * 2);
       if (this.state === 'play' && this.dangerT > 2.6) {
@@ -336,10 +336,10 @@
 
       // evolution strip
       // evolution strip (kept between the two corner buttons)
-      const y0 = BOX.floor + 66;
+      const y0 = BOX.floor + 60;
       for (let i = 1; i <= TIERS; i++) {
-        const x = 152 + (i - 1) * 41.6;
-        const type = 'm' + i, sc = 17 / this.radius(i);
+        const x = 162 + (i - 1) * ((558 - 162) / (TIERS - 1));
+        const type = 'm' + i, sc = 16 / this.radius(i);
         if (this.dex.has(type)) C.drawCat(ctx, { type, seed: 5, face: i <= this.maxTier ? 'happy' : 'sleep', x, y: y0, a: 0, scale: sc }, T, boil);
         else C.drawSilhouette(ctx, type, x, y0, sc, boil);
       }
