@@ -7,7 +7,8 @@
 
    Online the videos are played as embeds, and some channels forbid embedding (Sing King, for
    example). oEmbed answers 401 for those, so every search result is checked with oEmbed and
-   blocked videos are left out. Results are cached with the Cache API. */
+   blocked videos are left out. Whole search results are cached with the Cache API.
+   Subrequest budget of a fresh search (free plan limit 50): 1 cache read + 1 search + up to 20 oEmbed + 1 cache write. */
 
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36';
 const PAGE_HEADERS = {
@@ -16,7 +17,6 @@ const PAGE_HEADERS = {
   'Cookie': 'CONSENT=YES+1; SOCS=CAI'
 };
 const SEARCH_TTL = 6 * 3600;
-const EMBED_TTL = 7 * 24 * 3600;
 
 export const VIDEO_ID_RE = /^[A-Za-z0-9_-]{11}$/;
 export const isValidVideoId = (id) => VIDEO_ID_RE.test(id || '');
@@ -89,19 +89,18 @@ async function cached(key, ttl, compute) {
 
 /*#region Embeddability*/
 
-// true / false / null (unknown: network trouble)
+// true / false / null (unknown: network trouble). Not cached per video on purpose: Cache API calls count
+// as subrequests (free plan: 50 per request), and the whole search result is cached anyway.
 export async function isEmbeddable(id) {
-  return cached('embed/' + id, EMBED_TTL, async () => {
-    try {
-      const res = await fetch(`https://www.youtube.com/oembed?format=json&url=${encodeURIComponent('https://www.youtube.com/watch?v=' + id)}`,
-        { signal: AbortSignal.timeout(5000) });
-      if (res.status === 200) return { ok: true };
-      if (res.status === 401 || res.status === 403 || res.status === 404 || res.status === 400) return { ok: false, status: res.status };
-      return undefined; // don't cache unknowns
-    } catch (e) {
-      return undefined;
-    }
-  }).then(v => (v ? v.ok : null)).catch(() => null);
+  try {
+    const res = await fetch(`https://www.youtube.com/oembed?format=json&url=${encodeURIComponent('https://www.youtube.com/watch?v=' + id)}`,
+      { signal: AbortSignal.timeout(5000) });
+    if (res.status === 200) return true;
+    if ([400, 401, 403, 404].includes(res.status)) return false;
+    return null;
+  } catch (e) {
+    return null;
+  }
 }
 
 /*#endregion*/

@@ -108,7 +108,7 @@ async function prepareAdd(env, request, videoId) {
       title = parsed.song || '';
     }
     try {
-      const match = await refine(artist, title, info.title);
+      const match = await refine(artist, title, info.title, { budget: { left: 30 } }); // free plan: 50 subrequests per request
       if (match) { artist = match.artist; title = match.title; }
     } catch (e) { /* online lookup is best effort */ }
     artist = suggestCatalogArtist(songs, normalizeArtistSeparators(artist));
