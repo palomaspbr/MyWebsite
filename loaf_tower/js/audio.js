@@ -91,16 +91,20 @@
     osc.type = 'triangle';
     osc.frequency.setValueAtTime(330 * p, t);
     osc.frequency.linearRampToValueAtTime(520 * p, t + dur);
+    // 28 Hz trill as a tremolo *after* the envelope, so it scales with `vol` and fades out with it
+    // (it used to be added straight onto the envelope: always loud, and it could click at the end)
     const am = ctx.createOscillator();
     am.frequency.value = 28;
     const amg = ctx.createGain();
-    amg.gain.value = 0.5;
-    const g = gainEnv(ctx, t, 0.55 * (o.vol || 1), 0.02, dur);
-    am.connect(amg).connect(g.gain);
+    amg.gain.value = 0.45;
+    const trem = ctx.createGain();
+    trem.gain.value = 0.55;
+    am.connect(amg).connect(trem.gain);
+    const g = gainEnv(ctx, t, 0.9 * (o.vol == null ? 1 : o.vol), 0.02, dur);
     const f = ctx.createBiquadFilter();
     f.type = 'lowpass';
     f.frequency.value = 1800;
-    osc.connect(f).connect(g).connect(out);
+    osc.connect(f).connect(g).connect(trem).connect(out);
     osc.start(t); osc.stop(t + dur + 0.1);
     am.start(t); am.stop(t + dur + 0.1);
   };
@@ -353,6 +357,45 @@
       osc.connect(g).connect(out);
       osc.start(t); osc.stop(t + 1);
     }
+  };
+
+  // Soft kalimba-like chime (rounded sine + quick octave shimmer through a lowpass).
+  // o.notes: MIDI notes played as a gentle arpeggio; o.vol scales it.
+  S.chime = function (ctx, out, t, o) {
+    o = o || {};
+    const notes = o.notes || [o.note || 76];
+    const v = o.vol == null ? 1 : o.vol;
+    const f = ctx.createBiquadFilter();
+    f.type = 'lowpass';
+    f.frequency.value = 2200;
+    f.connect(out);
+    notes.forEach((n, i) => {
+      const t0 = t + i * (o.gap || 0.07);
+      for (const [mul, amp, dec] of [[1, 0.16, 0.7], [2, 0.035, 0.25]]) {
+        const osc = ctx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.value = midi(n) * mul;
+        const g = gainEnv(ctx, t0, amp * v, 0.006, dec);
+        osc.connect(g).connect(f);
+        osc.start(t0); osc.stop(t0 + dec + 0.05);
+      }
+    });
+  };
+
+  // Soft round "bloop" (lower and gentler than pop): o.pitch ~0.5 (big) .. 1.5 (small).
+  S.softpop = function (ctx, out, t, o) {
+    o = o || {};
+    const p = o.pitch || 1, v = o.vol == null ? 1 : o.vol;
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(230 * p, t);
+    osc.frequency.exponentialRampToValueAtTime(400 * p, t + 0.09);
+    const f = ctx.createBiquadFilter();
+    f.type = 'lowpass';
+    f.frequency.value = 1400;
+    const g = gainEnv(ctx, t, 0.24 * v, 0.012, 0.16);
+    osc.connect(f).connect(g).connect(out);
+    osc.start(t); osc.stop(t + 0.25);
   };
 
   /* ---------------- music ---------------- */

@@ -244,3 +244,7 @@ canvas#game {
 #dex .card > #btn-dex-close, #levels .card > .row:last-child { position: sticky; bottom: 0; z-index: 1; }
 #levels .card > .row:last-child { background: #fffdf5; width: 100%; bottom: -3vh; padding: 8px 0 3vh; margin-bottom: -3vh; }
 #dex .card > #btn-dex-close { bottom: 1vh; box-shadow: 3px 4px 0 var(--ink), 0 0 0 12px #fffdf5; }
+/* Meow Match level menu: green instead of yarn pink */
+#levels.tiles .lvl.solved { background: #d3f9d8; }
+#levels.tiles #levels-grid h3 { color: #2b8a3e; }
+.toast { pointer-events: none; } /* never swallow taps meant for the game */

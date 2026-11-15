@@ -377,6 +377,8 @@
         { id: 'undo', x: 236, y: BTN_Y, w: 230, h: 80 },
         { id: 'shuffle', x: 484, y: BTN_Y, w: 230, h: 80 },
       ];
+      this.autoButton = { id: 'auto', x: 484, y: BTN_Y, w: 230, h: 80 };
+      this.clears = 0;
     }
 
     get L() { return LT.I18N[this.lang] || LT.I18N.en; }
@@ -390,10 +392,47 @@
     slotX(i, n) { return n <= TRAY ? 360 + (i - (TRAY - 1) / 2) * SLOT : 360 + (i - (n - 1) / 2) * ((SLOT * (TRAY - 1)) / (n - 1)); }
 
     /* ---------- input ---------- */
+    // The right-hand button becomes "auto-finish" when every tile left on the board is free.
+    activeButtons() { return this.canAuto ? [this.buttons[0], this.autoButton] : this.buttons; }
+
+    // Pick-up order that finishes the level from here (all board tiles must be free): first the faces
+    // completing the tray's pairs/singles, then whole triples. Null if it can't be done.
+    planAuto() {
+      const board = this.tiles.filter((t) => !t.gone);
+      if (!board.length || board.some((t) => !this.isFree(t.id))) return null;
+      const byType = {};
+      board.forEach((t) => (byType[t.type] = byType[t.type] || []).push(t.id));
+      const tray = {};
+      this.tray.forEach((e) => { if (e.clearAt == null) tray[e.type] = (tray[e.type] || 0) + 1; });
+      const order = [];
+      const take = (type, n) => { for (let k = 0; k < n && byType[type] && byType[type].length; k++) order.push(byType[type].pop()); };
+      for (const [type, n] of Object.entries(tray)) if (n === 2) take(type, 1);
+      for (const [type, n] of Object.entries(tray)) if (n === 1) take(type, 2);
+      for (const type of Object.keys(byType)) while (byType[type].length) take(type, 3);
+      const cnt = Object.assign({}, tray);
+      let size = Object.values(tray).reduce((a, b) => a + b, 0);
+      for (const id of order) {
+        const type = this.tiles[id].type;
+        cnt[type] = (cnt[type] || 0) + 1;
+        size++;
+        if (cnt[type] === 3) { cnt[type] = 0; size -= 3; } else if (size >= TRAY) return null;
+      }
+      return order;
+    }
+
+    startAuto() {
+      const plan = this.canAuto && this.planAuto();
+      if (!plan) return false;
+      this.auto = { queue: plan, nextT: this.t + 0.1 };
+      this.canAuto = false;
+      this.sfx('sparkle');
+      return true;
+    }
+
     pointer(type, x, y) {
-      if (type !== 'down' || this.state !== 'play') return;
+      if (type !== 'down' || this.state !== 'play' || this.auto) return;
       y -= this.offY;
-      for (const b of this.buttons) {
+      for (const b of this.activeButtons()) {
         if (Math.abs(x - b.x) < b.w / 2 + 6 && Math.abs(y - b.y) < b.h / 2 + 10) { this.button(b.id); return; }
       }
       if (this.t < (this.flipUntil || 0)) return; // faces are still flipping after a shuffle
@@ -424,7 +463,8 @@
       const same = this.tray.filter((e) => e.type === t.type && e.clearAt == null);
       if (same.length >= 3) {
         const hit = same.slice(0, 3);
-        hit.forEach((e) => { e.clearAt = this.t + FLY; });
+        hit.forEach((e) => { e.clearAt = this.t + FLY; e.chord = this.clears; });
+        this.clears++;
         this.undoStack = this.undoStack.filter((u) => !hit.some((e) => e.id === u));
         if (!this.boardLeft() && !this.trayCount()) this.win();
       } else if (this.trayCount() >= TRAY) {
@@ -438,10 +478,11 @@
       this.pressT = { id, t: this.t };
       if (id === 'undo') { if (!this.undo()) this.sfx('tap', { pitch: 0.7 }); }
       else if (id === 'shuffle') { if (!this.shuffle()) this.sfx('tap', { pitch: 0.7 }); }
+      else if (id === 'auto') { if (!this.startAuto()) this.sfx('tap', { pitch: 0.7 }); }
     }
 
     undo() {
-      if (this.state !== 'play' || this.undos <= 0) return false;
+      if (this.state !== 'play' || this.undos <= 0 || this.auto) return false;
       while (this.undoStack.length) {
         const id = this.undoStack.pop();
         const i = this.tray.findIndex((e) => e.id === id && e.clearAt == null);
@@ -545,8 +586,10 @@
           if (!e.quiet) {
             // one sound/burst per cleared triple
             this.tray.filter((o) => o.clearAt === e.clearAt).forEach((o) => { o.quiet = true; });
-            this.sfx('ding', { note: 88 });
-            this.sfx('mrrp', { pitch: 1.2, vol: 0.7 });
+            const PENTA = [72, 74, 76, 79, 81];
+            const n = PENTA[(e.chord || 0) % PENTA.length];
+            this.sfx('chime', { notes: [n, n + 7], vol: 0.9 });
+            this.sfx('softpop', { pitch: 1.3, vol: 0.5 });
             this.burst(e.pos[0], e.pos[1], 16, ['#ffd43b', '#ff8fab', '#74c0fc', '#8ce99a']);
           }
         }
@@ -567,6 +610,14 @@
         this.sentWin = true;
         this.emit('won', { level: this.level, moves: this.moves, undos: this.usedUndo, shuffles: this.usedShuffle, unlocked: this.unlocked || [] });
       }
+      // auto-finish: pick the planned tiles one by one
+      if (this.auto && this.state === 'play' && this.t >= this.auto.nextT) {
+        const id = this.auto.queue.shift();
+        if (id == null || !this.pick(id)) this.auto = null;
+        else this.auto.nextT = this.t + 0.15;
+      }
+      if (this.state !== 'play') this.auto = null;
+      this.canAuto = !this.auto && this.state === 'play' && this.t >= (this.flipUntil || 0) && !!this.planAuto();
       for (const p of this.particles) { p.life += dt; p.x += p.vx; p.y += p.vy; p.vy += 0.2; p.rot += 0.2; }
       this.particles = this.particles.filter((p) => p.life < p.max);
       this.banners = this.banners.filter((b) => this.t - b.t0 < b.dur);
@@ -643,23 +694,26 @@
       }
 
       // buttons with remaining-use badges
-      for (const b of this.buttons) {
+      for (const b of this.activeButtons()) {
+        const isAuto = b.id === 'auto';
         const left = b.id === 'undo' ? this.undos : this.shuffles;
-        const off = left <= 0 || this.state !== 'play';
+        const off = (!isAuto && left <= 0) || this.state !== 'play' || !!this.auto;
         const pressed = this.pressT && this.pressT.id === b.id && T - this.pressT.t < 0.12;
         ctx.save();
         if (off) ctx.globalAlpha = 0.45;
         ctx.translate(pressed ? 2 : 0, pressed ? 3 : 0);
-        D.shape(ctx, D.roundRect(b.w, b.h, 16, 3).map((q) => [q[0] + b.x, q[1] + b.y]), { fill: b.id === 'shuffle' ? '#d3f9d8' : '#fffdf5', seed: 1300 + b.x, boil, lw: 3 });
+        if (isAuto) { const k = 1 + Math.sin(T * 5) * 0.03; ctx.translate(b.x, b.y); ctx.scale(k, k); ctx.translate(-b.x, -b.y); } // gentle pulse
+        D.shape(ctx, D.roundRect(b.w, b.h, 16, 3).map((q) => [q[0] + b.x, q[1] + b.y]), { fill: isAuto ? '#ffd43b' : b.id === 'shuffle' ? '#d3f9d8' : '#fffdf5', seed: 1300 + b.x, boil, lw: 3 });
         const label = L[b.id];
         const iw = 42, gap = 6;
-        const left0 = b.x - b.w / 2 + 12, right0 = b.x + b.w / 2 - 54; // badge sits right of right0
+        const left0 = b.x - b.w / 2 + 12, right0 = b.x + b.w / 2 - (isAuto ? 12 : 54); // badge sits right of right0
         ctx.font = `34px ${LT.FONT_TITLE}`;
         const size = Math.min(34, (34 * (right0 - left0 - iw - gap)) / ctx.measureText(label).width);
         ctx.font = `${size}px ${LT.FONT_TITLE}`;
         const x0 = (left0 + right0) / 2 - (iw + gap + ctx.measureText(label).width) / 2;
-        LT.Icons.draw(ctx, b.id, x0 + iw / 2, b.y + 1, iw, { boil });
+        LT.Icons.draw(ctx, isAuto ? 'wand' : b.id, x0 + iw / 2, b.y + 1, iw, { boil });
         D.text(ctx, label, x0 + iw + gap, b.y + 2, { size, seed: 1310 + b.x, boil, align: 'left' });
+        if (isAuto) { ctx.restore(); continue; }
         const bx = b.x + b.w / 2 - 30;
         D.shape(ctx, D.ellipse(19, 19, 14, bx, b.y), { fill: left > 0 ? '#ffd43b' : '#e9e4da', seed: 1320 + b.x, boil, lw: 2.6 });
         D.text(ctx, `${left}`, bx, b.y + 2, { size: 28, seed: 1330 + b.x, boil });

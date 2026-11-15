@@ -157,11 +157,14 @@
       c.happyUntil = this.t + 0.9;
       this.score += POINTS[nt] * Math.min(COMBO_CAP, this.combo);
       this.burst(x, y, 10 + nt * 2, nt >= 9 ? 'star' : 'pop');
-      this.sfx('pop', { pitch: 1.5 - nt * 0.06 });
-      this.sfx(nt >= 4 ? 'meow' : 'mrrp', { pitch: Math.max(0.55, 1.7 - nt * 0.1), vol: 0.8 });
+      // soft sounds: a round bloop (lower for bigger cats) + a quiet purr-trill; only big cats meow, gently
+      this.sfx('softpop', { pitch: Math.max(0.6, 1.45 - nt * 0.07) });
+      if (nt >= 9) this.sfx('meow', { pitch: Math.max(0.55, 1.7 - nt * 0.1), vol: 0.35 });
+      else this.sfx('mrrp', { pitch: Math.max(0.6, 1.5 - nt * 0.08), vol: 0.3 });
       if (this.combo >= 2) {
         this.banners.push({ kind: 'word', text: `${this.L.combo} x${Math.min(COMBO_CAP, this.combo)}!`, color: '#e8590c', t0: this.t, dur: 1.1 });
-        this.sfx('ding', { note: 84 + Math.min(this.combo, 8) * 2 }); // capped: keeps the partials audible
+        const PENTA = [72, 74, 76, 79, 81, 84];
+        this.sfx('chime', { note: PENTA[Math.min(this.combo, PENTA.length + 1) - 2], vol: 0.8 });
       }
     }
 

@@ -181,6 +181,7 @@
     show('over', false);
     show('dex', false);
     show('levels', false);
+    show('toast', false);
     show('hint', true);
     show('btn-pause-sound', true);
     show('btn-home', true);
@@ -218,7 +219,7 @@
     $('over-height').textContent = o.line3 || '';
     $('btn-again').textContent = o.again;
     show('btn-clip', !!o.clip);
-    show('btn-over-levels', current === 'yarn');
+    show('btn-over-levels', current === 'yarn' || current === 'tiles');
     updateTitle();
     show('over', true);
     show('btn-pause-sound', false);
@@ -302,27 +303,37 @@
     else startMode(current);
   }
 
-  /* ---------- yarn level menu ---------- */
-  function openLevels() {
+  /* ---------- level menu (Yarn Lines and Meow Match) ---------- */
+  function openLevels(kind) {
+    const tiles = kind === 'tiles';
     const l = L();
+    const G = tiles ? LT.TileGame : LT.YarnGame;
+    const unlocked = tiles ? tileLevel : yarnLevel;
+    const groupOf = (n) => (tiles ? G.levelSpec(n).layers : G.levelSpec(n).size); // yarn: board size, tiles: layers
+    const groupName = (g, a, b) => (tiles ? l.layersGroup(g, a, b) : l.boardSize(g, a, b));
+    const title = $('levels-title');
+    title.innerHTML = '';
+    title.appendChild(LT.Icons.img(tiles ? 'tiles' : 'yarn'));
+    title.appendChild(document.createTextNode(' ' + (tiles ? l.modeTiles : l.modeYarn)));
+    $('levels').classList.toggle('tiles', tiles);
     const grid = $('levels-grid');
     grid.innerHTML = '';
-    const total = Math.max(60, Math.ceil(yarnLevel / 10) * 10 + 10);
-    const rewards = LT.YarnGame.REWARDS;
-    $('levels-sub').textContent = l.levelsSub(yarnLevel - 1, total);
+    const total = Math.max(60, Math.ceil(unlocked / 10) * 10 + 10);
+    const rewards = G.REWARDS;
+    $('levels-sub').textContent = l.levelsSub(unlocked - 1, total);
     let group = null, header = null;
     let currentTile = null;
     for (let n = 1; n <= total; n++) {
-      const size = LT.YarnGame.levelSpec(n).size;
-      if (size !== group) {
-        group = size;
+      const g = groupOf(n);
+      if (g !== group) {
+        group = g;
         header = document.createElement('h3');
         header.dataset.from = n;
         grid.appendChild(header);
       }
-      header.textContent = l.boardSize(size, +header.dataset.from, n);
+      header.textContent = groupName(g, +header.dataset.from, n);
       const b = document.createElement('button');
-      const locked = n > yarnLevel, solved = n < yarnLevel;
+      const locked = n > unlocked, solved = n < unlocked;
       b.className = 'btn lvl' + (locked ? ' locked' : solved ? ' solved' : ' current');
       b.style.rotate = (LT.hash(n, 7, 3) * 2.5).toFixed(2) + 'deg';
       if (locked) b.appendChild(LT.Icons.img('lock', {}, 'lock'));
@@ -336,18 +347,21 @@
         if (locked) {
           b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake');
           audio.play('thud', { pitch: 1.4, vol: 0.5 });
-          toast(l.levelLocked(yarnLevel));
+          toast(l.levelLocked(unlocked));
           return;
         }
-        startMode('yarn', n);
+        startMode(tiles ? 'tiles' : 'yarn', n);
       };
-      if (n === yarnLevel) currentTile = b;
+      if (n === unlocked) currentTile = b;
       grid.appendChild(b);
     }
     show('over', false);
     show('dex', false);
     show('levels', true);
-    if (currentTile) currentTile.scrollIntoView({ block: 'center' });
+    // start at the top (heading visible); only scroll when the current level is below the fold
+    const card = $('levels').querySelector('.card');
+    card.scrollTop = 0;
+    if (currentTile && currentTile.getBoundingClientRect().bottom > card.getBoundingClientRect().bottom - 90) currentTile.scrollIntoView({ block: 'center' });
   }
 
   /* ---------- catdex ---------- */
@@ -533,11 +547,11 @@
   });
 
   $('btn-play').onclick = () => startMode('tower');
-  $('btn-yarn').onclick = openLevels;
-  $('btn-over-levels').onclick = openLevels;
+  $('btn-yarn').onclick = () => openLevels('yarn');
+  $('btn-over-levels').onclick = () => openLevels(current);
   $('btn-levels-close').onclick = () => { if (mode === 'play') backToMenu(); else show('levels', false); };
   $('btn-merge').onclick = () => startMode('merge');
-  $('btn-tiles').onclick = () => startMode('tiles');
+  $('btn-tiles').onclick = () => openLevels('tiles');
   $('btn-again').onclick = again;
   $('btn-menu').onclick = backToMenu;
   $('btn-home').onclick = (e) => { e.stopPropagation(); backToMenu(); };
