@@ -432,3 +432,27 @@ textarea.field { resize: vertical; min-height: 84px; line-height: 1.3; }
   .prof-id { min-width: 0; }
   .pend-tools { width: 100%; justify-content: flex-end; }
 }
+
+/* ---------- belt-weighted points ---------- */
+.delta {
+  display: inline-block;
+  font-size: 14px;
+  padding: 0 6px;
+  margin-left: 2px;
+  border: 1.5px solid var(--ink-soft);
+  border-radius: var(--wobble-2);
+  color: var(--ink-soft);
+  white-space: nowrap;
+  vertical-align: 1px;
+}
+details.legend { text-align: left; }
+details.legend summary { cursor: pointer; text-align: center; list-style: none; }
+details.legend summary::-webkit-details-marker { display: none; }
+.rules { margin-top: 8px; color: var(--ink); font-size: 16px; }
+.rules ul { margin: 6px 0; padding-left: 20px; }
+.rules p { margin: 6px 0; }
+.pts-table { border-collapse: collapse; width: 100%; font-size: 15px; margin: 8px 0; }
+.pts-table th, .pts-table td { border: 1.5px dashed #d8cfc0; padding: 3px 4px; text-align: center; }
+.pts-table th { font-weight: normal; color: var(--ink-soft); }
+.preview { margin: 0; padding: 6px 10px; background: #fff7cf; border: 2px dashed var(--ink-soft); border-radius: var(--wobble-2); text-align: center; }
+@media (max-width: 560px) { .pts-table { font-size: 13px; } .pts-table th, .pts-table td { padding: 2px; } }

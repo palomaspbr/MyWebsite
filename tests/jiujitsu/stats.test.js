@@ -12,9 +12,9 @@ const R = (a, b, winner, date = '2024-01-01', method = '', extra = {}) =>
 const row = (rows, id) => rows.find((r) => r.player.id === id);
 
 test('exports', () => {
-  assert.deepEqual(S.POINTS, { win: 3, draw: 1, loss: 0 });
   assert.deepEqual(S.BELTS, ['white', 'blue', 'purple', 'brown', 'black']);
-  for (const k of ['table', 'headToHead', 'chrono']) assert.equal(typeof S[k], 'function');
+  assert.deepEqual(S.BELT_VALUE, { white: 1, blue: 2, purple: 3, brown: 4, black: 5 });
+  for (const k of ['table', 'headToHead', 'chrono', 'rollPoints', 'rollDelta']) assert.equal(typeof S[k], 'function');
 });
 
 test('empty inputs', () => {
@@ -185,9 +185,76 @@ test('headToHead ignores a winner that is neither player (consistent with table)
 });
 
 test('belt tie-break among players who rolled; shared rank needs the same points, wins and losses', () => {
-  const ps = [P(1, 'a', 'white'), P(2, 'b', 'black'), P(3, 'c', 'blue'), P(4, 'd', 'white')];
-  // a and b each drew once (1 pt, 0W 1D 0L) with c and d respectively; c and d same.
+  const ps = [P(1, 'a', 'white'), P(2, 'b', 'black'), P(3, 'c', 'white'), P(4, 'd', 'black')];
+  // Same-belt draws: everyone ends 1 pt, 0W 1D 0L. Order: higher belt first, then name.
   const rows = S.table(ps, [R(1, 3, null), R(2, 4, null)]);
-  assert.deepEqual(rows.map((r) => r.player.name), ['b', 'c', 'a', 'd']);
+  assert.deepEqual(rows.map((r) => r.player.name), ['b', 'd', 'a', 'c']);
+  assert.deepEqual(rows.map((r) => r.points), [1, 1, 1, 1]);
   assert.deepEqual(rows.map((r) => r.rank), [1, 1, 1, 1]);
+});
+
+// ---------- belt-weighted points ----------
+test('rollPoints: the examples from the rules table', () => {
+  const W = (m, o) => S.rollPoints(m, o, 'win'), L = (m, o) => S.rollPoints(m, o, 'loss'), D = (m, o) => S.rollPoints(m, o, 'draw');
+  assert.equal(W('white', 'white'), 3);
+  assert.equal(W('white', 'blue'), 5);
+  assert.equal(W('white', 'black'), 11);
+  assert.equal(W('black', 'white'), 3);
+  assert.equal(W('black', 'black'), 7);
+  assert.equal(L('black', 'white'), -4);
+  assert.equal(L('black', 'blue'), -3);
+  assert.equal(L('purple', 'white'), -2);
+  assert.equal(L('white', 'black'), 0);
+  assert.equal(L('blue', 'blue'), 0);
+  assert.equal(D('white', 'white'), 1);
+  assert.equal(D('white', 'black'), 5);
+  assert.equal(D('black', 'white'), -3);
+});
+
+test('rollPoints: the rules hold for every belt pair', () => {
+  const B = S.BELTS;
+  for (const me of B) {
+    // A win is always worth something, and beating a higher belt is always worth more.
+    for (let i = 0; i < B.length; i++) {
+      assert.ok(S.rollPoints(me, B[i], 'win') >= 3, `${me} beats ${B[i]}`);
+      if (i > 0) assert.ok(S.rollPoints(me, B[i], 'win') > S.rollPoints(me, B[i - 1], 'win'), `${me}: beating ${B[i]} > beating ${B[i - 1]}`);
+      if (i > 0) assert.ok(S.rollPoints(me, B[i], 'loss') >= S.rollPoints(me, B[i - 1], 'loss'), `${me}: losing to a lower belt costs more`);
+    }
+    // Draws share 2 points between the two players.
+    for (const opp of B) assert.equal(S.rollPoints(me, opp, 'draw') + S.rollPoints(opp, me, 'draw'), 2);
+    // Never losing points against an equal or higher belt.
+    for (let i = B.indexOf(me); i < B.length; i++) assert.equal(S.rollPoints(me, B[i], 'loss'), 0);
+  }
+  // An upset is worth more to the lower belt than the same result for the higher belt.
+  assert.ok(S.rollPoints('white', 'black', 'win') > S.rollPoints('black', 'white', 'win'));
+  assert.ok(S.rollPoints('black', 'white', 'loss') < S.rollPoints('white', 'black', 'loss'));
+});
+
+test('table: points use the belts recorded with the roll, not current belts', () => {
+  // Ana is a black belt now, but beat Bia (black) back when she was white: +11 stays +11.
+  const ps = [P(1, 'Ana', 'black'), P(2, 'Bia', 'black')];
+  const rolls = [R(1, 2, 1, '2024-01-01', '', { belt_a: 'white', belt_b: 'black' })];
+  const rows = S.table(ps, rolls);
+  assert.equal(row(rows, 1).points, 11);
+  assert.equal(row(rows, 2).points, -4);
+  // Without recorded belts (old rolls), current belts are used: black vs black.
+  const old = S.table(ps, [R(1, 2, 1)]);
+  assert.equal(row(old, 1).points, 7);
+  assert.equal(row(old, 2).points, 0);
+});
+
+test('table: a higher belt losing and drawing to lower belts can go negative and rank below them', () => {
+  const ps = [P(1, 'Black', 'black'), P(2, 'White', 'white'), P(3, 'Blue', 'blue')];
+  const rows = S.table(ps, [R(2, 1, 2), R(3, 1, null)]); // white beats black, blue draws black
+  assert.equal(row(rows, 2).points, 11);  // white upset
+  assert.equal(row(rows, 3).points, 4);   // blue draws black: 1 + 3
+  assert.equal(row(rows, 1).points, -6);  // -4 (loss) + -2 (draw)
+  assert.deepEqual(rows.map((r) => r.player.name), ['White', 'Blue', 'Black']);
+});
+
+test('rollDelta: both sides of one roll', () => {
+  const beltOf = (id) => ({ 1: 'white', 2: 'brown' })[id];
+  assert.deepEqual(S.rollDelta({ a: 1, b: 2, winner: 1 }, beltOf), { a: 9, b: -3 });
+  assert.deepEqual(S.rollDelta({ a: 1, b: 2, winner: 2 }, beltOf), { a: 0, b: 3 });
+  assert.deepEqual(S.rollDelta({ a: 1, b: 2, winner: null }, beltOf), { a: 4, b: -2 });
 });

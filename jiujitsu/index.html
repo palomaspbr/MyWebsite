@@ -83,7 +83,25 @@
           <span class="muted small" id="board-count"></span>
         </div>
         <ol id="board" class="board"></ol>
-        <p class="legend">Win <b>3</b> pts &nbsp;·&nbsp; Draw <b>1</b> pt &nbsp;·&nbsp; Loss <b>0</b> &nbsp;— tap a name for their story.</p>
+        <details class="legend">
+          <summary>Points depend on belts: upsets pay big. <u>How it works</u> &middot; tap a name for their story.</summary>
+          <div class="rules">
+            <p>Belts are worth <b>white 1 &middot; blue 2 &middot; purple 3 &middot; brown 4 &middot; black 5</b>. The <i>gap</i> is your opponent's belt minus yours.</p>
+            <ul>
+              <li><b>Win:</b> 2 + your opponent's belt, plus the gap if they're a higher belt.</li>
+              <li><b>Loss:</b> nothing lost against an equal or higher belt; lose the gap against a lower belt.</li>
+              <li><b>Draw:</b> 1 + the gap (the lower belt gains, the higher belt drops).</li>
+            </ul>
+            <table class="pts-table">
+              <tr><th></th><th>vs white</th><th>vs blue</th><th>vs purple</th><th>vs brown</th><th>vs black</th></tr>
+              <tr><th>White wins</th><td>+3</td><td>+5</td><td>+7</td><td>+9</td><td>+11</td></tr>
+              <tr><th>Blue wins</th><td>+3</td><td>+4</td><td>+6</td><td>+8</td><td>+10</td></tr>
+              <tr><th>Black wins</th><td>+3</td><td>+4</td><td>+5</td><td>+6</td><td>+7</td></tr>
+              <tr><th>Black loses</th><td>&minus;4</td><td>&minus;3</td><td>&minus;2</td><td>&minus;1</td><td>&plusmn;0</td></tr>
+            </table>
+            <p class="muted small">Points use everyone's belt on the day of the roll, so promotions don't change old results.</p>
+          </div>
+        </details>
       </section>
 
       <section class="card sketch tilt-r">
@@ -124,6 +142,7 @@
         <label><input type="radio" name="result" value="draw"><span>Draw</span></label>
         <label><input type="radio" name="result" value="b"><span id="res-b">They won</span></label>
       </div>
+      <p class="preview" id="roll-preview" aria-live="polite" hidden></p>
       <label class="lbl" for="roll-method">How? <span class="muted">(optional)</span></label>
       <input id="roll-method" class="field" list="methods" maxlength="40" placeholder="Armbar, triangle, points...">
       <datalist id="methods">

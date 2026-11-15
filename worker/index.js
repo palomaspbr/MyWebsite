@@ -87,7 +87,7 @@ async function ensureSchema(db) {
       fails: 'INTEGER NOT NULL DEFAULT 0',
       lock_until: 'INTEGER NOT NULL DEFAULT 0',
     },
-    rolls: { status: "TEXT NOT NULL DEFAULT 'confirmed'" },
+    rolls: { status: "TEXT NOT NULL DEFAULT 'confirmed'", belt_a: 'TEXT', belt_b: 'TEXT' },
   };
   for (const table of Object.keys(wanted)) {
     const info = await db.prepare(`PRAGMA table_info(${table})`).all();
@@ -278,7 +278,7 @@ function requireSelfOrAdmin(auth, playerId) {
 
 // ---------- data ----------
 const PLAYER_COLS = `id, name, belt, stripes, bio, photo_v, (pw_hash IS NOT NULL) AS has_pw, created_at`;
-const ROLL_COLS = `id, player_a AS a, player_b AS b, winner, method, note, rolled_on AS date, created_by AS by, status, created_at`;
+const ROLL_COLS = `id, player_a AS a, player_b AS b, winner, method, note, rolled_on AS date, created_by AS by, status, belt_a, belt_b, created_at`;
 
 function publicPlayer(p, env) {
   if (!p) return p;
@@ -306,10 +306,12 @@ async function validateRoll(db, r) {
     winner = cleanId(winner, 'Winner');
     if (winner !== a && winner !== b) throw new HttpError(400, 'Winner must be one of the two players (or null for a draw).');
   }
-  const found = await db.prepare('SELECT COUNT(*) AS n FROM players WHERE id IN (?, ?)').bind(a, b).first();
-  if (!found || found.n !== 2) throw new HttpError(404, 'Player not found.');
+  const found = await db.prepare('SELECT id, belt FROM players WHERE id IN (?, ?)').bind(a, b).all();
+  if (found.results.length !== 2) throw new HttpError(404, 'Player not found.');
+  const beltOf = (id) => found.results.find((p) => p.id === id).belt;
   return {
     a, b, winner,
+    belt_a: beltOf(a), belt_b: beltOf(b), // points use the belts on the day of the roll
     method: cleanText(r.method, MAX_METHOD, 'Method', false),
     note: cleanText(r.note, MAX_NOTE, 'Note', false),
     date: cleanDate(r.date),
@@ -516,9 +518,9 @@ async function handle(request, env, parts) {
       const r = await validateRoll(db, body);
       if (!auth.admin && auth.id !== r.a && auth.id !== r.b) throw new HttpError(403, 'You can only log rolls you were in.');
       const status = auth.admin ? 'confirmed' : 'pending';
-      const row = await db.prepare(`INSERT INTO rolls (player_a, player_b, winner, method, note, rolled_on, created_by, status)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING ${ROLL_COLS}`)
-        .bind(r.a, r.b, r.winner, r.method, r.note, r.date, auth.id, status).first();
+      const row = await db.prepare(`INSERT INTO rolls (player_a, player_b, winner, method, note, rolled_on, created_by, status, belt_a, belt_b)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING ${ROLL_COLS}`)
+        .bind(r.a, r.b, r.winner, r.method, r.note, r.date, auth.id, status, r.belt_a, r.belt_b).first();
       return json({ roll: row }, 201);
     }
     if (idPart && (sub === 'accept' || sub === 'reject') && method === 'POST') {
@@ -559,9 +561,11 @@ async function handle(request, env, parts) {
           date: body.date !== undefined ? body.date : roll.rolled_on,
         };
         const r = await validateRoll(db, merged);
-        const row = await db.prepare(`UPDATE rolls SET player_a = ?, player_b = ?, winner = ?, method = ?, note = ?, rolled_on = ?
+        // Keep the belts recorded with the roll, unless the admin swapped in a different player.
+        const keep = (pid, fresh) => (pid === roll.player_a && roll.belt_a ? roll.belt_a : pid === roll.player_b && roll.belt_b ? roll.belt_b : fresh);
+        const row = await db.prepare(`UPDATE rolls SET player_a = ?, player_b = ?, winner = ?, method = ?, note = ?, rolled_on = ?, belt_a = ?, belt_b = ?
             WHERE id = ? RETURNING ${ROLL_COLS}`)
-          .bind(r.a, r.b, r.winner, r.method, r.note, r.date, id).first();
+          .bind(r.a, r.b, r.winner, r.method, r.note, r.date, keep(r.a, r.belt_a), keep(r.b, r.belt_b), id).first();
         return json({ roll: row });
       }
       await db.prepare('DELETE FROM rolls WHERE id = ?').bind(id).run();

@@ -214,12 +214,21 @@
     }).join('');
   }
 
+  function beltOf(id) { const p = player(id); return p && p.belt; }
+  function signed(n) { return n > 0 ? `+${n}` : n < 0 ? `−${-n}` : '±0'; }
+  // "+5 / −4": points for the first and second name in the sentence.
+  function deltaChip(r) {
+    const d = JJStats.rollDelta(r, beltOf);
+    const first = r.winner === r.b ? d.b : d.a, second = r.winner === r.b ? d.a : d.b;
+    return ` <span class="delta" title="Points from this roll">${signed(first)} / ${signed(second)}</span>`;
+  }
   function rollSentence(r) {
     const A = player(r.a), B = player(r.b);
     const an = `<b>${esc(A ? A.name : '?')}</b>`, bn = `<b>${esc(B ? B.name : '?')}</b>`;
     const how = r.method ? ` <span class="how">by ${esc(r.method.toLowerCase())}</span>` : '';
-    if (r.winner == null) return `${an} and ${bn} drew${how}`;
-    return r.winner === r.a ? `${an} beat ${bn}${how}` : `${bn} beat ${an}${how}`;
+    const pts = deltaChip(r);
+    if (r.winner == null) return `${an} and ${bn} drew${how}${pts}`;
+    return r.winner === r.a ? `${an} beat ${bn}${how}${pts}` : `${bn} beat ${an}${how}${pts}`;
   }
   function plainSentence(r) {
     const tmp = document.createElement('div');
@@ -444,6 +453,20 @@
     $('#b-label').textContent = mine ? 'Opponent' : 'Player B';
     $('#res-a').textContent = mine ? 'I won' : `${A ? A.name : 'A'} won`;
     $('#res-b').textContent = mine ? (B ? `${B.name} won` : 'They won') : `${B ? B.name : 'B'} won`;
+    refreshPreview();
+  }
+  // "You'd get +5 · Bia ±0", shown while filling in the roll.
+  function refreshPreview() {
+    const a = Number($('#roll-a').value), b = Number($('#roll-b').value);
+    const A = player(a), B = player(b);
+    const result = ($('input[name=result]:checked') || {}).value;
+    const out = $('#roll-preview');
+    if (!A || !B || !result || editingRollId) { out.textContent = ''; out.hidden = true; return; }
+    const d = JJStats.rollDelta({ a, b, winner: result === 'draw' ? null : result === 'a' ? a : b }, beltOf);
+    out.hidden = false;
+    out.textContent = a === meId()
+      ? `You'd get ${signed(d.a)} · ${B.name} ${signed(d.b)}`
+      : `${A.name} ${signed(d.a)} · ${B.name} ${signed(d.b)}`;
   }
   function refreshOpponents() {
     const a = Number($('#roll-a').value);
@@ -825,7 +848,7 @@
     $('#roll-a').addEventListener('change', refreshOpponents);
     $('#roll-b').addEventListener('change', refreshRollLabels);
     $('#roll-form').addEventListener('submit', submitRoll);
-    $$('input[name=result]').forEach((i) => i.addEventListener('change', () => Sound.play('scribble')));
+    $$('input[name=result]').forEach((i) => i.addEventListener('change', () => { Sound.play('scribble'); refreshPreview(); }));
 
     $('#pending').addEventListener('click', (e) => {
       const b = e.target.closest('[data-act]');

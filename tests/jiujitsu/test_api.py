@@ -198,7 +198,7 @@ class Base(unittest.TestCase):
 
 
 PLAYER_KEYS = {"id", "name", "belt", "stripes", "bio", "photo_v", "has_pw", "created_at"}
-ROLL_KEYS = {"id", "a", "b", "winner", "method", "note", "date", "by", "status", "created_at"}
+ROLL_KEYS = {"id", "a", "b", "winner", "method", "note", "date", "by", "status", "belt_a", "belt_b", "created_at"}
 
 
 # ---------------------------------------------------------------- state
@@ -1040,6 +1040,41 @@ class RoutingTests(Base):
 
 
 # ---------------------------------------------------------------- regression tests
+class BeltSnapshotTests(Base):
+    """Points are belt-weighted, so each roll records both players' belts on the day it was logged."""
+
+    def test_roll_records_belts_and_keeps_them_after_promotion(self):
+        a, ta = self.mk("w", belt="white")
+        b, tb = self.mk("k", belt="black")
+        r = self.mkroll(a["id"], b["id"], a["id"], token=ta)
+        self.assertEqual((r["belt_a"], r["belt_b"]), ("white", "black"))
+        self.ok(call("PATCH", f"/players/{a['id']}", {"belt": "purple"}, ta))
+        self.ok(call("POST", f"/rolls/{r['id']}/accept", None, tb))
+        self.assertEqual((roll_by_id(r["id"])["belt_a"], roll_by_id(r["id"])["belt_b"]), ("white", "black"))
+
+    def test_admin_edit_keeps_belts_unless_a_player_is_swapped(self):
+        a, _ = self.mk("a", belt="blue")
+        b, _ = self.mk("b", belt="brown")
+        c, _ = self.mk("c", belt="purple")
+        r = self.mkroll(a["id"], b["id"], b["id"])
+        self.ok(call("PATCH", f"/players/{a['id']}", {"belt": "black"}, admin_token()))
+        # Changing only the winner keeps the recorded belts.
+        e = self.ok(call("PATCH", f"/rolls/{r['id']}", {"winner": a["id"]}, admin_token()))["roll"]
+        self.assertEqual((e["belt_a"], e["belt_b"]), ("blue", "brown"))
+        # Swapping the sides keeps each player's recorded belt.
+        e = self.ok(call("PATCH", f"/rolls/{r['id']}", {"a": b["id"], "b": a["id"]}, admin_token()))["roll"]
+        self.assertEqual((e["belt_a"], e["belt_b"]), ("brown", "blue"))
+        # Swapping in a different player takes that player's current belt.
+        e = self.ok(call("PATCH", f"/rolls/{r['id']}", {"b": c["id"], "winner": c["id"]}, admin_token()))["roll"]
+        self.assertEqual((e["belt_a"], e["belt_b"]), ("brown", "purple"))
+
+    def test_belts_cannot_be_forged_in_the_body(self):
+        a, ta = self.mk("x", belt="black")
+        b, _ = self.mk("y", belt="black")
+        r = self.mkroll(a["id"], b["id"], a["id"], token=ta, belt_a="white", belt_b="black")
+        self.assertEqual((r["belt_a"], r["belt_b"]), ("black", "black"))
+
+
 class RegressionTests(Base):
     def test_invisible_chars_cannot_impersonate_admin(self):
         for n in ["Paloma​", "‍Paloma", "Pal­oma", "Paloma⁠", "‮Paloma", "Paloma﻿",

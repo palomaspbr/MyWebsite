@@ -309,6 +309,20 @@ def pending_li(p, rid):
     return p.locator(f'#pending li[data-id="{rid}"]')
 
 
+BELT_VALUE = {"white": 1, "blue": 2, "purple": 3, "brown": 4, "black": 5}
+
+
+def roll_points(mine, opp, result):
+    """Independent Python copy of the belt-weighted rules (see the "How it works" box on the page)."""
+    m, o = BELT_VALUE[mine], BELT_VALUE[opp]
+    gap = o - m
+    if result == "win":
+        return 2 + o + max(0, gap)
+    if result == "loss":
+        return min(0, gap)
+    return 1 + gap
+
+
 class Model:
     """Expected leaderboard numbers for the players this test owns (confirmed rolls only)."""
 
@@ -316,26 +330,37 @@ class Model:
         self.players = {}  # id -> name
         self.rolls = {}  # id -> (a, b, winner)
 
-    def stats(self, pid):
+    def stats(self, pid, belts):
+        """belts: roll id -> (belt_a, belt_b) as recorded by the server for that roll."""
         pts = w = d = l = 0
-        for a, b, win in self.rolls.values():
+        for rid, (a, b, win) in self.rolls.items():
             if pid not in (a, b):
                 continue
+            ba, bb = belts[rid]
+            mine, opp = (ba, bb) if pid == a else (bb, ba)
             if win is None:
                 d += 1
-                pts += 1
+                pts += roll_points(mine, opp, "draw")
             elif win == pid:
                 w += 1
-                pts += 3
+                pts += roll_points(mine, opp, "win")
             else:
                 l += 1
+                pts += roll_points(mine, opp, "loss")
         return pts, w, d, l
+
+
+def server_belts(p):
+    """Roll id -> (belt_a, belt_b) recorded by the server (points use the belts on the day of the roll)."""
+    st = p.evaluate("fetch('/jiujitsu/api/state').then(r => r.json())")
+    return {r["id"]: (r["belt_a"], r["belt_b"]) for r in st["rolls"]}
 
 
 def check_board(f, model, where):
     p = f.page
+    belts = server_belts(p)
     for pid, name in model.players.items():
-        pts, w, d, l = model.stats(pid)
+        pts, w, d, l = model.stats(pid, belts)
         li = p.locator(f'#board li[data-id="{pid}"]')
         expect(li.locator(".pts b"), f"{where}: points of {name}").to_have_text(str(pts))
         expect(li.locator(".meta"), f"{where}: record of {name}").to_contain_text(f"{w}W {d}D {l}L")
@@ -731,7 +756,8 @@ def run(pw):
         expect(p.locator("#player-dlg")).to_have_attribute("open", "")
         expect(p.locator("#player-body h2")).to_have_text(names["caio"])
         stats = p.locator("#player-body .statgrid .stat b").all_text_contents()
-        PROBLEMS.check(stats == [str(x) for x in model.stats(c)], f"Caio profile stats {stats} != {model.stats(c)}")
+        exp = model.stats(c, server_belts(p))
+        PROBLEMS.check(stats == [str(x) for x in exp], f"Caio profile stats {stats} != {exp}")
         expect(p.locator("#player-body")).to_contain_text(f"You vs {names['caio']}: 0W 0D 1L")
         expect(p.locator("#player-body [data-act]")).to_have_count(0)  # no edit/delete on others
         p.keyboard.press("Escape")
