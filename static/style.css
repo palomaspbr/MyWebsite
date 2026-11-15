@@ -380,6 +380,7 @@ main .projects-grid:not(.cards) > p { margin: 0; flex: 1 1 260px; text-align: ce
 .comp h3 { margin: 0 70px 6px 0; font-size: 28px; }
 .comp h3 small { display: block; font-family: var(--hand); font-size: 18px; color: var(--ink-soft); }
 .comp p { margin: 4px 0; }
+.comp .result { font-family: var(--brush); font-size: 23px; }
 
 .year {
     position: absolute;
@@ -424,7 +425,6 @@ main .projects-grid:not(.cards) > p { margin: 0; flex: 1 1 260px; text-align: ce
 .medal.gold { background: var(--gold); }
 .medal.silver { background: var(--silver); }
 .medal.bronze { background: var(--bronze); }
-.medal.star { background: var(--blue); }
 
 /*#endregion Parkour*/
 
