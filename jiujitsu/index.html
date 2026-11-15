@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Chacrinha Jiu-Jitsu</title>
+  <meta name="description" content="Chacrinha Jiu-Jitsu: the leaderboard for our casual rolls.">
+  <meta name="theme-color" content="#fbf6e9">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='4' y='24' width='56' height='16' rx='3' fill='%232f5fb3' stroke='%232b2520' stroke-width='3'/%3E%3Crect x='40' y='24' width='12' height='16' fill='%232b2520'/%3E%3Crect x='43' y='24' width='2.5' height='16' fill='%23fff'/%3E%3Crect x='47' y='24' width='2.5' height='16' fill='%23fff'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Shared SVG filter that makes every drawing look hand-inked. -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <filter id="rough" x="-5%" y="-20%" width="110%" height="140%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="2" seed="7" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="2.4" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+  </svg>
+
+  <header class="top">
+    <div class="title-wrap">
+      <svg class="knot" viewBox="0 0 90 70" aria-hidden="true">
+        <g filter="url(#rough)" stroke="#2b2520" stroke-width="2.5" stroke-linejoin="round">
+          <path d="M8 22 L36 26 L36 40 L8 36 Z" fill="#2f5fb3"/>
+          <path d="M82 22 L54 26 L54 40 L82 36 Z" fill="#2f5fb3"/>
+          <path d="M40 38 L22 66 L32 68 L46 42 Z" fill="#2f5fb3"/>
+          <path d="M50 38 L64 64 L74 60 L56 36 Z" fill="#1f1b18"/>
+          <rect x="34" y="20" width="22" height="24" rx="5" fill="#2f5fb3"/>
+          <rect x="63" y="47" width="2.5" height="13" fill="#fff" stroke="none" transform="rotate(-28 64 53)"/>
+          <rect x="67" y="45" width="2.5" height="13" fill="#fff" stroke="none" transform="rotate(-28 68 51)"/>
+        </g>
+      </svg>
+      <div>
+        <h1>Chacrinha <span class="nw">Jiu-Jitsu</span></h1>
+        <svg class="underline" viewBox="0 0 300 14" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M3 9 C 60 3, 120 12, 180 6 S 270 4, 297 8" fill="none" stroke="#c0392b" stroke-width="4" stroke-linecap="round" filter="url(#rough)"/>
+        </svg>
+        <p class="tagline">Casual rolls. Serious bragging rights.</p>
+      </div>
+    </div>
+    <div id="me-chip" class="me-chip" hidden></div>
+    <button id="sound-btn" class="icon-btn" type="button" aria-label="Sound on" title="Sound on/off"></button>
+  </header>
+
+  <main>
+    <div id="banner" class="banner" hidden></div>
+
+    <section id="welcome" class="card sketch" hidden>
+      <h2>Who's rolling?</h2>
+      <p class="muted">Pick your name, or sign up if you're new. No passwords, we're all friends here.</p>
+      <input id="who-search" class="field" type="search" placeholder="Search names..." autocomplete="off" aria-label="Search names">
+      <div id="who-list" class="who-list"></div>
+
+      <h3 class="divider"><span>New on the mat?</span></h3>
+      <form id="signup-form" class="stack" autocomplete="off">
+        <label class="lbl" for="signup-name">Your name</label>
+        <input id="signup-name" class="field" maxlength="24" placeholder="e.g. Bruno">
+        <span class="lbl">Your belt</span>
+        <div class="belt-picker" data-for="signup"></div>
+        <span class="lbl">Stripes</span>
+        <div class="stripe-picker" data-for="signup"></div>
+        <button class="btn primary" type="submit">Sign me up! Oss!</button>
+      </form>
+    </section>
+
+    <section id="board-wrap" hidden>
+      <button id="log-btn" class="btn primary big" type="button">+ Log a roll</button>
+
+      <section class="card sketch">
+        <div class="card-head">
+          <h2>Leaderboard</h2>
+          <span class="muted small" id="board-count"></span>
+        </div>
+        <ol id="board" class="board"></ol>
+        <p class="legend">Win <b>3</b> pts &nbsp;·&nbsp; Draw <b>1</b> pt &nbsp;·&nbsp; Loss <b>0</b> &nbsp;— tap a name for their story.</p>
+      </section>
+
+      <section class="card sketch tilt-r">
+        <div class="card-head">
+          <h2>Recent rolls</h2>
+          <span id="admin-tag" class="admin-tag" hidden>admin mode</span>
+        </div>
+        <ul id="feed" class="feed"></ul>
+        <button id="more-btn" class="btn ghost" type="button" hidden>Show more</button>
+      </section>
+    </section>
+
+    <p id="loading" class="loading">Sharpening pencils...</p>
+  </main>
+
+  <footer class="foot">
+    <a href="/">palomaliz.com.br</a> · drawn with a shaky hand · Oss!
+  </footer>
+
+  <!-- Log / edit a roll -->
+  <dialog id="roll-dlg" class="dlg sketch">
+    <form id="roll-form" method="dialog" class="stack" autocomplete="off">
+      <h2 id="roll-title">Log a roll</h2>
+      <div class="vs-row">
+        <div class="vs-side">
+          <span class="lbl" id="a-label">You</span>
+          <select id="roll-a" class="field" aria-labelledby="a-label"></select>
+        </div>
+        <span class="vs">vs</span>
+        <div class="vs-side">
+          <span class="lbl" id="b-label">Opponent</span>
+          <select id="roll-b" class="field" aria-labelledby="b-label"></select>
+        </div>
+      </div>
+      <span class="lbl">Who won?</span>
+      <div class="result-pick" role="radiogroup" aria-label="Who won">
+        <label><input type="radio" name="result" value="a"><span id="res-a">I won</span></label>
+        <label><input type="radio" name="result" value="draw"><span>Draw</span></label>
+        <label><input type="radio" name="result" value="b"><span id="res-b">They won</span></label>
+      </div>
+      <label class="lbl" for="roll-method">How? <span class="muted">(optional)</span></label>
+      <input id="roll-method" class="field" list="methods" maxlength="40" placeholder="Armbar, triangle, points...">
+      <datalist id="methods">
+        <option value="Armbar"><option value="Triangle"><option value="Rear naked choke"><option value="Kimura">
+        <option value="Guillotine"><option value="Americana"><option value="Ezekiel"><option value="Bow and arrow choke">
+        <option value="Cross collar choke"><option value="Darce"><option value="Anaconda"><option value="Arm triangle">
+        <option value="Omoplata"><option value="Heel hook"><option value="Straight ankle lock"><option value="Kneebar">
+        <option value="Toe hold"><option value="Baseball bat choke"><option value="Loop choke"><option value="Wrist lock">
+        <option value="Points"><option value="Advantages"><option value="Just vibes">
+      </datalist>
+      <label class="lbl" for="roll-date">When?</label>
+      <input id="roll-date" class="field" type="date">
+      <label class="lbl" for="roll-note">Note <span class="muted">(optional)</span></label>
+      <input id="roll-note" class="field" maxlength="140" placeholder="Rematch next week!">
+      <p class="form-err" id="roll-err" role="alert"></p>
+      <div class="row-end">
+        <button class="btn ghost" type="button" data-close>Cancel</button>
+        <button class="btn primary" type="submit" id="roll-submit">Save roll</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Player profile -->
+  <dialog id="player-dlg" class="dlg sketch">
+    <div id="player-body"></div>
+    <div class="row-end"><button class="btn ghost" type="button" data-close>Close</button></div>
+  </dialog>
+
+  <!-- Change belt / rename -->
+  <dialog id="edit-player-dlg" class="dlg sketch">
+    <form id="edit-player-form" method="dialog" class="stack" autocomplete="off">
+      <h2 id="edit-player-title">Got promoted?</h2>
+      <div id="rename-wrap" class="stack" hidden>
+        <label class="lbl" for="edit-name">Name</label>
+        <input id="edit-name" class="field" maxlength="24">
+      </div>
+      <span class="lbl">Belt</span>
+      <div class="belt-picker" data-for="edit"></div>
+      <span class="lbl">Stripes</span>
+      <div class="stripe-picker" data-for="edit"></div>
+      <p class="form-err" id="edit-player-err" role="alert"></p>
+      <div class="row-end">
+        <button class="btn ghost" type="button" data-close>Cancel</button>
+        <button class="btn primary" type="submit">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Admin password -->
+  <dialog id="admin-dlg" class="dlg sketch">
+    <form id="admin-form" method="dialog" class="stack" autocomplete="off">
+      <h2>Admin check</h2>
+      <p class="muted">Paloma is the admin profile. Enter the admin password to roll as Paloma.</p>
+      <input id="admin-pw" class="field" type="password" autocomplete="current-password" aria-label="Admin password" required>
+      <p class="form-err" id="admin-err" role="alert"></p>
+      <div class="row-end">
+        <button class="btn ghost" type="button" data-close>Cancel</button>
+        <button class="btn primary" type="submit">Unlock</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Confirm -->
+  <dialog id="confirm-dlg" class="dlg sketch small-dlg">
+    <form method="dialog" class="stack">
+      <h2 id="confirm-title">Sure?</h2>
+      <p id="confirm-text"></p>
+      <div class="row-end">
+        <button class="btn ghost" value="no">Nope</button>
+        <button class="btn danger" value="yes" id="confirm-yes">Yes, do it</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast sketch" role="status" aria-live="polite" popover="manual" hidden></div>
+
+  <script src="js/stats.js"></script>
+  <script src="js/sound.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
