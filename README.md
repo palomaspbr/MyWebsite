@@ -12,8 +12,9 @@ curriculum.html                Curriculum (EN / PT)
 404.html                       Not found page
 loaf_tower/                    Loaf Tower, a cat-stacking browser game (/loaf_tower)
 jiujitsu/                      Chacrinha Jiu-Jitsu, leaderboard for casual BJJ rolls (/jiujitsu)
-functions/jiujitsu/api/        Its API (Cloudflare Pages Function + D1 database)
-_routes.json                   Only /jiujitsu/api/* runs the Function; everything else stays static
+worker/index.js                Its API (Cloudflare Worker + D1 database)
+wrangler.jsonc                 Cloudflare config: static assets + the Worker only on /jiujitsu/api/*
+.assetsignore                  Repo files that are not published (tests, worker source, READMEs...)
 tests/jiujitsu/                Its API, stats and browser tests
 static/style.css               Styles
 static/script.js               Project filter + language toggle
@@ -39,23 +40,19 @@ The domain's DNS is already on Cloudflare, so the site is hosted on Cloudflare P
 3. After the first deploy, open the project → **Custom domains** → add `palomaliz.com.br` (and `www.palomaliz.com.br`). Cloudflare creates the DNS records and the HTTPS certificate.
 4. In **DNS** → **Records**, delete any old `A`/`AAAA`/`CNAME` records for `palomaliz.com.br` / `www` that pointed to the old DigitalOcean app if Cloudflare reports a conflict.
 
-## Chacrinha Jiu-Jitsu (/jiujitsu): one-time Cloudflare setup (free plan)
+## Chacrinha Jiu-Jitsu (/jiujitsu): Cloudflare setup (free plan)
 
-The leaderboard needs a small database. Everything below is on Cloudflare's free plan; on the free plan, going over a limit makes requests fail for the day, it never bills you. Just don't upgrade to Workers Paid.
+The site is deployed by **Workers Builds** (Worker `paloma-website`) from `wrangler.jsonc` on every push to `master`. Static files are served directly and are free and unlimited; only `/jiujitsu/api/*` runs the Worker (free plan: 100,000 requests/day). The D1 database `chacrinha-jiujitsu` is **created automatically** on the first deploy (free plan: 5M rows read and 100k rows written per day). On the free plan, going over a limit makes requests fail for the day; it never bills you. Just don't upgrade to Workers Paid.
 
-1. **Create the database:** Cloudflare dashboard → **Storage & Databases** → **D1 SQL Database** → **Create** → name it `chacrinha-jiujitsu`. (No SQL needed: the tables are created automatically on first use.)
-2. **Connect it:** **Workers & Pages** → the site's Pages project → **Settings** → **Bindings** → **Add** → **D1 database**. Variable name `JJ_DB`, database `chacrinha-jiujitsu`. Do it for **Production** (and **Preview** if you want branch previews to work).
-3. **Admin password:** same project → **Settings** → **Variables and Secrets** → **Add** → type **Secret**, name `JJ_ADMIN_PASSWORD`, value = the password for the Paloma admin profile.
-4. **Redeploy:** **Deployments** → latest production deployment → **⋯** → **Retry deployment** (bindings only apply to new deployments).
-
-Free plan limits that matter here: 100,000 Function requests/day (only `/jiujitsu/api/*` counts, thanks to `_routes.json`), D1 5 million rows read/day and 100,000 rows written/day.
+One manual step: set the admin password for the Paloma profile.
+Cloudflare dashboard → **Workers & Pages** → `paloma-website` → **Settings** → **Variables and Secrets** → **Add** → type **Secret**, name `JJ_ADMIN_PASSWORD`, value = the password → **Deploy**. Secrets survive later deploys.
 
 ### Run it locally
 
 Plain `python -m http.server` serves the page but not the API. For the full app use Wrangler (needs Node):
 
 ```
-npx wrangler pages dev . --port 8788 --d1 JJ_DB=local-jj --binding JJ_ADMIN_PASSWORD=test-admin-pw
+npx wrangler dev --port 8788 --var JJ_ADMIN_PASSWORD:test-admin-pw
 ```
 
 Then open http://localhost:8788/jiujitsu/. Tests: see `tests/jiujitsu/README.md`.

@@ -3,7 +3,7 @@
 Start the full app locally first (needs Node; from the repo root):
 
 ```
-npx wrangler pages dev . --port 8788 --d1 JJ_DB=local-jj --binding JJ_ADMIN_PASSWORD=test-admin-pw
+npx wrangler dev --port 8788 --var JJ_ADMIN_PASSWORD:test-admin-pw
 ```
 
 | Test | What it covers | Run |

@@ -1,6 +1,6 @@
-"""API tests for the Chacrinha Jiu-Jitsu Pages Function.
+"""API tests for the Chacrinha Jiu-Jitsu API (worker/index.js).
 
-Run against a local `wrangler pages dev` server:
+Run against a local `wrangler dev` server:
     python -I tests/jiujitsu/test_api.py
 Env overrides: JJ_BASE (default http://localhost:8788/jiujitsu/api),
                JJ_ADMIN_PW (default test-admin-pw).

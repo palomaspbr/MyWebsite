@@ -1,8 +1,10 @@
-/* Chacrinha Jiu-Jitsu API: a Cloudflare Pages Function backed by a D1 database.
+/* The site's Worker (wrangler.jsonc). Static files are served straight from the assets;
+   this script only runs for /jiujitsu/api/* (assets.run_worker_first), which is the
+   Chacrinha Jiu-Jitsu API backed by a D1 database.
 
-   Free-plan only. Needs two things set on the Pages project (see jiujitsu/README.md):
-     JJ_DB              D1 database binding
-     JJ_ADMIN_PASSWORD  secret, the password of the admin profile (Paloma)
+   Free-plan only. Needs:
+     JJ_DB              D1 database binding (declared in wrangler.jsonc, created on first deploy)
+     JJ_ADMIN_PASSWORD  secret set in the dashboard: the password of the admin profile (Paloma)
 
    Routes (all under /jiujitsu/api):
      GET    /state              players + rolls
@@ -283,18 +285,26 @@ async function handle(request, env, parts) {
   throw new HttpError(404, 'Not found.');
 }
 
-export async function onRequest(context) {
-  const { request, env, params } = context;
-  let parts = params.path;
-  if (!Array.isArray(parts)) parts = parts ? [parts] : [];
-  parts = parts.filter(Boolean);
-  try {
-    return await handle(request, env, parts);
-  } catch (err) {
-    if (err instanceof HttpError) return json({ error: err.message }, err.status);
-    console.error(err);
-    const msg = String(err && err.message || err);
-    if (/UNIQUE/i.test(msg)) return json({ error: 'That name is already taken.' }, 409);
-    return json({ error: 'Something went wrong on the server.' }, 500);
-  }
-}
+const API_PREFIX = '/jiujitsu/api';
+
+export default {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+    if (url.pathname !== API_PREFIX && !url.pathname.startsWith(API_PREFIX + '/')) {
+      // Not the API: hand back to the static assets (normally never reached, see wrangler.jsonc).
+      return env.ASSETS.fetch(request);
+    }
+    try {
+      let parts;
+      try { parts = url.pathname.slice(API_PREFIX.length).split('/').filter(Boolean).map(decodeURIComponent); }
+      catch (_) { throw new HttpError(404, 'Not found.'); }
+      return await handle(request, env, parts);
+    } catch (err) {
+      if (err instanceof HttpError) return json({ error: err.message }, err.status);
+      console.error(err);
+      const msg = String(err && err.message || err);
+      if (/UNIQUE/i.test(msg)) return json({ error: 'That name is already taken.' }, 409);
+      return json({ error: 'Something went wrong on the server.' }, 500);
+    }
+  },
+};
