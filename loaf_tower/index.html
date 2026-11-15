@@ -114,6 +114,24 @@
           <button id="btn-board-save" class="btn small-btn" data-i18n="saveName"></button>
         </div>
         <p id="board-note" class="muted note"></p>
+        <div id="board-account">
+          <p id="acc-line" class="muted note"></p>
+          <div id="acc-buttons" class="row acc-buttons">
+            <button id="btn-acc-login" class="btn small-btn" data-i18n="logIn"></button>
+            <button id="btn-acc-pass" class="btn small-btn"></button>
+            <button id="btn-acc-logout" class="btn small-btn" data-i18n="logOut"></button>
+          </div>
+          <form id="acc-form" class="acc-form hidden" autocomplete="on">
+            <input id="acc-name" autocomplete="username" maxlength="32" spellcheck="false">
+            <input id="acc-cur" type="password" autocomplete="current-password" maxlength="64">
+            <input id="acc-pass" type="password" autocomplete="current-password" maxlength="64">
+            <div class="row">
+              <button id="btn-acc-go" type="submit" class="btn small-btn yellow"></button>
+              <button id="btn-acc-cancel" type="button" class="btn small-btn" data-i18n="cancel"></button>
+            </div>
+            <p id="acc-msg" class="note"></p>
+          </form>
+        </div>
         <div id="board-tabs" class="row tabs"></div>
         <p id="board-me" class="muted"></p>
         <ol id="board-list"></ol>

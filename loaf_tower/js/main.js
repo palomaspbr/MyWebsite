@@ -463,6 +463,7 @@
     $('board-note').textContent = pub ? l.boardPublic(p.name) : l.boardPrivate;
     show('btn-board-hide', !!pub);
     if (p && p.name && document.activeElement !== $('board-input')) $('board-input').value = p.name; // hidden players keep their name
+    accountUI();
   }
   async function openBoard(game) {
     const l = L();
@@ -529,6 +530,79 @@
     } catch (e) {
       const byCode = { name_taken: l.nameTaken, name_short: l.nameShort, name_long: l.nameLong, bad_name: l.nameShort };
       $('board-note').textContent = byCode[e.code] || (e.status === 409 ? l.nameTaken : l.boardOffline);
+    }
+  }
+
+  /* ---------- leaderboard account: log in (name + password), set / change password, log out ---------- */
+  let accMode = null; // 'login' | 'set' | 'change'
+  function accountUI() {
+    const p = LT.Board.profile, l = L();
+    const named = !!(p && p.name), locked = named && p.hasPassword;
+    $('acc-line').textContent = locked ? l.loggedInAs(p.name) : named ? l.setPassHint : l.loginHint;
+    show('btn-acc-login', !locked);
+    show('btn-acc-pass', named);
+    $('btn-acc-pass').textContent = locked ? l.changePassword : l.setPassword;
+    show('btn-acc-logout', locked);
+  }
+  function openAccForm(m) {
+    const l = L();
+    accMode = m;
+    show('acc-form', true);
+    show('acc-buttons', false);
+    show('acc-name', m === 'login');
+    show('acc-cur', m === 'change');
+    $('acc-name').placeholder = l.namePlaceholder;
+    $('acc-cur').placeholder = l.currentPassPh;
+    $('acc-pass').placeholder = m === 'login' ? l.passwordPh : l.newPassPh;
+    $('acc-pass').setAttribute('autocomplete', m === 'login' ? 'current-password' : 'new-password');
+    $('btn-acc-go').textContent = m === 'login' ? l.logIn : l.saveName;
+    $('acc-msg').textContent = '';
+    ['acc-cur', 'acc-pass'].forEach((id) => { $(id).value = ''; });
+    if (m === 'login') { $('acc-name').value = ''; $('acc-name').focus(); } else $(m === 'change' ? 'acc-cur' : 'acc-pass').focus();
+  }
+  function closeAccForm() {
+    accMode = null;
+    show('acc-form', false);
+    show('acc-buttons', true);
+    ['acc-cur', 'acc-pass'].forEach((id) => { $(id).value = ''; }); // never leave a typed password behind
+  }
+  // records saved on the server come back to this device after logging in (best of both)
+  function applyProfileScores(p) {
+    const s = (p && p.scores) || {};
+    const up = (cur, v) => Math.max(cur, Number.isInteger(v) ? v : 0);
+    best = up(best, s.tower); store.set('best', best);
+    mergeBest = up(mergeBest, s.merge); store.set('mergeBest', mergeBest);
+    yarnLevel = up(yarnLevel, (s.yarn || 0) + 1); store.set('yarnLevel', yarnLevel);
+    tileLevel = up(tileLevel, (s.tiles || 0) + 1); store.set('tileLevel', tileLevel);
+    mjLevel = up(mjLevel, (s.mahjong || 0) + 1); store.set('mjLevel', mjLevel);
+    catchUpRewards();
+    updateTitle();
+  }
+  async function submitAccForm() {
+    const l = L();
+    const msg = $('acc-msg');
+    if (submitAccForm.busy) return; // no double submits
+    submitAccForm.busy = true;
+    $('btn-acc-go').disabled = true;
+    msg.textContent = l.loading;
+    try {
+      if (accMode === 'login') {
+        const p = await LT.Board.login($('acc-name').value.trim(), $('acc-pass').value);
+        applyProfileScores(p);
+        toast(l.loggedIn(p.name || ''));
+      } else {
+        await LT.Board.setPassword($('acc-pass').value, accMode === 'change' ? $('acc-cur').value : undefined);
+        toast(l.passSaved);
+      }
+      closeAccForm();
+      openBoard(boardGame);
+    } catch (e) {
+      const byCode = { wrong_login: l.wrongLogin, wrong_password: l.wrongPassword, no_password: l.noPassword, locked: l.locked,
+        pass_short: l.passShort, pass_long: l.passShort, need_name: l.needName };
+      msg.textContent = byCode[e.code] || l.boardOffline;
+    } finally {
+      submitAccForm.busy = false;
+      $('btn-acc-go').disabled = false;
     }
   }
 
@@ -697,7 +771,7 @@
     } else if (e.code === 'Escape' && ['tutorial', 'dex', 'audio', 'levels', 'board'].some((id) => !$(id).classList.contains('hidden'))) {
       // Escape closes the top overlay first
       if (!$('tutorial').classList.contains('hidden')) closeTutorial();
-      else if (!$('board').classList.contains('hidden')) show('board', false);
+      else if (!$('board').classList.contains('hidden')) { closeAccForm(); show('board', false); }
       else if (!$('audio').classList.contains('hidden')) closeAudio();
       else if (!$('dex').classList.contains('hidden')) show('dex', false);
       else $('btn-levels-close').click();
@@ -734,7 +808,19 @@
   $('btn-clip').onclick = makeClip;
   $('btn-dex').onclick = openDex;
   $('btn-board').onclick = () => openBoard();
-  $('btn-board-close').onclick = () => show('board', false);
+  $('btn-board-close').onclick = () => { closeAccForm(); show('board', false); };
+  $('btn-acc-login').onclick = () => openAccForm('login');
+  $('btn-acc-pass').onclick = () => { const p = LT.Board.profile; openAccForm(p && p.hasPassword ? 'change' : 'set'); };
+  $('btn-acc-cancel').onclick = closeAccForm;
+  ['acc-name', 'acc-cur', 'acc-pass'].forEach((id) => $(id).addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); closeAccForm(); } }));
+  $('acc-form').addEventListener('submit', (e) => { e.preventDefault(); submitAccForm(); });
+  $('btn-acc-logout').onclick = () => {
+    LT.Board.logout();
+    $('board-input').value = '';
+    closeAccForm();
+    toast(L().loggedOut);
+    openBoard(boardGame);
+  };
   $('btn-board-save').onclick = () => saveBoardName($('board-input').value.trim());
   $('btn-board-hide').onclick = () => saveBoardName(null);
   $('board-input').addEventListener('keydown', (e) => {

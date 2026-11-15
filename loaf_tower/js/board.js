@@ -61,5 +61,28 @@
   async function setName(name) { return keep((await post('/name', { device: deviceId(), name })).profile); }
   const board = (game) => call(`/board?game=${encodeURIComponent(game)}&device=${encodeURIComponent(deviceId())}`);
 
-  LT.Board = { deviceId, sync, flush, setName, board, get profile() { return profile; } };
+  // Log in with name + password: this device becomes that profile (its scores are merged in on the server).
+  async function login(name, password) {
+    const r = await post('/login', { device: deviceId(), name, password });
+    device = r.device;
+    ls.set(KEY, device);
+    lastSent = null;
+    return keep(r.profile);
+  }
+  // set (first time) or change (needs the current one) the profile's password
+  async function setPassword(password, current) {
+    const r = await post('/password', { device: deviceId(), password, current });
+    if (r.device) { device = r.device; ls.set(KEY, device); lastSent = null; } // the profile moved to a new id
+    return keep(r.profile);
+  }
+  // Log out: this device starts a fresh anonymous profile (local records stay on the device).
+  function logout() {
+    device = null;
+    try { localStorage.removeItem(KEY); localStorage.removeItem(PKEY); } catch (e) { /* ignore */ }
+    profile = null;
+    lastSent = null;
+    deviceId();
+  }
+
+  LT.Board = { deviceId, sync, flush, setName, board, login, setPassword, logout, get profile() { return profile; } };
 })();
