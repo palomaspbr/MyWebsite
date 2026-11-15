@@ -16,17 +16,30 @@
     <main>
         <h1 class="page-title">This Website</h1>
 
-        <p>This website is a project I built for improving my knowledges in both frontend and backend. I learnt the basics in college and wanted to try by mylself!</p>
-        <p>It was also a challange to set up my own domain and hosting, but I really enjoyed the process and definetly improved a lot while makin it.</p>
-        <p>It started as a Django project, and later I rebuilt it as a static site with only HTML / CSS and JavaScript, hosted for free.</p>
+        <p>This website is a project I built for improving my knowledge in both frontend and backend. I learnt the basics in college and wanted to try by myself!</p>
+        <p>It was also a challenge to set up my own domain and hosting, but I really enjoyed the process and definitely improved a lot while making it.</p>
 
-        <section id="socials">
-        <h3><a href="https://github.com/palomaspbr/MyWebsite/tree/master">Github Repo</a></h3>
-        </section>
+        <p class="links-row">
+            <a class="chip" href="https://github.com/palomaspbr/MyWebsite/tree/master" target="_blank"><i class="fab fa-github"></i> Github Repo</a>
+        </p>
 
-        <br>
+        <h2>How it's made</h2>
+        <ul>
+            <li><b>Plain HTML, CSS and JavaScript:</b> no framework and no build step, every page is just a file in the repo.</li>
+            <li><b>A hand-drawn notebook look:</b> lined paper, hand-written fonts (Caveat Brush and Patrick Hand), wobbly ink borders and taped cards. It's the same style as my games, so the whole site feels like one notebook.</li>
+            <li><b>Free hosting on Cloudflare:</b> every time I push to GitHub, the new version goes live at palomaliz.com.br in about a minute.</li>
+            <li><b>A tiny backend:</b> a Cloudflare Worker with two small databases runs only the parts that need a server, the <a href="/loaf_tower/">Loaf Tower</a> leaderboard and the <a href="/jiujitsu/">Chacrinha Jiu-Jitsu</a> app. Everything else is static.</li>
+        </ul>
 
-        <p>Some screenshots from the original Django version:</p>
+        <h2>How it looks now</h2>
+        <p><img src="/static/media/website/home.png" style="max-height: 500px;" alt="The home page: hand-drawn title, sticky-note intro"></p>
+        <div class="projects-grid">
+            <p><img src="/static/media/website/phone.png" style="max-height: 500px;" alt="The home page on a phone"></p>
+            <p><img src="/static/media/website/parkour.png" style="max-height: 500px;" alt="Parkour competitions as cards with medal stickers"></p>
+        </div>
+
+        <h2>Where it started</h2>
+        <p>The first version was a Django project (Python) hosted on DigitalOcean. Later I rebuilt it as a static site, which is simpler and free to host. Some screenshots from the Django version:</p>
 
         <p><img src="/static/media/website/base.png" style="max-height: 500px;" alt="Base template"></p>
 
