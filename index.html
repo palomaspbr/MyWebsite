@@ -11,12 +11,15 @@
 <body>
 <div id="wrapper">
     <main>
-        <h1 id="main-heading">Paloma Liz</h1>
-        <section id="socials">
-            <a href="https://github.com/palomaspbr" target="_blank"><i class="fab fa-github fa-2x"></i></a>
-            <a href="https://www.linkedin.com/in/paloma-liz-huebner-botana-2a0456252/" target="_blank"><i class="fab fa-linkedin fa-2x"></i></a>
-            <a href="https://www.instagram.com/palomita_liz/" target="_blank"><i class="fab fa-instagram fa-2x"></i></a>
-        </section>
+        <header class="hero">
+            <h1 class="logo">Paloma Liz</h1>
+            <p class="tagline">XR developer, game developer and parkour athlete</p>
+            <nav class="hero-socials">
+                <a class="icon-btn" href="https://github.com/palomaspbr" target="_blank" aria-label="GitHub"><i class="fab fa-github"></i></a>
+                <a class="icon-btn" href="https://www.linkedin.com/in/paloma-liz-huebner-botana-2a0456252/" target="_blank" aria-label="LinkedIn"><i class="fab fa-linkedin"></i></a>
+                <a class="icon-btn" href="https://www.instagram.com/palomita_liz/" target="_blank" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+            </nav>
+        </header>
         <section id="introduction">
             <p> Hey, my name is Paloma, I'm a graduate student in Mechatronics Engineering at the Polytechnic School of the University of São Paulo </p>
             <p> I love Virtual Reality, coding and game development! I've been working as an XR Dev and I've dedicated myself to a couple of personal projects, like this website! </p>
@@ -25,20 +28,22 @@
         </section>
 
         <h2>Professional Experience</h2>
-        <h3><a href="/static/files/PalomaLiz.pdf" id="curriculum-text" class="curriculum-card">[Download PDF]</a></h3>
-        <span id="ptbr">pt-br</span>
+        <p class="cv">
+            <a class="btn primary" href="/static/files/PalomaLiz.pdf">Download my CV (PDF)</a>
+            <span class="muted">in pt-br</span>
+        </p>
 
         <h2>Projects</h2>
 
         <div class="filter-buttons">
-            <button onclick="filterProjects('all', this)">All</button>
+            <button class="selected" onclick="filterProjects('all', this)">All</button>
             <button onclick="filterProjects('game', this)">Games</button>
             <button onclick="filterProjects('code', this)">Coding</button>
             <button onclick="filterProjects('vr', this)">VR/AR</button>
             <button onclick="filterProjects('personal', this)">Personal</button>
         </div>
 
-        <div class="projects-grid">
+        <div class="projects-grid cards">
             <a href="/loaf_tower/" class="project-card" data-category="game">
                 <div class="image-wrapper">
                     <img src="/static/media/loaftower/card.png" alt="Loaf Tower">

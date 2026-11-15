@@ -8,29 +8,29 @@
     <link rel="stylesheet" href="/static/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
-        .rd-download { display: inline-block; margin: 10px 0 4px; padding: 12px 22px; border-radius: 8px;
-            background: #e5484d; color: #fff !important; font-weight: bold; text-decoration: none; }
-        .rd-download:hover { filter: brightness(1.08); }
-        .rd-small { font-size: 0.85em; opacity: 0.8; word-break: break-all; }
-        .rd-box { background: #fff9d5; border: 2px solid rgb(168, 152, 98); border-radius: 8px; padding: 6px 18px; margin: 14px 0; }
-        .rd-table { border-collapse: collapse; width: 100%; margin: 8px 0; }
-        .rd-table td { border-top: 1px solid rgba(168, 152, 98, 0.5); padding: 6px 8px; vertical-align: top; text-align: left; }
-        .rd-table td:first-child { font-weight: bold; white-space: nowrap; }
-        main ol li, main ul li { margin: 4px 0; text-align: left; }
-        main code { background: rgba(0, 0, 0, 0.06); padding: 1px 5px; border-radius: 4px; }
+        .rd-download { margin: 10px 0 6px; }
+        .rd-small { font-size: 0.85em; color: var(--ink-soft); word-break: break-all; }
+        .rd-box { background: var(--hi); border: 2.5px dashed var(--ink); border-radius: var(--wobble-2); padding: 4px 18px; margin: 18px 0; transform: rotate(-0.5deg); }
+        .rd-table { border-collapse: separate; border-spacing: 0; width: 100%; margin: 8px 0; background: var(--paper-2); border: 2px solid var(--ink); border-radius: var(--wobble); box-shadow: 3px 4px 0 -1px var(--ink); }
+        .rd-table td { border-top: 2px dashed #d8cfc0; padding: 6px 12px; vertical-align: top; text-align: left; overflow-wrap: anywhere; }
+        .rd-table tr:first-child td { border-top: none; }
+        .rd-table td:first-child { font-family: var(--brush); font-size: 1.1em; overflow-wrap: normal; }
     </style>
 </head>
 <body>
 <div id="wrapper">
+    <header class="site-top">
+        <a class="btn" href="/">← Back</a>
+        <a class="brand" href="/">Paloma Liz</a>
+    </header>
     <main>
-        <br>
-        <h2>Remote Desktop</h2>
+        <h1 class="page-title">Remote Desktop</h1>
         <p><img src="/static/media/remotedesktop/card.png" style="max-height: 320px; max-width: 100%;" alt="Illustration: a laptop desktop shown on a phone"></p>
 
         <p>I wanted something like AnyDesk to control my PC from my phone or laptop at home, but small enough to read and fully under my control. So I built one: a tiny Python program runs on the Windows PC, and you control it from <b>any browser</b> on your network, with nothing to install on the other device.</p>
 
         <p>
-            <a class="rd-download" id="rd-download" href="/static/files/remote-desktop-v1.0.0.zip" download><i class="fas fa-download"></i> Download v1.0.0 (.zip)</a><br>
+            <a class="btn primary rd-download" id="rd-download" href="/static/files/remote-desktop-v1.0.0.zip" download><i class="fas fa-download"></i> Download v1.0.0 (.zip)</a><br>
             <span class="rd-small">Windows host · Python 3.10+ · MIT license · SHA-256: <span id="rd-sha">00a4bce45f4598e8f86a821fa721234ebb4a67341b7759ac4571cbea3b41520f</span></span>
         </p>
 
@@ -81,7 +81,6 @@
 
         <br>
     </main>
-    <a href="/">← Back</a>
     <footer>
         <p>Paloma Liz</p>
         <p class="links">

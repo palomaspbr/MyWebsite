@@ -18,7 +18,8 @@ wrangler.jsonc                 Cloudflare config: static assets + the Worker onl
 tests/jiujitsu/                Its API, stats and browser tests
 customprojects/remotedesktop/  Remote Desktop project page; download zip in static/files/
                                (built and copied by the remote-desktop repo's tools/release.ps1)
-static/style.css               Styles
+static/style.css               Styles (hand-drawn notebook look, same as Loaf Tower / Jiu-Jitsu)
+static/fonts/                  Caveat Brush + Patrick Hand (OFL)
 static/script.js               Project filter + language toggle
 static/media/, static/files/   Images and the PDF curriculum
 ```
