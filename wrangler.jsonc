@@ -14,7 +14,7 @@
     "not_found_handling": "404-page"
   },
   "d1_databases": [
-    // No database_id: Wrangler creates the "chacrinha-jiujitsu" D1 database on the first deploy.
-    { "binding": "JJ_DB", "database_name": "chacrinha-jiujitsu" }
+    // Created in the Cloudflare dashboard (free plan). Tables are created by the Worker on first use.
+    { "binding": "JJ_DB", "database_name": "jiujitsu", "database_id": "1753f55b-9572-4caf-9e8d-14704a3a0e1e" }
   ]
 }
