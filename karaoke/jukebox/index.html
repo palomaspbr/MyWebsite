@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="en" translate="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="google" content="notranslate">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#fbf6e9">
+    <title>Karaoke Jukebox</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='24' cy='22' r='14' fill='%23ffd43b' stroke='%232b2520' stroke-width='4'/%3E%3Cpath d='M33 31 L54 56' stroke='%232b2520' stroke-width='9' stroke-linecap='round'/%3E%3C/svg%3E">
+    <!-- Online version: shared hand-drawn theme + room helper first. -->
+    <link rel="stylesheet" href="/karaoke/css/sketch.css?v=1">
+    <link rel="stylesheet" href="/karaoke/css/videokind.css?v=2">
+    <script src="/karaoke/js/room.js?v=1"></script>
+    <script src="/karaoke/js/icons.js"></script>
+    <style>
+        /* Kiosk screen in the notebook theme: a big landscape page with a left rail
+           (now playing, DJ controls, invite QR) and the code entry + hand-written queue. */
+        html, body { height: 100%; }
+        body {
+            overflow: hidden;
+            font-size: 20px;
+            background-color: var(--paper);
+            background-image: var(--notebook);
+        }
+
+        .jukebox {
+            display: grid;
+            grid-template-columns: minmax(340px, 420px) minmax(0, 1fr);
+            /* Fill the viewport exactly: the single row flexes (minmax(0,1fr)) so the
+               queue scrolls internally instead of growing the page. */
+            grid-template-rows: minmax(0, 1fr);
+            gap: 26px;
+            height: 100vh;
+            max-width: 1760px;
+            margin: 0 auto;
+            padding: 18px 26px 18px 58px;
+        }
+
+        /* ── Left rail ───────────────────────────────────────── */
+        .rail {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            min-height: 0;
+            overflow-y: auto;
+            padding: 4px 10px 10px 4px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-family: var(--brush);
+            font-size: 44px;
+            line-height: 1;
+        }
+        .brand .logo { font-size: 42px; display: inline-block; transform: rotate(-12deg); }
+        .brand-name {
+            display: inline-block;
+            padding-bottom: 8px;
+            background: var(--pen-line) 0 100% / 100% 12px no-repeat;
+        }
+        .brand small {
+            display: block;
+            margin-top: 2px;
+            font-family: var(--hand);
+            font-size: 18px;
+            color: var(--ink-soft);
+        }
+
+        .card {
+            padding: 18px 20px;
+            background: var(--paper-2);
+            border: 2.5px solid var(--ink);
+            border-radius: var(--wobble);
+            box-shadow: var(--shadow);
+        }
+        .card h3 { margin: 0 0 12px; font-size: 27px; }
+
+        /* Invite card: QR + party code. */
+        .qr-card {
+            text-align: center;
+            border-radius: var(--wobble-2);
+            transform: rotate(0.6deg);
+        }
+        .qr-box {
+            display: inline-block;
+            padding: 12px;
+            line-height: 0;
+            background: #fff;
+            border: 2.5px solid var(--ink);
+            border-radius: var(--wobble-sm);
+            box-shadow: var(--shadow-sm);
+            transform: rotate(-2deg);
+        }
+        .qr-box img, .qr-box canvas { display: block; }
+        .room-code-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 16px;
+            color: var(--ink-soft);
+        }
+        .room-code-row .code-stamp {
+            font-size: 46px;
+            line-height: 1.05;
+            letter-spacing: 6px;
+            padding: 0 6px 0 12px;
+            border-width: 3px;
+            background: rgba(255, 255, 255, 0.7);
+        }
+        .connect-text {
+            margin: 12px 0 4px;
+            font-size: 17px;
+            color: var(--ink-soft);
+        }
+        .server-url {
+            font-size: 17px;
+            word-break: break-all;
+        }
+
+        /* DJ controls (full mode only). */
+        .remote { display: none; }
+        .remote.active { display: block; }
+        .remote-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .remote-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 10px 12px;
+            font-size: 20px;
+            color: var(--ink);
+            background: #fff;
+            border: 2.5px solid var(--ink);
+            border-radius: var(--wobble-2);
+            box-shadow: var(--shadow-sm);
+            cursor: pointer;
+            transition: transform 0.08s ease, background 0.15s ease;
+        }
+        .remote-btn:hover { background: var(--hi); transform: rotate(-1.2deg); }
+        .remote-btn:active { transform: translate(2px, 2px); box-shadow: none; }
+        .remote-btn.full { grid-column: 1 / -1; background: var(--yellow); font-family: var(--brush); font-size: 26px; }
+        .remote-btn.danger { background: var(--red-soft); }
+        .remote-btn .material-icons-round { font-size: 26px; }
+
+        /* Now playing: an index card with a tape strip. */
+        .np-card {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 22px 20px 18px;
+            background: linear-gradient(180deg, transparent 10px, var(--margin) 10px 12px, transparent 12px), #fff;
+            border: 2.5px solid var(--ink);
+            border-radius: var(--wobble);
+            box-shadow: var(--shadow);
+            transform: rotate(-0.8deg);
+        }
+        .np-card::before {
+            content: '';
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            width: 96px;
+            height: 24px;
+            margin-left: -48px;
+            background: rgba(255, 242, 168, 0.85);
+            border: 1px solid rgba(43, 37, 32, 0.25);
+            transform: rotate(-3deg);
+        }
+        .np-thumb {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 44px;
+            background: var(--paper-3);
+            border: 6px solid #fff;
+            outline: 2px solid var(--ink);
+            transform: rotate(1deg);
+        }
+        .np-thumb img { width: 100%; height: 100%; object-fit: cover; }
+        .np-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: var(--brush);
+            font-size: 22px;
+            color: var(--red);
+        }
+        .np-label:empty { display: none; }
+        .np-pulse {
+            width: 12px;
+            height: 12px;
+            background: var(--red);
+            border: 2px solid var(--ink);
+            border-radius: var(--blob);
+            animation: jb-pulse 1.4s ease-in-out infinite;
+        }
+        @keyframes jb-pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.35; transform: scale(0.8); } }
+        .np-title { font-family: var(--brush); font-size: 32px; line-height: 1.1; overflow: hidden; white-space: nowrap; }
+        .np-artist { font-size: 20px; color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .np-singer { font-size: 18px; color: var(--ink-soft); }
+        .np-singer:empty { display: none; }
+        .np-card.idle .np-title { color: var(--ink-soft); font-size: 26px; }
+
+        /* Scrolling ("rotating") title for text too wide to fit. The JS sets
+           --marquee-shift / --marquee-duration and toggles .marquee only when
+           the text actually overflows, so short titles stay still. */
+        .marquee-inner { display: inline-block; white-space: nowrap; }
+        .marquee .marquee-inner {
+            animation: marquee-scroll var(--marquee-duration, 10s) ease-in-out infinite alternate;
+        }
+        @keyframes marquee-scroll {
+            0%, 12%   { transform: translateX(0); }
+            88%, 100% { transform: translateX(var(--marquee-shift, 0)); }
+        }
+
+        /* ── Main column ─────────────────────────────────────── */
+        .main {
+            display: flex;
+            flex-direction: column;
+            gap: 26px;
+            min-height: 0;
+            min-width: 0;
+        }
+
+        /* Code entry: a big yellow sticky note. */
+        .code-hero {
+            padding: 24px 30px 26px;
+            background: var(--hi);
+            border: 2.5px solid var(--ink);
+            border-radius: 4px 14px 5px 16px / 16px 5px 14px 4px;
+            box-shadow: 6px 7px 0 -1px var(--ink);
+            transform: rotate(-0.5deg);
+        }
+        .code-hero h2 { margin: 0 0 2px; font-size: 46px; }
+        .code-hero p { margin: 0 0 18px; font-size: 21px; color: var(--ink-soft); }
+        .code-entry { display: flex; gap: 16px; align-items: stretch; }
+        .code-input {
+            flex: 1;
+            min-width: 0;
+            padding: 2px 16px;
+            font-family: var(--brush);
+            font-size: 72px;
+            line-height: 1.1;
+            letter-spacing: 14px;
+            text-align: center;
+            color: var(--ink);
+            background: #fff;
+            border: 3px solid var(--ink);
+            border-radius: var(--wobble-2);
+            outline: none;
+        }
+        .code-input::placeholder { color: var(--ink-faint); opacity: 0.6; }
+        .code-input:focus { box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.8), 0 0 0 8px var(--ink); }
+        .add-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 0 30px;
+            font-family: var(--brush);
+            font-size: 34px;
+            color: var(--ink);
+            background: var(--yellow);
+            border: 3px solid var(--ink);
+            border-radius: var(--wobble);
+            box-shadow: var(--shadow);
+            cursor: pointer;
+            transition: transform 0.08s ease;
+        }
+        .add-btn:hover { transform: rotate(-1.5deg); }
+        .add-btn:active { transform: translate(2px, 2px); box-shadow: none; }
+        .add-btn .material-icons-round { font-size: 34px; }
+
+        /* Live code match preview: an index card slipped under the note. */
+        .code-preview {
+            display: none;
+            align-items: center;
+            gap: 16px;
+            margin-top: 18px;
+            padding: 12px 16px;
+            background: #fff;
+            border: 2.5px solid var(--ink);
+            border-radius: var(--wobble);
+            box-shadow: var(--shadow-sm);
+            transform: rotate(0.6deg);
+            animation: cpIn 0.18s ease;
+        }
+        .code-preview.show { display: flex; }
+        @keyframes cpIn { from { opacity: 0; transform: translateY(-6px) rotate(2deg); } to { opacity: 1; transform: rotate(0.6deg); } }
+        .cp-thumb {
+            width: 96px;
+            aspect-ratio: 16 / 9;
+            flex-shrink: 0;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            background: var(--paper-3);
+            border: 4px solid #fff;
+            outline: 2px solid var(--ink);
+            transform: rotate(-2deg);
+        }
+        .cp-thumb img { width: 100%; height: 100%; object-fit: cover; }
+        .cp-info { flex: 1; min-width: 0; }
+        .cp-title { font-family: var(--brush); font-size: 30px; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .cp-artist { font-size: 19px; color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .cp-hint {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+            padding: 2px 10px;
+            font-size: 18px;
+            white-space: nowrap;
+            background: var(--green);
+            border: 2px solid var(--ink);
+            border-radius: var(--wobble-2);
+            transform: rotate(2deg);
+        }
+        .cp-hint .material-icons-round { font-size: 20px; }
+
+        /* Queue: a hand-written list on a paper sheet. */
+        .queue-panel {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            padding: 18px 24px 12px;
+            background-color: var(--paper-2);
+            background-image: repeating-linear-gradient(180deg, transparent 0 31px, var(--line) 31px 32px);
+            border: 2.5px solid var(--ink);
+            border-radius: var(--wobble-2);
+            box-shadow: var(--shadow);
+        }
+        .queue-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+        .queue-head h3 {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 0;
+            padding-bottom: 6px;
+            font-size: 36px;
+            background: var(--pen-line) 0 100% / 100% 11px no-repeat;
+        }
+        .queue-head h3 .material-icons-round { font-size: 32px; }
+        .queue-count {
+            min-width: 44px;
+            padding: 0 12px;
+            font-family: var(--brush);
+            font-size: 28px;
+            text-align: center;
+            color: #fff;
+            background: var(--red);
+            border: 2.5px solid var(--ink);
+            border-radius: var(--blob);
+            transform: rotate(6deg);
+        }
+        .queue-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; padding-right: 6px; }
+        .queue-item {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 10px 6px;
+            border-bottom: 2px solid var(--line);
+        }
+        .queue-item:first-child {
+            background: linear-gradient(100deg, transparent 1%, rgba(255, 242, 168, 0.85) 2%, rgba(255, 242, 168, 0.85) 97%, transparent 99%);
+        }
+        .queue-pos {
+            width: 40px;
+            flex-shrink: 0;
+            font-family: var(--brush);
+            font-size: 34px;
+            line-height: 1;
+            text-align: center;
+            color: var(--red);
+            transform: rotate(-6deg);
+        }
+        .queue-pos::after { content: '.'; }
+        .queue-thumb {
+            width: 76px;
+            aspect-ratio: 16 / 9;
+            flex-shrink: 0;
+            overflow: hidden;
+            background: var(--paper-3);
+            border: 3px solid #fff;
+            outline: 2px solid var(--ink);
+            transform: rotate(-2deg);
+        }
+        .queue-item:nth-child(even) .queue-thumb { transform: rotate(2deg); }
+        .queue-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .queue-info { min-width: 0; flex: 1; }
+        .queue-title { font-family: var(--brush); font-size: 28px; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .queue-meta { font-size: 18px; color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .queue-empty {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            text-align: center;
+            color: var(--ink-soft);
+        }
+        .queue-empty div { font-family: var(--brush); font-size: 34px; color: var(--ink); }
+        .queue-empty .material-icons-round { font-size: 64px; color: var(--ink-faint); transform: rotate(-10deg); }
+
+        /* ── Singer picker modal (a paper sheet) ─────────────── */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            background: rgba(43, 37, 32, 0.45);
+        }
+        .modal-overlay.open { display: flex; }
+        .jb-modal {
+            width: min(620px, 92vw);
+            max-height: calc(100vh - 32px);
+            overflow-y: auto;
+            padding: 26px 28px 18px;
+            background-color: var(--paper-2);
+            background-image: repeating-linear-gradient(180deg, transparent 0 31px, var(--line) 31px 32px);
+            border: 2.5px solid var(--ink);
+            border-radius: var(--wobble);
+            box-shadow: 6px 7px 0 -1px var(--ink);
+            animation: jb-sheet 0.25s ease;
+        }
+        @keyframes jb-sheet { from { opacity: 0; transform: translateY(16px) rotate(1deg); } to { opacity: 1; transform: none; } }
+        .modal-song { display: flex; align-items: center; gap: 18px; margin-bottom: 20px; }
+        .modal-song .np-thumb { width: 120px; flex-shrink: 0; font-size: 30px; }
+        .modal-song-title { font-family: var(--brush); font-size: 32px; line-height: 1.1; }
+        .modal-song-artist { font-size: 19px; color: var(--ink-soft); }
+        .jb-modal h3 { margin: 0 0 12px; font-size: 30px; }
+        .singer-chips { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 18px; }
+        .singer-chip {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 16px;
+            font-size: 20px;
+            color: var(--ink);
+            background: #fff;
+            border: 2.5px solid var(--ink);
+            border-radius: var(--wobble-2);
+            box-shadow: var(--shadow-sm);
+            cursor: pointer;
+            transition: transform 0.1s ease, background 0.15s ease;
+        }
+        .singer-chip:nth-child(odd) { transform: rotate(-1.5deg); border-radius: var(--wobble); }
+        .singer-chip:nth-child(even) { transform: rotate(1.2deg); }
+        .singer-chip:hover { background: var(--hi); transform: rotate(0) scale(1.04); }
+        .singer-chip.away { opacity: 0.6; }
+        .singer-chip .status-dot { width: 12px; height: 12px; flex-shrink: 0; border: 2px solid var(--ink); border-radius: var(--blob); }
+        .status-dot.active { background: var(--green-ink); }
+        .status-dot.inactive { background: var(--paper-3); }
+        .singer-form { display: flex; gap: 12px; }
+        .singer-input {
+            flex: 1;
+            min-width: 0;
+            padding: 8px 14px;
+            font-size: 21px;
+            color: var(--ink);
+            background: #fff;
+            border: 2.5px solid var(--ink);
+            border-radius: var(--wobble-2);
+            outline: none;
+        }
+        .singer-input:focus { box-shadow: 0 0 0 4px var(--hi); }
+        .singer-confirm {
+            padding: 0 26px;
+            font-family: var(--brush);
+            font-size: 26px;
+            color: var(--ink);
+            background: var(--yellow);
+            border: 2.5px solid var(--ink);
+            border-radius: var(--wobble);
+            box-shadow: var(--shadow-sm);
+            cursor: pointer;
+        }
+        .singer-confirm:active { transform: translate(2px, 2px); box-shadow: none; }
+        .modal-close {
+            width: 100%;
+            margin-top: 14px;
+            padding: 6px;
+            font-size: 19px;
+            color: var(--ink-soft);
+            background: none;
+            border: none;
+            cursor: pointer;
+            text-decoration: underline wavy var(--red) 1.5px;
+            text-underline-offset: 4px;
+        }
+        .modal-close:hover { color: var(--ink); }
+
+        /* ── Toast: a sticky note ────────────────────────────── */
+        .jb-toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            z-index: 200;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            max-width: min(640px, 90vw);
+            padding: 12px 22px;
+            font-size: 22px;
+            background: var(--hi);
+            border: 2.5px solid var(--ink);
+            border-radius: 3px 12px 4px 14px / 14px 4px 12px 3px;
+            box-shadow: 4px 5px 0 -1px var(--ink);
+            opacity: 0;
+            transform: translateX(-50%) translateY(140px) rotate(-1deg);
+            transition: transform 0.3s ease, opacity 0.3s ease;
+            pointer-events: none;
+        }
+        .jb-toast.show { opacity: 1; transform: translateX(-50%) translateY(0) rotate(-1deg); }
+        .jb-toast.success { background: var(--green); }
+        .jb-toast.error { background: var(--red-soft); }
+        .jb-toast .material-icons-round { font-size: 26px; }
+
+        /* ── Party missing / ended (online version) ──────────── */
+        .room-gone {
+            position: fixed;
+            inset: 0;
+            z-index: 300;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            background: rgba(43, 37, 32, 0.5);
+        }
+        .room-gone-note {
+            width: min(560px, 100%);
+            padding: 34px 30px 30px;
+            text-align: center;
+            background: var(--hi);
+            border: 2.5px solid var(--ink);
+            border-radius: 3px 12px 4px 14px / 14px 4px 12px 3px;
+            box-shadow: 6px 7px 0 -1px var(--ink);
+            transform: rotate(-1.5deg);
+        }
+        .room-gone-note .big { font-size: 60px; display: inline-block; transform: rotate(-12deg); }
+        .room-gone-note h2 { margin: 6px 0 10px; font-size: 48px; }
+        .room-gone-note p { margin: 0 0 22px; font-size: 22px; }
+
+        @media (max-width: 900px) {
+            body { overflow: auto; }
+            .jukebox {
+                grid-template-columns: minmax(0, 1fr);
+                grid-template-rows: auto;
+                height: auto;
+                padding: 16px 16px 24px 48px;
+            }
+            .rail { overflow: visible; }
+            .queue-panel { min-height: 320px; }
+            .code-input { font-size: 52px; letter-spacing: 8px; }
+            .add-btn { padding: 0 18px; font-size: 26px; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation: none !important; transition: none !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="jukebox">
+        <!-- Left rail -->
+        <aside class="rail">
+            <div class="brand">
+                <span class="logo" aria-hidden="true"><span class="material-icons-round">mic</span></span>
+                <div>
+                    <span class="brand-name">Karaoke</span>
+                    <small id="jukeboxTag">Jukebox</small>
+                </div>
+            </div>
+
+            <div class="np-card idle" id="nowPlaying">
+                <div class="np-label" id="npLabel"></div>
+                <div class="np-thumb" id="npThumb"><span class="material-icons-round">music_note</span></div>
+                <div class="np-title" id="npTitle">Nothing playing</div>
+                <div class="np-artist" id="npArtist"></div>
+                <div class="np-singer" id="npSinger"></div>
+            </div>
+
+            <div class="remote card" id="remotePanel">
+                <h3 id="remoteTitle">DJ Controls</h3>
+                <div class="remote-buttons">
+                    <button class="remote-btn full" id="playPauseBtn" type="button">
+                        <span class="material-icons-round" id="playPauseIcon">play_arrow</span>
+                        <span id="playPauseLabel">Play</span>
+                    </button>
+                    <button class="remote-btn" id="skipBtn" type="button">
+                        <span class="material-icons-round">skip_next</span>
+                        <span id="skipLabel">Skip</span>
+                    </button>
+                    <button class="remote-btn danger" id="clearBtn" type="button">
+                        <span class="material-icons-round">playlist_remove</span>
+                        <span id="clearLabel">Clear</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Online version: the public party link + code replace the LAN URL / Wi-Fi hint. -->
+            <div class="qr-card card">
+                <h3 id="scanTitle">Scan to join from your phone</h3>
+                <div class="qr-box"><div id="qrcode"></div></div>
+                <div class="room-code-row">
+                    <span id="partyCodeLabel">Party code</span>
+                    <span class="code-stamp" id="roomCode">----</span>
+                </div>
+                <p class="connect-text" id="connectText">Or open the link and type the party code</p>
+                <div class="server-url" id="serverUrl">—</div>
+            </div>
+        </aside>
+
+        <!-- Main column -->
+        <main class="main">
+            <div class="code-hero">
+                <h2 id="codeTitle">Enter a song code</h2>
+                <p id="codeSubtitle">Find the number next to any song and type it in</p>
+                <form class="code-entry" id="codeForm" autocomplete="off">
+                    <input class="code-input" id="codeInput" type="text" inputmode="numeric"
+                           pattern="[0-9]*" maxlength="6" placeholder="0000" aria-label="Song code">
+                    <button class="add-btn" type="submit">
+                        <span class="material-icons-round">add</span>
+                        <span id="addLabel">Add</span>
+                    </button>
+                </form>
+                <div class="code-preview" id="codePreview">
+                    <div class="cp-thumb" id="cpThumb"><span class="material-icons-round">music_note</span></div>
+                    <div class="cp-info">
+                        <div class="cp-title" id="cpTitle"></div>
+                        <div class="cp-artist" id="cpArtist"></div>
+                        <div id="cpChips"></div>
+                    </div>
+                    <div class="cp-hint"><span class="material-icons-round">keyboard_return</span><span id="cpHint">Press Enter to add</span></div>
+                </div>
+            </div>
+
+            <div class="queue-panel">
+                <div class="queue-head">
+                    <h3><span class="material-icons-round">queue_music</span> <span id="queueTitle">Up next</span></h3>
+                    <span class="queue-count" id="queueCount">0</span>
+                </div>
+                <div class="queue-list" id="queueList"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Singer picker modal -->
+    <div class="modal-overlay" id="singerModal">
+        <div class="jb-modal">
+            <div class="modal-song">
+                <div class="np-thumb" id="modalThumb"><span class="material-icons-round">music_note</span></div>
+                <div>
+                    <div class="modal-song-title" id="modalTitle"></div>
+                    <div class="modal-song-artist" id="modalArtist"></div>
+                    <div id="modalChips" style="margin-top:4px;"></div>
+                </div>
+            </div>
+            <h3 id="whoSinging">Who's singing?</h3>
+            <div class="singer-chips" id="singerChips"></div>
+            <form class="singer-form" id="singerForm" autocomplete="off">
+                <input class="singer-input" id="singerInput" type="text" maxlength="50"
+                       placeholder="or type a name…" aria-label="Singer name">
+                <button class="singer-confirm" type="submit" id="singerConfirm">Add</button>
+            </form>
+            <button class="modal-close" id="modalCancel" type="button">Cancel</button>
+        </div>
+    </div>
+
+    <div class="jb-toast" id="toast"></div>
+
+    <!-- Online version: shown when the party does not exist or the DJ ended it. -->
+    <div class="room-gone" id="roomGone" hidden>
+        <div class="room-gone-note" role="alertdialog" aria-labelledby="roomGoneTitle">
+            <span class="big" aria-hidden="true"><span class="material-icons-round">mic</span></span>
+            <h2 id="roomGoneTitle">Party not found</h2>
+            <p id="roomGoneText"></p>
+            <a class="btn primary" id="roomGoneLink" href="/karaoke/">Back to the start</a>
+        </div>
+    </div>
+
+    <script src="/karaoke/js/escape.js?v=1"></script>
+    <script src="/karaoke/js/qrcode.min.js"></script>
+    <script src="/karaoke/js/videokind.js?v=1"></script>
+    <script>
+        // Hand-drawn placeholder when a song has no thumbnail (drawn by /karaoke/js/icons.js).
+        window.NOTE_ICON = '<span class="material-icons-round">music_note</span>';
+        // Online version: every request goes through window.KRoom (room code prefix + auth
+        // headers). No party code in the URL: room.js sends the kiosk to /karaoke/?join=1.
+        KRoom.require();
+
+        // ── Minimal i18n (en / pt-BR / es) ──────────────────────
+        const I18N = {
+            en: {
+                jukeboxTag: 'Jukebox', scanTitle: 'Scan to join from your phone',
+                connectGeneric: 'Or open this link on your phone:', partyCode: 'Party code',
+                remoteTitle: 'DJ Controls', play: 'Play', pause: 'Pause', skip: 'Skip', clear: 'Clear',
+                codeTitle: 'Enter a song code', codeSubtitle: 'Find the number next to any song and type it in',
+                add: 'Add', nothingPlaying: 'Nothing playing', nowPlaying: 'Now playing',
+                upNext: 'Up next', emptyQueue: 'The queue is empty', emptyHint: 'Add a song with its code to get started',
+                requestedBy: 'Added by {name}', whoSinging: "Who's singing?", guest: 'Guest', typeName: 'or type a name…',
+                added: 'Added "{title}" to the queue', notFound: 'No song found with code {code}',
+                enterCode: 'Type a song code first', cleared: 'Queue cleared', confirmClear: 'Clear the entire queue?', djOnly: 'Only the DJ can do this',
+                pressEnterToAdd: 'Press Enter to add', cancel: 'Cancel',
+                roomNotFound: 'Party not found', roomNotFoundDesc: 'Party {code} does not exist or has already ended. Check the code or start a new party.',
+                partyEnded: 'The party is over!', partyEndedDesc: 'The DJ ended the party. Thanks for singing!', backToStart: 'Back to the start'
+            },
+            'pt-BR': {
+                jukeboxTag: 'Jukebox', scanTitle: 'Escaneie para entrar pelo celular',
+                connectGeneric: 'Ou abra este link no celular:', partyCode: 'Código da festa',
+                remoteTitle: 'Controles do DJ', play: 'Tocar', pause: 'Pausar', skip: 'Pular', clear: 'Limpar',
+                codeTitle: 'Digite o código da música', codeSubtitle: 'Encontre o número ao lado de cada música e digite aqui',
+                add: 'Adicionar', nothingPlaying: 'Nada tocando', nowPlaying: 'Tocando agora',
+                upNext: 'A seguir', emptyQueue: 'A fila está vazia', emptyHint: 'Adicione uma música pelo código para começar',
+                requestedBy: 'Adicionada por {name}', whoSinging: 'Quem vai cantar?', guest: 'Convidado', typeName: 'ou digite um nome…',
+                added: '"{title}" adicionada à fila', notFound: 'Nenhuma música com o código {code}',
+                enterCode: 'Digite um código primeiro', cleared: 'Fila limpa', confirmClear: 'Limpar toda a fila?', djOnly: 'Só o DJ pode fazer isso',
+                pressEnterToAdd: 'Pressione Enter para adicionar', cancel: 'Cancelar',
+                roomNotFound: 'Festa não encontrada', roomNotFoundDesc: 'A festa {code} não existe ou já acabou. Confira o código ou comece uma nova festa.',
+                partyEnded: 'A festa acabou!', partyEndedDesc: 'O DJ encerrou a festa. Obrigado por cantar!', backToStart: 'Voltar ao início'
+            },
+            es: {
+                jukeboxTag: 'Jukebox', scanTitle: 'Escanea para unirte desde tu móvil',
+                connectGeneric: 'O abre este enlace en tu móvil:', partyCode: 'Código de la fiesta',
+                remoteTitle: 'Controles del DJ', play: 'Reproducir', pause: 'Pausar', skip: 'Saltar', clear: 'Vaciar',
+                codeTitle: 'Ingresa un código', codeSubtitle: 'Busca el número junto a cada canción y escríbelo',
+                add: 'Añadir', nothingPlaying: 'Nada sonando', nowPlaying: 'Sonando ahora',
+                upNext: 'A continuación', emptyQueue: 'La cola está vacía', emptyHint: 'Añade una canción con su código para empezar',
+                requestedBy: 'Añadida por {name}', whoSinging: '¿Quién canta?', guest: 'Invitado', typeName: 'o escribe un nombre…',
+                added: '"{title}" añadida a la cola', notFound: 'No hay canción con el código {code}',
+                enterCode: 'Escribe un código primero', cleared: 'Cola vaciada', confirmClear: '¿Vaciar toda la cola?', djOnly: 'Solo el DJ puede hacer esto',
+                pressEnterToAdd: 'Pulsa Enter para añadir', cancel: 'Cancelar',
+                roomNotFound: 'Fiesta no encontrada', roomNotFoundDesc: 'La fiesta {code} no existe o ya terminó. Revisa el código o empieza una fiesta nueva.',
+                partyEnded: '¡La fiesta terminó!', partyEndedDesc: 'El DJ terminó la fiesta. ¡Gracias por cantar!', backToStart: 'Volver al inicio'
+            }
+        };
+        // Match the player's language. The player persists the DJ's choice in
+        // localStorage under 'karaoke_language'; because the jukebox is served
+        // from the same origin it shares that value. Fall back to the browser
+        // language, then pt-BR to mirror the player's own default.
+        const LANG = (() => {
+            let stored = null;
+            try { stored = localStorage.getItem('karaoke_language'); } catch (e) { /* storage blocked */ }
+            if (stored && I18N[stored]) return stored;
+            const n = (navigator.language || navigator.languages?.[0] || '');
+            if (/^pt/i.test(n)) return 'pt-BR';
+            if (/^es/i.test(n)) return 'es';
+            if (/^en/i.test(n)) return 'en';
+            return 'pt-BR';
+        })();
+        // Re-apply if the DJ changes the language in the player while the
+        // jukebox is open (storage events fire across same-origin windows).
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'karaoke_language' && e.newValue && e.newValue !== LANG) location.reload();
+        });
+        const L = I18N[LANG] || I18N.en;
+        const t = (key, vars) => {
+            let s = L[key] || I18N.en[key] || key;
+            if (vars) for (const k in vars) s = s.replace(`{${k}}`, vars[k]);
+            return s;
+        };
+        const esc = window.escapeHtml;
+        // Video-type chips in the page language (shared /karaoke/js/videokind.js).
+        const vkChips = (song) => window.videoKindChips ? window.videoKindChips(song, LANG) : '';
+        // Online version: thumbnails come from YouTube, not from the server.
+        const thumbImg = (song, onerror) => {
+            const src = KRoom.thumb(song);
+            return src ? `<img src="${esc(src)}" alt="" onerror="${onerror}">` : '';
+        };
+
+        class Jukebox {
+            constructor() {
+                this.controls = 'add_only';
+                this.isPlaying = false;
+                this.nowPlaying = null;
+                this.pendingSong = null;
+                this.matchedSong = null; // song the live code lookup is currently previewing
+                this.matchedCode = null; // the code matchedSong was fetched for
+                this.reconnectDelay = 2000;
+                this.roomGone = false;
+                this.applyStaticText();
+                this.bindUI();
+                this.loadConfig();
+                this.showInvite();
+                this.setupWebSocket();
+                document.getElementById('codeInput').focus();
+            }
+
+            applyStaticText() {
+                const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+                set('jukeboxTag', t('jukeboxTag'));
+                set('scanTitle', t('scanTitle'));
+                set('connectText', t('connectGeneric'));
+                set('partyCodeLabel', t('partyCode'));
+                set('remoteTitle', t('remoteTitle'));
+                set('skipLabel', t('skip'));
+                set('clearLabel', t('clear'));
+                set('codeTitle', t('codeTitle'));
+                set('codeSubtitle', t('codeSubtitle'));
+                set('addLabel', t('add'));
+                set('cpHint', t('pressEnterToAdd'));
+                set('npTitle', t('nothingPlaying'));
+                set('queueTitle', t('upNext'));
+                set('whoSinging', t('whoSinging'));
+                set('singerConfirm', t('add'));
+                set('modalCancel', t('cancel'));
+                document.getElementById('singerInput').placeholder = t('typeName');
+            }
+
+            bindUI() {
+                document.getElementById('codeForm').addEventListener('submit', (e) => { e.preventDefault(); this.submitCode(); });
+                document.getElementById('codeInput').addEventListener('input', () => this.onCodeInput());
+                document.getElementById('playPauseBtn').addEventListener('click', () => this.togglePlay());
+                document.getElementById('skipBtn').addEventListener('click', () => this.skip());
+                document.getElementById('clearBtn').addEventListener('click', () => this.clearQueue());
+
+                // Any numeric key typed anywhere on the kiosk jumps to the code
+                // input and starts filling it — guests can just start typing the
+                // number without first clicking the box.
+                document.addEventListener('keydown', (e) => {
+                    if (e.ctrlKey || e.metaKey || e.altKey) return;
+                    if (document.getElementById('singerModal').classList.contains('open')) return;
+                    const input = document.getElementById('codeInput');
+                    const active = document.activeElement;
+                    if (active === input) return; // already typing in it
+                    if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) return;
+                    if (/^[0-9]$/.test(e.key)) {
+                        e.preventDefault();
+                        input.focus();
+                        if (input.value.length < input.maxLength) input.value += e.key;
+                        this.onCodeInput();
+                    }
+                });
+                document.getElementById('singerForm').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const name = document.getElementById('singerInput').value.trim();
+                    // A typed name is a real singer (register it); empty = Guest.
+                    if (name) this.confirmSinger(name, true);
+                    else this.confirmSinger(t('guest'), false);
+                });
+                document.getElementById('modalCancel').addEventListener('click', () => this.closeModal());
+                document.getElementById('singerModal').addEventListener('click', (e) => {
+                    if (e.target.id === 'singerModal') this.closeModal();
+                });
+            }
+
+            // Online version: KRoom.fetch + JSON; a missing party shows the "party not found" note.
+            async api(path, opts) {
+                const r = await KRoom.fetch(path, opts);
+                const d = await r.json().catch(() => ({}));
+                if (r.status === 404 && d && d.data && d.data.code === 'room_not_found') this.showRoomGone('notFound');
+                return { ok: r.ok, status: r.status, data: d };
+            }
+
+            async loadConfig() {
+                try {
+                    const { data: d } = await this.api('/config');
+                    if (d.success && d.data) this.applyControls(d.data.jukebox_controls || 'add_only');
+                } catch (e) { console.error('config load failed', e); }
+            }
+
+            applyControls(mode) {
+                this.controls = mode;
+                document.getElementById('remotePanel').classList.toggle('active', mode === 'full');
+            }
+
+            // Online version: QR + text = the public party link (no LAN IPs, mDNS or Wi-Fi).
+            showInvite() {
+                const url = KRoom.joinUrl();
+                document.getElementById('roomCode').textContent = KRoom.code;
+                document.getElementById('serverUrl').textContent = url.replace(/^https?:\/\//, '');
+                document.title = `Karaoke Jukebox · ${KRoom.code}`;
+                this.renderQR(url);
+            }
+
+            renderQR(text) {
+                const c = document.getElementById('qrcode');
+                c.innerHTML = '';
+                if (typeof QRCode === 'undefined') return;
+                new QRCode(c, { text, width: 210, height: 210, colorDark: '#2b2520', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.H });
+            }
+
+            // kind: 'notFound' (unknown/expired party) | 'ended' (the DJ ended it)
+            showRoomGone(kind) {
+                this.roomGone = true;
+                clearInterval(this.pingInterval);
+                if (this.ws) { try { this.ws.close(); } catch (e) { /* ignore */ } }
+                const ended = kind === 'ended';
+                document.getElementById('roomGoneTitle').textContent = t(ended ? 'partyEnded' : 'roomNotFound');
+                document.getElementById('roomGoneText').textContent = ended ? t('partyEndedDesc') : t('roomNotFoundDesc', { code: KRoom.code });
+                document.getElementById('roomGoneLink').textContent = t('backToStart');
+                document.getElementById('singerModal').classList.remove('open');
+                document.getElementById('roomGone').hidden = false;
+            }
+
+            // ── WebSocket ───────────────────────────────────────
+            setupWebSocket() {
+                if (this.roomGone) return;
+                this.ws = new WebSocket(KRoom.wsUrl());
+                this.ws.onopen = () => {
+                    this.reconnectDelay = 2000;
+                    this.pingInterval = setInterval(() => {
+                        if (this.ws && this.ws.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify({ type: 'ping' }));
+                    }, 10000);
+                };
+                this.ws.onmessage = (ev) => {
+                    const msg = JSON.parse(ev.data);
+                    if (msg.type === 'init' || msg.type === 'queue_update') this.handleQueueUpdate(msg.payload);
+                    else if (msg.type === 'config_update' && msg.payload && msg.payload.jukebox_controls) this.applyControls(msg.payload.jukebox_controls);
+                    else if (msg.type === 'server_shutdown') this.showRoomGone('ended'); // online version: the DJ ended the party
+                };
+                this.ws.onclose = (ev) => {
+                    clearInterval(this.pingInterval);
+                    if (ev && ev.code === 4404) { this.showRoomGone('notFound'); return; } // online version: no such party
+                    if (this.roomGone) return;
+                    setTimeout(() => this.setupWebSocket(), this.reconnectDelay);
+                    this.reconnectDelay = Math.min(this.reconnectDelay * 1.5, 10000);
+                };
+                this.ws.onerror = () => {};
+            }
+
+            handleQueueUpdate(payload) {
+                if (!payload) return;
+                this.nowPlaying = payload.now_playing || null;
+                this.isPlaying = payload.is_playing === true;
+                this.renderNowPlaying();
+                this.updatePlayPause();
+                const queue = (payload.queue || []).filter(it => !this.nowPlaying || it.id !== this.nowPlaying.id);
+                this.renderQueue(queue);
+            }
+
+            // Set a title and scroll it horizontally only if it overflows, so
+            // long titles "rotate" into view instead of being clipped.
+            setScrollingTitle(el, text) {
+                el.classList.remove('marquee');
+                el.style.removeProperty('--marquee-shift');
+                el.style.removeProperty('--marquee-duration');
+                el.innerHTML = '<span class="marquee-inner"></span>';
+                el.firstElementChild.textContent = text || '';
+                requestAnimationFrame(() => {
+                    const inner = el.firstElementChild;
+                    if (!inner) return;
+                    const overflow = inner.scrollWidth - el.clientWidth;
+                    if (overflow > 4) {
+                        el.style.setProperty('--marquee-shift', `-${overflow}px`);
+                        el.style.setProperty('--marquee-duration', `${Math.max(6, Math.round(overflow / 25))}s`);
+                        el.classList.add('marquee');
+                    }
+                });
+            }
+
+            renderNowPlaying() {
+                const np = this.nowPlaying;
+                const box = document.getElementById('nowPlaying');
+                const thumb = document.getElementById('npThumb');
+                if (np && np.song) {
+                    box.classList.remove('idle');
+                    document.getElementById('npLabel').innerHTML = `<span class="np-pulse"></span>${esc(t('nowPlaying'))}`;
+                    this.setScrollingTitle(document.getElementById('npTitle'), np.song.title || '—');
+                    document.getElementById('npArtist').textContent = np.song.artist || '';
+                    document.getElementById('npSinger').textContent = np.user_name ? t('requestedBy', { name: np.user_name }) : '';
+                    thumb.innerHTML = thumbImg(np.song, "this.outerHTML=window.NOTE_ICON") || window.NOTE_ICON;
+                } else {
+                    box.classList.add('idle');
+                    document.getElementById('npLabel').textContent = '';
+                    this.setScrollingTitle(document.getElementById('npTitle'), t('nothingPlaying'));
+                    document.getElementById('npArtist').textContent = '';
+                    document.getElementById('npSinger').textContent = '';
+                    thumb.innerHTML = window.NOTE_ICON;
+                }
+            }
+
+            renderQueue(queue) {
+                document.getElementById('queueCount').textContent = queue.length;
+                const list = document.getElementById('queueList');
+                if (!queue.length) {
+                    list.innerHTML = `<div class="queue-empty"><span class="material-icons-round">music_note</span><div>${esc(t('emptyQueue'))}</div><small>${esc(t('emptyHint'))}</small></div>`;
+                    return;
+                }
+                list.innerHTML = queue.map((it, i) => {
+                    const s = it.song || {};
+                    return `<div class="queue-item">
+                        <div class="queue-pos">${i + 1}</div>
+                        <div class="queue-thumb">${thumbImg(s, "this.style.display='none'")}</div>
+                        <div class="queue-info">
+                            <div class="queue-title">${esc(s.title || '—')}</div>
+                            <div class="queue-meta vk-line"><span class="vk-line-text">${esc(s.artist || '')}${it.user_name ? ' · ' + esc(it.user_name) : ''}</span>${vkChips(s)}</div>
+                        </div>
+                    </div>`;
+                }).join('');
+            }
+
+            updatePlayPause() {
+                const icon = document.getElementById('playPauseIcon');
+                const label = document.getElementById('playPauseLabel');
+                if (this.isPlaying) { icon.textContent = 'pause'; label.textContent = t('pause'); }
+                else { icon.textContent = 'play_arrow'; label.textContent = t('play'); }
+            }
+
+            // ── Code entry → live preview → singer modal ────────
+            // Runs on every keystroke: sanitises the field and (debounced) looks
+            // up the code so a match can be previewed before the guest confirms.
+            onCodeInput() {
+                const input = document.getElementById('codeInput');
+                input.value = input.value.replace(/[^0-9]/g, '');
+                const code = input.value.trim();
+                clearTimeout(this._previewTimer);
+                if (!code) { this.clearPreview(); return; }
+                this._previewTimer = setTimeout(() => this.livePreview(code), 200);
+            }
+
+            async livePreview(code) {
+                // Ignore if the field changed before this fired.
+                if (document.getElementById('codeInput').value.trim() !== code) return;
+                try {
+                    const { data: d } = await this.api(`/catalog/code/${encodeURIComponent(code)}`);
+                    // Guard against out-of-order responses.
+                    if (document.getElementById('codeInput').value.trim() !== code) return;
+                    if (d.success && d.data) {
+                        this.matchedSong = d.data;
+                        this.matchedCode = code;
+                        this.showPreview(d.data);
+                    } else {
+                        this.clearPreview();
+                    }
+                } catch (e) {
+                    this.clearPreview();
+                }
+            }
+
+            showPreview(song) {
+                document.getElementById('cpThumb').innerHTML = thumbImg(song, "this.outerHTML=window.NOTE_ICON") || window.NOTE_ICON;
+                this.setScrollingTitle(document.getElementById('cpTitle'), song.title || '—');
+                document.getElementById('cpArtist').textContent = song.artist || '';
+                document.getElementById('cpChips').innerHTML = vkChips(song);
+                document.getElementById('codePreview').classList.add('show');
+            }
+
+            clearPreview() {
+                this.matchedSong = null;
+                this.matchedCode = null;
+                document.getElementById('codePreview').classList.remove('show');
+            }
+
+            // Confirmation (Add button / Enter): use the previewed match if it's
+            // still for the typed code, otherwise look it up.
+            async submitCode() {
+                const input = document.getElementById('codeInput');
+                const code = input.value.trim();
+                if (!code) { this.toast(t('enterCode'), 'error'); return; }
+                if (this.matchedSong && this.matchedCode === code) {
+                    this.proceedWithSong(this.matchedSong);
+                    return;
+                }
+                try {
+                    const { data: d } = await this.api(`/catalog/code/${encodeURIComponent(code)}`);
+                    if (d.success && d.data) {
+                        this.proceedWithSong(d.data);
+                    } else {
+                        this.toast(t('notFound', { code }), 'error');
+                    }
+                } catch (e) {
+                    this.toast(t('notFound', { code }), 'error');
+                }
+            }
+
+            proceedWithSong(song) {
+                this.pendingSong = song;
+                document.getElementById('codeInput').value = '';
+                this.clearPreview();
+                this.openModal(song);
+            }
+
+            async openModal(song) {
+                document.getElementById('modalTitle').textContent = song.title || '—';
+                document.getElementById('modalArtist').textContent = song.artist || '';
+                document.getElementById('modalChips').innerHTML = vkChips(song);
+                document.getElementById('modalThumb').innerHTML = thumbImg(song, "this.outerHTML=window.NOTE_ICON") || window.NOTE_ICON;
+                document.getElementById('singerInput').value = '';
+
+                // Build singer chips: all session players (active + inactive)
+                let players = [];
+                try {
+                    const { data: d } = await this.api('/users');
+                    if (d.success && Array.isArray(d.data)) players = d.data;
+                } catch (e) { /* ignore */ }
+                const chips = document.getElementById('singerChips');
+                chips.innerHTML =
+                    players.map(p => `<button class="singer-chip ${p.status === 'inactive' ? 'away' : ''}" type="button" data-name="${esc(p.name)}"><span class="status-dot ${esc(p.status)}"></span>${esc(p.name)}</button>`).join('');
+                chips.querySelectorAll('.singer-chip').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        // Named chips register as roster players.
+                        this.confirmSinger(btn.dataset.name, true);
+                    });
+                });
+
+                document.getElementById('singerModal').classList.add('open');
+                setTimeout(() => document.getElementById('singerInput').focus(), 50);
+            }
+
+            closeModal() {
+                document.getElementById('singerModal').classList.remove('open');
+                this.pendingSong = null;
+                document.getElementById('codeInput').focus();
+            }
+
+            async confirmSinger(name, registerPlayer = false) {
+                if (!this.pendingSong) return;
+                const song = this.pendingSong;
+                await this.addToQueue(song.id, name, registerPlayer);
+                this.closeModal();
+            }
+
+            async addToQueue(songId, userName, registerPlayer = false) {
+                try {
+                    const { data: d } = await this.api('/queue', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ song_id: songId, user_name: userName, register_player: registerPlayer })
+                    });
+                    if (d.success) {
+                        const title = (d.data && d.data.song && d.data.song.title) || (this.pendingSong && this.pendingSong.title) || '';
+                        this.toast(t('added', { title }), 'success');
+                    } else {
+                        this.toast(d.error || 'Error', 'error');
+                    }
+                } catch (e) {
+                    this.toast('Error', 'error');
+                }
+            }
+
+            // ── Remote (full mode only) ─────────────────────────
+            async post(path) {
+                try { await this.api(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }); } catch (e) {}
+            }
+            togglePlay() {
+                if (this.controls !== 'full') return;
+                if (this.isPlaying) this.post('/queue/pause');
+                else this.post(this.nowPlaying ? '/queue/resume' : '/queue/play');
+            }
+            skip() { if (this.controls === 'full') this.post('/queue/skip'); }
+            async clearQueue() {
+                if (this.controls !== 'full') return;
+                if (!confirm(t('confirmClear'))) return;
+                try {
+                    // Clearing is a room-admin action: works for the party creator (host key)
+                    // or when no DJ PIN is set; any other kiosk gets 401.
+                    const r = await this.api('/queue', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+                    if (r.ok) this.toast(t('cleared'), 'success');
+                    else this.toast(r.status === 401 || r.status === 429 ? t('djOnly') : 'Error', 'error');
+                } catch (e) {}
+            }
+
+            // ── Toast ───────────────────────────────────────────
+            toast(message, type = 'success') {
+                const el = document.getElementById('toast');
+                el.className = `jb-toast ${type}`;
+                el.innerHTML = `<span class="material-icons-round">${type === 'success' ? 'check_circle' : 'error'}</span>${esc(message)}`;
+                requestAnimationFrame(() => el.classList.add('show'));
+                clearTimeout(this._toastTimer);
+                this._toastTimer = setTimeout(() => el.classList.remove('show'), 3200);
+            }
+        }
+
+        let jukebox;
+        document.addEventListener('DOMContentLoaded', () => { jukebox = new Jukebox(); });
+    </script>
+</body>
+</html>

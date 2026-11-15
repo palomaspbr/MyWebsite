@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en" translate="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="google" content="notranslate">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='24' cy='22' r='14' fill='%23ffd43b' stroke='%232b2520' stroke-width='4'/%3E%3Cpath d='M33 31 L54 56' stroke='%232b2520' stroke-width='9' stroke-linecap='round'/%3E%3C/svg%3E">
+    <title>Song Catalog</title>
+    <link rel="stylesheet" href="/karaoke/css/sketch.css">
+    <style>
+        /* Printable song catalog: replaces the original Go PDF generator (services/pdf.go).
+           Same content and structure: a cover, then per language a sub-cover and a table
+           (ARTIST | CODE | SONG | LYRICS START | LNG) sorted by artist, then title.
+           On screen it looks like sheets of notebook paper; printed it is plain black on white A4. */
+
+        .toolbar {
+            position: sticky; top: 0; z-index: 10;
+            display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px;
+            padding: 10px 16px;
+            background: var(--paper);
+            border-bottom: 2.5px solid var(--ink);
+        }
+        .toolbar h1 { margin: 0; font-size: 30px; }
+        .toolbar .spacer { flex: 1; }
+        .toolbar label { display: inline-flex; align-items: center; gap: 8px; color: var(--ink-soft); }
+        .toolbar select.field { width: auto; padding: 4px 10px; }
+        .toolbar .btn .material-icons-round { font-size: 20px; }
+
+        main { padding: 24px 16px 60px; }
+        .status { max-width: 520px; margin: 40px auto; padding: 22px; text-align: center; }
+        .status .material-icons-round { font-size: 40px; display: block; margin: 0 auto 8px; }
+
+        .page {
+            width: min(210mm, 100%);
+            margin: 0 auto 32px;
+            padding: 14mm 10mm;
+            background: var(--paper-2);
+            border: 2.5px solid var(--ink);
+            border-radius: var(--wobble);
+            box-shadow: var(--shadow);
+        }
+
+        /* Cover */
+        .cover { min-height: 250mm; display: flex; flex-direction: column; align-items: center; text-align: center; }
+        .cover-title { font-family: var(--brush); font-size: 96px; line-height: 1; margin: 30mm 0 4mm; letter-spacing: 2px; }
+        .cover-sub { font-family: var(--brush); font-size: 34px; color: var(--red); margin: 0; }
+        .cover-line { width: 120mm; max-width: 80%; height: 14px; margin: 10mm auto 0; background: var(--pen-line) 0 50% / 100% 12px no-repeat; }
+        .cover-mic { font-size: 110px !important; margin: 14mm 0 6mm; }
+        .cover-stats { padding: 8mm 16mm; border: 2.5px solid var(--ink); border-radius: var(--wobble-2); background: var(--hi); }
+        .cover-stats .big { font-family: var(--brush); font-size: 40px; line-height: 1.1; }
+        .cover-stats .small { font-size: 22px; color: var(--ink-soft); }
+        .cover-date { margin-top: auto; padding-top: 12mm; font-style: italic; color: var(--ink-soft); }
+
+        /* Language sub-cover */
+        .subcover { min-height: 250mm; display: flex; flex-direction: column; align-items: center; text-align: center; }
+        .subcover-acr { font-family: var(--brush); font-size: 150px; line-height: 1; margin-top: 25mm; opacity: 0.3; }
+        .subcover-name { font-family: var(--brush); font-size: 56px; margin: 4mm 0 0; }
+        .subcover-line { width: 100mm; max-width: 70%; border-top: 2.5px solid var(--ink); margin: 10mm auto; }
+        .subcover-count { font-size: 30px; }
+
+        /* Song table */
+        .songs { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 15px; }
+        .songs .bar th {
+            text-align: left; padding: 4px 8px;
+            font-family: var(--brush); font-weight: normal; font-size: 20px;
+            background: var(--yellow); border: 2px solid var(--ink);
+        }
+        .songs .cols th {
+            padding: 3px 4px; text-align: center; font-weight: normal;
+            font-family: var(--brush); font-size: 17px; letter-spacing: 0.5px;
+            border: 2px solid var(--ink); background: var(--paper-3);
+        }
+        .songs td {
+            padding: 2px 6px;
+            border: 1px solid var(--line);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .songs tbody tr:nth-child(even) td { background: rgba(201, 219, 233, 0.25); }
+        .songs td.c { text-align: center; }
+        .songs td.code { font-family: var(--brush); color: var(--red); }
+        .songs col.c-artist { width: 23.7%; }
+        .songs col.c-code { width: 8.4%; }
+        .songs col.c-song { width: 26.3%; }
+        .songs col.c-lyrics { width: 32.6%; }
+        .songs col.c-lang { width: 9%; }
+
+        @media (max-width: 640px) {
+            .page { padding: 18px 10px; }
+            .cover, .subcover { min-height: 0; padding-bottom: 20px; }
+            .cover-title { font-size: 64px; margin-top: 20px; }
+            .subcover-acr { font-size: 100px; margin-top: 10px; }
+            .songs { font-size: 13px; }
+            .songs col.c-lyrics { width: 22%; }
+            .songs col.c-artist { width: 27%; }
+            .songs col.c-song { width: 33.6%; }
+        }
+
+        /* Print: A4, plain black on white, a page per cover/sub-cover, table header repeated per page. */
+        @page { size: A4; margin: 10mm; }
+        @media print {
+            html, body { background: #fff !important; }
+            body { background-image: none !important; color: #000; font-size: 10pt; }
+            .toolbar, .status { display: none !important; }
+            main { padding: 0; }
+            .page {
+                width: auto; margin: 0; padding: 0;
+                background: none; border: none; border-radius: 0; box-shadow: none;
+                break-after: page; page-break-after: always;
+            }
+            .page:last-child { break-after: auto; page-break-after: auto; }
+            .cover, .subcover { min-height: 270mm; color: #000; }
+            .cover-sub { color: #000; }
+            .cover-line { background: none; border-top: 2pt solid #000; height: 0; }
+            .cover-stats { background: none; border: 1.5pt solid #000; }
+            .cover-stats .small, .cover-date { color: #333; }
+            .subcover-acr { color: #000; opacity: 0.25; }
+            .subcover-line { border-top-color: #000; }
+            .songs { font-family: Arial, Helvetica, sans-serif; font-size: 7.5pt; }
+            .songs thead { display: table-header-group; }
+            .songs tr { break-inside: avoid; page-break-inside: avoid; }
+            .songs .bar th { font-family: Arial, Helvetica, sans-serif; font-weight: bold; font-size: 9pt; background: #fff; border: 1pt solid #000; border-bottom-width: 2pt; color: #000; }
+            .songs .cols th { font-family: Arial, Helvetica, sans-serif; font-weight: bold; font-size: 7.5pt; background: #fff; border: 1pt solid #000; color: #000; }
+            .songs td { border: 0.5pt solid #000; padding: 1pt 3pt; color: #000; }
+            .songs td.code { font-family: Arial, Helvetica, sans-serif; color: #000; }
+            .songs tbody tr:nth-child(even) td { background: #f2f2f2; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <h1 class="pen-underline" id="pageHeading">Song Catalog</h1>
+        <span class="spacer"></span>
+        <label for="langSelect">Labels
+            <select id="langSelect" class="field">
+                <option value="PT-BR">Português (BR)</option>
+                <option value="es">Español</option>
+                <option value="en">English</option>
+            </select>
+        </label>
+        <button type="button" class="btn primary" id="printBtn" disabled>
+            <span class="material-icons-round">print</span> Print / Save as PDF
+        </button>
+    </div>
+    <main id="catalogRoot">
+        <div class="status sketch" id="status"><span class="material-icons-round wiggle">edit</span>Writing the songbook...</div>
+    </main>
+
+    <script src="/karaoke/js/room.js"></script>
+    <script src="/karaoke/js/icons.js"></script>
+    <script src="/karaoke/js/escape.js"></script>
+    <script>
+        KRoom.require();
+        const esc = window.escapeHtml;
+
+        // Same labels as services/pdf.go (with proper accents: the browser has no font limits).
+        const PRINT_TEXT = {
+            'PT-BR': {
+                catalog: 'CATÁLOGO DE MÚSICAS', songs: 'Músicas', languages: 'Idiomas', generatedOn: 'Gerado em',
+                code: 'CÓD', artist: 'ARTISTA', song: 'MÚSICA', lyricsStart: 'INÍCIO DA LETRA', lang: 'LNG',
+                catalogTitle: 'Catálogo de Músicas'
+            },
+            es: {
+                catalog: 'CATÁLOGO DE CANCIONES', songs: 'Canciones', languages: 'Idiomas', generatedOn: 'Generado el',
+                code: 'CÓD', artist: 'ARTISTA', song: 'CANCIÓN', lyricsStart: 'INICIO DE LETRA', lang: 'IDM',
+                catalogTitle: 'Catálogo de Canciones'
+            },
+            en: {
+                catalog: 'SONG CATALOG', songs: 'Songs', languages: 'Languages', generatedOn: 'Generated on',
+                code: 'CODE', artist: 'ARTIST', song: 'SONG', lyricsStart: 'LYRICS START', lang: 'LNG',
+                catalogTitle: 'Song Catalog'
+            }
+        };
+        // Fallback languages when GET /languages fails (as pdf.go).
+        const FALLBACK_LANGUAGES = [
+            { id: 'PT-BR', name: 'Portugues (BR)', acronym: 'PT-BR' },
+            { id: 'PT', name: 'Portugues (PT)', acronym: 'PT' },
+            { id: 'EN', name: 'English', acronym: 'EN' },
+            { id: 'ES', name: 'Espanol', acronym: 'ES' },
+            { id: 'FR', name: 'Francais', acronym: 'FR' },
+            { id: 'IT', name: 'Italiano', acronym: 'IT' }
+        ];
+        // pdf.go groups songs without a language under the configured default, else "EN".
+        const DEFAULT_LANGUAGE = 'EN';
+
+        function normalizeLabelLang(raw) {
+            const v = String(raw || '').trim();
+            if (PRINT_TEXT[v]) return v;
+            const l = v.toLowerCase();
+            if (l.startsWith('pt')) return 'PT-BR';
+            if (l.startsWith('es')) return 'es';
+            if (l.startsWith('en')) return 'en';
+            return 'PT-BR'; // pdf.go default and fallback
+        }
+        const params = new URLSearchParams(location.search);
+        const uiLang = normalizeLabelLang(params.get('lang'));
+        const t = (key) => (PRINT_TEXT[uiLang] && PRINT_TEXT[uiLang][key]) || PRINT_TEXT['PT-BR'][key] || key;
+
+        const langSelect = document.getElementById('langSelect');
+        langSelect.value = uiLang;
+        langSelect.addEventListener('change', () => {
+            const p = new URLSearchParams(location.search);
+            p.set('lang', langSelect.value);
+            location.search = p.toString();
+        });
+        document.getElementById('printBtn').addEventListener('click', () => window.print());
+        document.documentElement.lang = uiLang === 'PT-BR' ? 'pt-BR' : uiLang;
+        document.title = t('catalogTitle');
+        document.getElementById('pageHeading').textContent = t('catalogTitle');
+
+        function showStatus(icon, html) {
+            document.getElementById('catalogRoot').innerHTML =
+                `<div class="status sketch"><span class="material-icons-round">${icon}</span>${html}</div>`;
+        }
+
+        async function getJson(path) {
+            const res = await KRoom.fetch(path);
+            let body = null;
+            try { body = await res.json(); } catch (e) { /* not JSON */ }
+            if (body && body.data && body.data.code === 'room_not_found') {
+                const err = new Error('room_not_found'); err.roomGone = true; throw err;
+            }
+            if (!res.ok || !body || !body.success) throw new Error((body && body.error) || ('HTTP ' + res.status));
+            return body.data;
+        }
+
+        function pad2(n) { return String(n).padStart(2, '0'); }
+
+        function buildCatalog(songs, languages) {
+            const langMap = new Map(languages.map(l => [l.id, l]));
+            // Group songs by language.
+            const groups = new Map();
+            for (const song of songs) {
+                const langId = song.language || DEFAULT_LANGUAGE;
+                if (!groups.has(langId)) {
+                    let lang = langMap.get(langId);
+                    if (!lang) {
+                        const acr = langId.length > 2 ? langId.slice(0, 2).toUpperCase() : langId;
+                        lang = { id: langId, name: langId, acronym: acr };
+                    }
+                    groups.set(langId, { id: langId, name: lang.name, acronym: lang.acronym, songs: [] });
+                }
+                groups.get(langId).songs.push(song);
+            }
+            // Languages by position (both known), otherwise by name.
+            const sorted = [...groups.values()].sort((a, b) => {
+                const la = langMap.get(a.id), lb = langMap.get(b.id);
+                if (la && lb) return (la.position || 0) - (lb.position || 0);
+                return a.name < b.name ? -1 : (a.name > b.name ? 1 : 0);
+            });
+            const lower = (s) => String(s || '').toLowerCase();
+            const cmp = (x, y) => (x < y ? -1 : (x > y ? 1 : 0));
+            const now = new Date();
+            const dateText = `${pad2(now.getDate())}/${pad2(now.getMonth() + 1)}/${now.getFullYear()}`;
+
+            let html = `<section class="page cover">
+                <div class="cover-title">KARAOKE</div>
+                <p class="cover-sub">${esc(t('catalog'))}</p>
+                <div class="cover-line"></div>
+                <span class="material-icons-round cover-mic" aria-hidden="true">mic</span>
+                <div class="cover-stats">
+                    <div class="big">${songs.length} ${esc(t('songs'))}</div>
+                    <div class="small">${sorted.length} ${esc(t('languages'))}</div>
+                </div>
+                <div class="cover-date">${esc(t('generatedOn'))} ${dateText}</div>
+            </section>`;
+
+            for (const g of sorted) {
+                if (!g.songs.length) continue;
+                g.songs.sort((a, b) => a.artist === b.artist
+                    ? cmp(lower(a.title), lower(b.title))
+                    : cmp(lower(a.artist), lower(b.artist)));
+                html += `<section class="page subcover">
+                    <div class="subcover-acr">${esc(g.acronym)}</div>
+                    <h2 class="subcover-name">${esc(g.name)}</h2>
+                    <div class="subcover-line"></div>
+                    <div class="subcover-count">${g.songs.length} ${esc(t('songs').toLowerCase())}</div>
+                </section>`;
+                html += `<section class="page"><table class="songs">
+                    <colgroup><col class="c-artist"><col class="c-code"><col class="c-song"><col class="c-lyrics"><col class="c-lang"></colgroup>
+                    <thead>
+                        <tr class="bar"><th colspan="5">${esc(`${t('catalogTitle')} - ${g.acronym} - ${now.getFullYear()}`)}</th></tr>
+                        <tr class="cols"><th>${esc(t('artist'))}</th><th>${esc(t('code'))}</th><th>${esc(t('song'))}</th><th>${esc(t('lyricsStart'))}</th><th>${esc(t('lang'))}</th></tr>
+                    </thead>
+                    <tbody>${g.songs.map(s => `<tr>
+                        <td title="${esc(s.artist)}">${esc(s.artist)}</td>
+                        <td class="c code">${s.code ? esc(String(s.code)) : '-'}</td>
+                        <td title="${esc(s.title)}">${esc(s.title)}</td>
+                        <td title="${esc(s.lyrics_start || '')}">${s.lyrics_start ? esc(s.lyrics_start) : '-'}</td>
+                        <td class="c">${esc(g.acronym)}</td>
+                    </tr>`).join('')}</tbody>
+                </table></section>`;
+            }
+            document.getElementById('catalogRoot').innerHTML = html;
+        }
+
+        (async function init() {
+            let songs, languages;
+            try {
+                songs = await getJson('/catalog');
+            } catch (e) {
+                if (e.roomGone) {
+                    showStatus('celebration', `This party is over, so its catalog link no longer works.<br><a href="/karaoke/">Start or join a party</a>`);
+                } else {
+                    showStatus('cloud_off', `Could not load the catalog.<br><small class="muted">${esc(e.message)}</small>`);
+                }
+                return;
+            }
+            try { languages = await getJson('/languages'); } catch (e) { languages = null; }
+            if (!Array.isArray(languages) || !languages.length) languages = FALLBACK_LANGUAGES;
+            songs = Array.isArray(songs) ? songs : [];
+            if (!songs.length) { showStatus('library_music', 'No songs in the catalog yet.'); return; }
+            buildCatalog(songs, languages);
+            document.getElementById('printBtn').disabled = false;
+        })();
+    </script>
+</body>
+</html>

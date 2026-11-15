@@ -1,5 +1,6 @@
 // Cloudflare Worker for palomaliz.com.br (Workers Builds deploys this on every push to master).
-// Everything is static except /jiujitsu/api/* (Chacrinha Jiu-Jitsu API, worker/index.js) and /loaf_tower/api/* (Loaf Tower leaderboard, worker/loaf.js).
+// Everything is static except /jiujitsu/api/* (Chacrinha Jiu-Jitsu API, worker/index.js), /loaf_tower/api/* (Loaf Tower leaderboard, worker/loaf.js)
+// and /karaoke/api/* (Karaoke rooms + catalog, worker/karaoke/).
 // Free plan only: static asset requests are free and unlimited; only API calls count as Worker requests.
 {
   "$schema": "https://unpkg.com/wrangler@4.158.0/config-schema.json",
@@ -10,13 +11,22 @@
   "assets": {
     "directory": ".",
     "binding": "ASSETS",
-    "run_worker_first": ["/jiujitsu/api/*", "/loaf_tower/api/*"],
+    "run_worker_first": ["/jiujitsu/api/*", "/loaf_tower/api/*", "/karaoke/api/*"],
     "not_found_handling": "404-page"
   },
   "d1_databases": [
     // Created in the Cloudflare dashboard (free plan). Tables are created by the Worker on first use.
     { "binding": "JJ_DB", "database_name": "jiujitsu", "database_id": "1753f55b-9572-4caf-9e8d-14704a3a0e1e" },
     // Loaf Tower leaderboard (worker/loaf.js); created in the dashboard, tables created on first use.
-    { "binding": "CAT_DB", "database_name": "cat_game", "database_id": "846eab41-6882-4863-85e7-a9c8e953ee83" }
+    { "binding": "CAT_DB", "database_name": "cat_game", "database_id": "846eab41-6882-4863-85e7-a9c8e953ee83" },
+    // Karaoke catalog (worker/karaoke/catalog.js); create it in the dashboard and paste its ID here. Tables are created on first use.
+    { "binding": "KARAOKE_DB", "database_name": "karaoke", "database_id": "1368dd4e-d36f-4947-920d-506851a307f6" }
+  ],
+  // One Durable Object per karaoke party (worker/karaoke/room.js). Free plan: SQLite-backed classes only.
+  "durable_objects": {
+    "bindings": [{ "name": "KARAOKE_ROOM", "class_name": "KaraokeRoom" }]
+  },
+  "migrations": [
+    { "tag": "karaoke-v1", "new_sqlite_classes": ["KaraokeRoom"] }
   ]
 }

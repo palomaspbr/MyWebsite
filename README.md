@@ -13,6 +13,10 @@ curriculum.html                Curriculum (EN / PT)
 loaf_tower/                    Loaf Tower, a cat-stacking browser game (/loaf_tower)
 jiujitsu/                      Chacrinha Jiu-Jitsu, leaderboard for casual BJJ rolls (/jiujitsu)
 worker/index.js                Its API (Cloudflare Worker + D1 database)
+karaoke/                       Karaoke Night: online karaoke parties (/karaoke)
+                               pages: index (create/join), sing (guests), player (TV), control (DJ), jukebox, print
+worker/karaoke/                Its API: rooms (Durable Objects), catalog (D1), YouTube search, metadata
+tests/karaoke/                 Its unit tests (node --test) and API smoke test
 wrangler.jsonc                 Cloudflare config: static assets + the Worker only on /jiujitsu/api/*
 .assetsignore                  Repo files that are not published (tests, worker source, READMEs...)
 tests/jiujitsu/                Its API, stats and browser tests
@@ -59,3 +63,16 @@ npx wrangler dev --port 8788 --var JJ_ADMIN_PASSWORD:test-admin-pw
 ```
 
 Then open http://localhost:8788/jiujitsu/. Tests: see `tests/jiujitsu/README.md`.
+
+## Karaoke Night (/karaoke): Cloudflare setup (free plan)
+
+Full docs live outside this repo, in `C:\karaoke` (ARCHITECTURE.md, DEPLOY.md, TESTING.md, FEATURES.md).
+Only `/karaoke/api/*` runs the Worker. Each party is a Durable Object (`KaraokeRoom`, SQLite-backed, free plan);
+the shared songbook is the D1 database `karaoke` (binding `KARAOKE_DB`).
+
+Before the first deploy: create the D1 database `karaoke` in the dashboard and paste its ID into `wrangler.jsonc`
+(replace `REPLACE_WITH_KARAOKE_D1_DATABASE_ID`). Secrets: `KARAOKE_ADMIN_PASSWORD` (catalog admin, recommended)
+and `YOUTUBE_API_KEY` (optional, YouTube Data API v3 for search).
+
+Locally: `npx wrangler dev --port 8788 --var KARAOKE_ADMIN_PASSWORD:test-catalog-pw`, then open
+http://localhost:8788/karaoke/. Tests: `node --test tests/karaoke/` and `node tests/karaoke/api_smoke.mjs http://127.0.0.1:8788`.

@@ -1,0 +1,74 @@
+/* Video-type chips (see /karaoke/js/videokind.js), shared by the guest, DJ and kiosk pages.
+   Online version: drawn in the hand-drawn theme (sketch.css tokens, with fallbacks).
+   Quiet and outlined for "with vocals", filled and louder for "no lyrics". Height <= 20px. */
+.vk-chips {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 4px;
+    flex-shrink: 0;
+    vertical-align: middle;
+}
+
+.vk-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    height: 20px;
+    padding: 0 7px 0 4px;
+    font-family: var(--hand, inherit);
+    font-size: 13px;
+    font-weight: normal;
+    font-style: normal;
+    line-height: 1;
+    white-space: nowrap;
+    box-sizing: border-box;
+    border: 1.5px solid var(--ink, #2b2520);
+    border-radius: var(--wobble-sm, 9px);
+    transform: rotate(-2deg);
+}
+
+.vk-chip + .vk-chip { transform: rotate(1.5deg); }
+
+.vk-chip .material-icons-round {
+    font-size: 13px;
+    line-height: 1;
+}
+
+.vk-vocals {
+    color: #9a6a00;
+    background: var(--orange, #ffe0b8);
+    border-color: #b07a12;
+    border-style: dashed;
+}
+
+.vk-nolyrics {
+    color: #fff;
+    background: var(--red, #c0392b);
+    border-color: var(--ink, #2b2520);
+}
+
+/* A text line that must stay on one row with chips after it: the text
+   truncates, the chips keep their size. */
+.vk-line {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
+.vk-line-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.vk-detail-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+    font-size: 15px;
+    color: var(--ink-soft, #6d6259);
+}

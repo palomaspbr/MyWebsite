@@ -1,0 +1,3079 @@
+<!DOCTYPE html>
+<html lang="en" translate="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="google" content="notranslate">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='24' cy='22' r='14' fill='%23ffd43b' stroke='%232b2520' stroke-width='4'/%3E%3Cpath d='M33 31 L54 56' stroke='%232b2520' stroke-width='9' stroke-linecap='round'/%3E%3C/svg%3E">
+    <title>Karaoke Player</title>
+    <link rel="stylesheet" href="/karaoke/css/sketch.css">
+    <style>
+        /* TV / projector player. Hand-drawn notebook theme from /karaoke/css/sketch.css; the video
+           itself stays full-bleed on black. Sizes scale with the screen (clamp + vw/vh) for TVs. */
+        html, body { height: 100%; }
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: #000;
+            background-image: none;
+            cursor: none; /* Hide cursor when idle */
+        }
+        body.user-active { cursor: default; }
+
+        #player-app {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .paper-bg {
+            background-color: var(--paper);
+            background-image:
+                linear-gradient(90deg, transparent 4.2vw, var(--margin) 4.2vw, var(--margin) calc(4.2vw + 2px), transparent calc(4.2vw + 2px)),
+                repeating-linear-gradient(180deg, transparent 0 clamp(30px, 4.4vh, 56px), var(--line) clamp(30px, 4.4vh, 56px) calc(clamp(30px, 4.4vh, 56px) + 1px));
+        }
+
+        /* ── Video (YouTube iframe) ── */
+        .video-container {
+            position: absolute;
+            inset: 0;
+            background: #000;
+            z-index: 0;
+        }
+        .video-container .kyt-mount,
+        .video-container iframe {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+            pointer-events: none; /* no YouTube UI clicks: the page drives playback */
+        }
+
+        /* ── Idle screen: notebook page with the room stamp and a taped QR polaroid ── */
+        .idle-screen {
+            position: absolute;
+            inset: 0;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4vh 5vw 4vh 7vw;
+            transition: opacity 0.5s ease;
+        }
+        .idle-screen.hidden { opacity: 0; pointer-events: none; }
+
+        .idle-content {
+            display: grid;
+            grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+            align-items: center;
+            gap: 4vw;
+            width: min(100%, 1800px);
+        }
+
+        .idle-text { min-width: 0; }
+
+        .logo-large {
+            display: inline-block;
+            font-size: clamp(48px, 6vw, 120px);
+            transform: rotate(-10deg);
+            margin-bottom: 1vh;
+        }
+
+        .welcome-text {
+            margin: 0 0 1.5vh;
+            font-size: clamp(56px, 7.5vw, 170px);
+            color: var(--ink);
+        }
+        .welcome-text span {
+            display: inline-block;
+            padding-bottom: 0.12em;
+            background: var(--pen-line) 0 100% / 100% 0.16em no-repeat;
+        }
+
+        .instruction-text {
+            margin: 0 0 3vh;
+            font-size: clamp(24px, 2.4vw, 54px);
+            color: var(--ink-soft);
+        }
+        .instruction-text span {
+            padding: 0 0.3em;
+            background: linear-gradient(100deg, transparent 2%, var(--hi) 4%, var(--hi) 94%, transparent 97%) 0 62% / 100% 60% no-repeat;
+            color: var(--ink);
+        }
+
+        .room-row {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1vw 2vw;
+            margin-bottom: 3vh;
+        }
+        .room-label {
+            font-size: clamp(22px, 2vw, 44px);
+            color: var(--ink-soft);
+        }
+        .room-stamp {
+            display: inline-block;
+            padding: 0.05em 0.3em 0;
+            font-family: var(--brush);
+            font-size: clamp(64px, 8vw, 190px);
+            line-height: 1;
+            letter-spacing: 0.08em;
+            color: var(--red);
+            border: clamp(4px, 0.45vw, 9px) solid var(--red);
+            border-radius: var(--wobble-sm);
+            transform: rotate(-5deg);
+            opacity: 0.9;
+            text-shadow: 1px 1px 0 rgba(192, 57, 43, 0.35);
+        }
+
+        .connect-box { font-size: clamp(20px, 1.7vw, 40px); }
+        .connect-instruction { margin: 0 0 0.6vh; color: var(--ink-soft); }
+        .connect-url {
+            display: inline-block;
+            font-size: clamp(20px, 1.8vw, 42px);
+            color: var(--blue-ink);
+            word-break: break-all;
+            border-bottom: 2px dashed var(--blue-ink);
+        }
+
+        .idle-side {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4vh;
+            min-width: 0;
+        }
+
+        .polaroid {
+            position: relative;
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            padding: clamp(14px, 1.3vw, 28px) clamp(14px, 1.3vw, 28px) clamp(10px, 1vw, 22px);
+            background: #fff;
+            border: 2.5px solid var(--ink);
+            border-radius: 4px 9px 5px 8px / 9px 4px 8px 5px;
+            box-shadow: 6px 7px 0 -1px var(--ink);
+            transform: rotate(2.5deg);
+        }
+        .polaroid::before, .polaroid::after {
+            content: '';
+            position: absolute;
+            top: -16px;
+            width: clamp(70px, 6vw, 130px);
+            height: clamp(22px, 2vw, 40px);
+            background: rgba(255, 242, 168, 0.85);
+            border: 1px solid rgba(43, 37, 32, 0.25);
+        }
+        .polaroid::before { left: -20px; transform: rotate(-35deg); }
+        .polaroid::after { right: -20px; transform: rotate(35deg); }
+
+        .qr-placeholder {
+            width: clamp(220px, 30vh, 460px);
+            height: clamp(220px, 30vh, 460px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #fff;
+        }
+        .qr-placeholder canvas, .qr-placeholder img { width: 100% !important; height: 100% !important; display: block; }
+        .polaroid-caption {
+            margin-top: 1vh;
+            font-family: var(--brush);
+            font-size: clamp(26px, 2.4vw, 56px);
+            color: var(--ink);
+        }
+
+        /* Hand-written queue list on the idle page */
+        .idle-queue {
+            width: min(100%, 34vw);
+            min-width: 260px;
+            padding: 1.6vh 1.6vw 1.2vh;
+            background: var(--paper-2);
+            border: 2.5px solid var(--ink);
+            border-radius: var(--wobble-2);
+            box-shadow: var(--shadow);
+            transform: rotate(-1deg);
+        }
+        .idle-queue h2 {
+            margin: 0 0 0.6vh;
+            font-size: clamp(26px, 2.2vw, 52px);
+        }
+        .idle-queue ol {
+            margin: 0;
+            padding-left: 1.6em;
+            font-size: clamp(18px, 1.5vw, 34px);
+            line-height: 1.35;
+        }
+        .idle-queue li { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .idle-queue li::marker { font-family: var(--brush); color: var(--red); }
+        .idle-queue .q-artist { color: var(--ink-soft); }
+        .idle-queue .q-user { color: var(--blue-ink); }
+        .idle-queue .q-paused { color: var(--red); }
+        .idle-queue .q-more { list-style: none; color: var(--ink-soft); }
+
+        /* ── Now playing: a paper strip ── */
+        .now-playing-overlay {
+            position: absolute;
+            left: 3vw;
+            bottom: 6vh;
+            z-index: 20;
+            max-width: 46vw;
+            padding: 1.6vh 1.8vw 1.4vh;
+            background: var(--paper-2);
+            border: 2.5px solid var(--ink);
+            border-radius: var(--wobble);
+            box-shadow: var(--shadow);
+            transform: translateX(-160%) rotate(-1.5deg);
+            transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .now-playing-overlay::before {
+            content: '';
+            position: absolute;
+            top: -14px; left: 2.5vw;
+            width: clamp(70px, 6vw, 120px);
+            height: clamp(20px, 1.8vw, 34px);
+            background: rgba(255, 222, 235, 0.9);
+            border: 1px solid rgba(43, 37, 32, 0.25);
+            transform: rotate(-4deg);
+        }
+        .now-playing-overlay.visible { transform: translateX(0) rotate(-1.5deg); }
+        .overlay-title {
+            font-family: var(--brush);
+            font-size: clamp(28px, 2.6vw, 64px);
+            line-height: 1.05;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .overlay-artist {
+            font-size: clamp(20px, 1.7vw, 40px);
+            color: var(--ink-soft);
+        }
+        .overlay-user {
+            margin-top: 0.4vh;
+            font-size: clamp(16px, 1.3vw, 30px);
+            color: var(--blue-ink);
+        }
+        .overlay-firstline {
+            margin-top: 0.8vh;
+            font-size: clamp(17px, 1.4vw, 32px);
+            color: var(--ink);
+        }
+        .overlay-firstline span {
+            padding: 0 0.3em;
+            background: linear-gradient(100deg, transparent 2%, var(--hi) 4%, var(--hi) 94%, transparent 97%) 0 62% / 100% 60% no-repeat;
+        }
+        .overlay-firstline:empty { display: none; }
+
+        /* Progress bar: a marker stroke along the bottom */
+        .progress-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: clamp(5px, 0.7vh, 10px);
+            width: 0%;
+            background: repeating-linear-gradient(-45deg, var(--yellow) 0 8px, var(--gold) 8px 14px);
+            border-top: 2px solid var(--ink);
+            border-right: 2px solid var(--ink);
+            transition: width 0.25s linear;
+            z-index: 20;
+        }
+
+        /* ── Up next: a small paper strip top-left ── */
+        .next-song-card {
+            position: absolute;
+            top: 2.5vh;
+            left: 2vw;
+            z-index: 20;
+            width: clamp(240px, 22vw, 520px);
+            padding: 1.2vh 1.2vw 2vh;
+            background: var(--paper-2);
+            border: 2.5px solid var(--ink);
+            border-radius: var(--wobble-2);
+            box-shadow: var(--shadow-sm);
+            opacity: 0;
+            transform: translateY(-30px) rotate(1deg);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            display: flex;
+            gap: 12px;
+            overflow: visible;
+        }
+        .next-song-card.visible { opacity: 0.92; transform: translateY(0) rotate(1deg); }
+        .next-song-card .label {
+            position: absolute;
+            bottom: -0.9em;
+            left: 1vw;
+            padding: 0 0.6em;
+            font-family: var(--brush);
+            font-size: clamp(15px, 1.2vw, 28px);
+            color: #fff;
+            background: var(--red);
+            border: 2px solid var(--ink);
+            border-radius: var(--wobble-sm);
+            transform: rotate(-3deg);
+        }
+        .next-song-card .thumbnail { display: none; }
+        .next-song-card .info { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
+        .next-song-card .title {
+            font-family: var(--brush);
+            font-size: clamp(18px, 1.5vw, 36px);
+            line-height: 1.1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .next-song-card .artist, .next-song-card .user {
+            font-size: clamp(14px, 1.05vw, 26px);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .next-song-card .artist { color: var(--ink-soft); }
+        .next-song-card .user { color: var(--blue-ink); }
+        .next-code-badge {
+            display: inline-block;
+            padding: 0 0.35em;
+            font-family: var(--brush);
+            color: var(--red);
+            border: 2px solid var(--red);
+            border-radius: var(--wobble-sm);
+            transform: rotate(-4deg);
+        }
+
+        /* ── Score screen ── */
+        .score-screen {
+            position: absolute;
+            inset: 0;
+            z-index: 30;
+            display: flex;
+            flex-direction: row; /* 2/3 score | 1/3 next song */
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease;
+        }
+        .score-screen.visible { opacity: 1; pointer-events: auto; cursor: pointer; }
+
+        .score-main {
+            flex: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            gap: 1vh;
+            padding: 3vh 3vw 3vh 6vw;
+        }
+        .score-label {
+            font-family: var(--brush);
+            font-size: clamp(36px, 3.6vw, 84px);
+            color: var(--ink-soft);
+            transform: rotate(-3deg);
+        }
+        .score-number {
+            font-family: var(--brush);
+            font-size: clamp(180px, 34vh, 460px);
+            line-height: 0.9;
+            color: var(--red);
+            text-shadow: 6px 7px 0 var(--ink);
+            transform: rotate(-4deg);
+            animation: scorePop 0.5s ease;
+        }
+        @keyframes scorePop {
+            0% { transform: scale(0.4) rotate(-12deg); opacity: 0; }
+            60% { transform: scale(1.12) rotate(-2deg); }
+            100% { transform: scale(1) rotate(-4deg); opacity: 1; }
+        }
+        .score-stars {
+            display: flex;
+            gap: 0.6vw;
+            min-height: clamp(44px, 6vh, 90px);
+        }
+        .score-stars svg {
+            width: clamp(44px, 6vh, 90px);
+            height: clamp(44px, 6vh, 90px);
+            opacity: 0;
+            transform: scale(0.3) rotate(-30deg);
+            transition: opacity 0.3s ease, transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .score-stars svg.show { opacity: 1; transform: scale(1) rotate(var(--tilt, 0deg)); }
+        .score-stars svg path { stroke: var(--ink); stroke-width: 2.6; stroke-linejoin: round; fill: #fff; }
+        .score-stars svg.on path { fill: var(--yellow); }
+
+        /* rating phrase on a sticky note, revealed after the count-up */
+        .score-phrase {
+            margin-top: 1.5vh;
+            padding: 1vh 2vw;
+            font-family: var(--brush);
+            font-size: clamp(34px, 3.6vw, 86px);
+            background: var(--hi);
+            border: 2.5px solid var(--ink);
+            border-radius: 3px 10px 4px 12px / 12px 4px 10px 3px;
+            box-shadow: 4px 5px 0 -1px var(--ink);
+            opacity: 0;
+            transform: translateY(14px) rotate(2deg);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        .score-phrase.show { opacity: 1; transform: translateY(0) rotate(2deg); }
+        .score-phrase:empty { display: none; }
+
+        .score-side {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            gap: 1vh;
+            padding: 4vh 2.5vw;
+            border-left: 3px dashed var(--ink-faint);
+        }
+        .next-label {
+            font-family: var(--brush);
+            font-size: clamp(24px, 2vw, 48px);
+            color: var(--red);
+        }
+        .next-player {
+            font-family: var(--brush);
+            font-size: clamp(34px, 3vw, 72px);
+            line-height: 1.05;
+        }
+        .next-player span {
+            padding: 0 0.25em;
+            background: linear-gradient(100deg, transparent 2%, var(--hi) 4%, var(--hi) 94%, transparent 97%) 0 62% / 100% 60% no-repeat;
+        }
+        .next-thumb {
+            position: relative;
+            width: 85%;
+            margin: 3vh 0 1vh;
+            padding: 1vh 1vh 3vh;
+            background: #fff;
+            border: 2.5px solid var(--ink);
+            border-radius: 4px 9px 5px 8px / 9px 4px 8px 5px;
+            box-shadow: 5px 6px 0 -1px var(--ink);
+            transform: rotate(-2deg);
+        }
+        .next-thumb::before {
+            content: '';
+            position: absolute;
+            top: -14px; left: 50%;
+            width: 32%; height: clamp(20px, 1.8vw, 34px);
+            margin-left: -16%;
+            background: rgba(255, 242, 168, 0.85);
+            border: 1px solid rgba(43, 37, 32, 0.25);
+            transform: rotate(3deg);
+        }
+        .next-thumb img {
+            display: block;
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            object-fit: cover;
+            border: 2px solid var(--ink);
+            background: var(--paper-3);
+        }
+        .next-title {
+            font-family: var(--brush);
+            font-size: clamp(24px, 2vw, 50px);
+            line-height: 1.1;
+        }
+        .next-artist { font-size: clamp(18px, 1.5vw, 36px); color: var(--ink-soft); }
+        .score-countdown { margin-top: 2vh; font-size: clamp(15px, 1.2vw, 28px); color: var(--ink-soft); }
+
+        /* ── Activity notifications: sticky notes top-right ── */
+        .activity-container {
+            position: absolute;
+            top: 3vh;
+            right: 2vw;
+            z-index: 25;
+            display: flex;
+            flex-direction: column;
+            gap: 1.4vh;
+            max-width: clamp(260px, 24vw, 520px);
+        }
+        .activity-notification {
+            display: flex;
+            align-items: center;
+            gap: 0.8vw;
+            min-width: clamp(240px, 18vw, 420px);
+            padding: 1vh 1vw;
+            background: var(--hi);
+            border: 2px solid var(--ink);
+            border-radius: 3px 10px 4px 12px / 12px 4px 10px 3px;
+            box-shadow: 3px 4px 0 -1px var(--ink);
+            transform: rotate(-1deg);
+            animation: slideInRight 0.3s ease, fadeOut 0.5s ease 4.5s forwards;
+        }
+        .activity-notification:nth-child(even) { transform: rotate(1deg); background: var(--pink); }
+        .activity-notification.activity-added { background: var(--green); }
+        .activity-notification.activity-removed { background: var(--red-soft); }
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(50px) rotate(4deg); }
+            to { opacity: 1; }
+        }
+        @keyframes fadeOut { to { opacity: 0; transform: translateX(50px); } }
+        .activity-notification .activity-icon {
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: clamp(34px, 2.6vw, 60px);
+            height: clamp(34px, 2.6vw, 60px);
+            background: #fff;
+            border: 2px solid var(--ink);
+            border-radius: var(--blob);
+        }
+        .activity-notification .activity-icon.add { background: var(--green); }
+        .activity-notification .activity-icon.skip { background: var(--orange); }
+        .activity-notification .activity-icon.remove,
+        .activity-notification .activity-icon.clear { background: var(--red-soft); }
+        .activity-notification .activity-icon.reorder { background: var(--purple); }
+        .activity-notification .activity-icon .material-icons-round { font-size: clamp(20px, 1.5vw, 34px); color: var(--ink); }
+        .activity-notification .activity-content { flex: 1; min-width: 0; }
+        .activity-notification .activity-action { font-family: var(--brush); font-size: clamp(16px, 1.2vw, 28px); line-height: 1.1; }
+        .activity-notification .activity-details {
+            font-size: clamp(15px, 1.1vw, 26px);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .activity-notification .activity-user { font-size: clamp(13px, 0.95vw, 22px); color: var(--blue-ink); }
+
+        /* ── Join QR overlay (Q key / gear menu): a taped polaroid.
+           z-index 500: above video (0), idle (10), banners/toasts (20-25), score (30), notices (40)
+           and the gear buttons (100); below the settings (999/1000), start card and dialogs. ── */
+        .join-qr {
+            position: fixed;
+            top: 3vh;
+            right: 2vw;
+            z-index: 500;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.6vh;
+            max-width: 40vw;
+            padding: 1.4vh 1.4vh 1.2vh;
+            background: #fff;
+            color: var(--ink);
+            border: 2.5px solid var(--ink);
+            border-radius: 4px 9px 5px 8px / 9px 4px 8px 5px;
+            box-shadow: 5px 6px 0 -1px var(--ink);
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transform: scale(0.94) rotate(2deg);
+            transform-origin: top right;
+            transition: opacity 0.18s ease, transform 0.18s ease, visibility 0s linear 0.18s;
+        }
+        .join-qr::before {
+            content: '';
+            position: absolute;
+            top: -12px; left: 50%;
+            width: 40%; height: 22px;
+            margin-left: -20%;
+            background: rgba(255, 242, 168, 0.85);
+            border: 1px solid rgba(43, 37, 32, 0.25);
+            transform: rotate(-3deg);
+        }
+        .join-qr.visible {
+            opacity: 0.96;
+            visibility: visible;
+            transform: scale(1) rotate(2deg);
+            transition: opacity 0.18s ease, transform 0.18s ease, visibility 0s;
+        }
+        .join-qr-caption { font-family: var(--brush); font-size: clamp(18px, 2.4vh, 34px); line-height: 1.1; text-align: center; }
+        .join-qr-code {
+            width: clamp(140px, 18vh, 280px);
+            height: clamp(140px, 18vh, 280px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .join-qr-code canvas, .join-qr-code img { width: 100% !important; height: 100% !important; display: block; }
+        .join-qr-room {
+            font-family: var(--brush);
+            font-size: clamp(26px, 3.6vh, 52px);
+            line-height: 1;
+            letter-spacing: 0.08em;
+            color: var(--red);
+            border: 3px solid var(--red);
+            border-radius: var(--wobble-sm);
+            padding: 0.05em 0.3em 0;
+            transform: rotate(-4deg);
+        }
+        .join-qr-url {
+            font-size: clamp(12px, 1.5vh, 18px);
+            text-align: center;
+            word-break: break-all;
+            max-width: clamp(140px, 18vh, 280px);
+            color: var(--ink-soft);
+        }
+        .join-qr-empty { font-size: clamp(14px, 1.8vh, 22px); text-align: center; padding: 2vh 1vh; color: var(--ink-soft); }
+        /* Keep activity toasts clear of the QR card while it is showing */
+        body.join-qr-on .activity-container { top: calc(3vh + var(--join-qr-h, 0px) + 20px); }
+
+        /* ── Notice over the video (embedding errors) ── */
+        .video-notice {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            z-index: 40;
+            max-width: min(80vw, 900px);
+            padding: 3vh 3vw;
+            text-align: center;
+            background: var(--paper-2);
+            border: 3px solid var(--ink);
+            border-radius: var(--wobble);
+            box-shadow: 7px 8px 0 -1px var(--ink);
+            transform: translate(-50%, -50%) rotate(-1.5deg);
+            animation: k-pop 0.35s ease;
+        }
+        .video-notice .material-icons-round { font-size: clamp(48px, 5vw, 110px); color: var(--red); }
+        .video-notice h2 { margin: 0.5vh 0; font-size: clamp(30px, 3.2vw, 76px); }
+        .video-notice p { margin: 0; font-size: clamp(18px, 1.6vw, 38px); color: var(--ink-soft); }
+        .video-notice .notice-song { color: var(--ink); }
+
+        /* ── Gear / end-party buttons ── */
+        .player-buttons {
+            position: fixed;
+            bottom: 2.5vh;
+            right: 1.5vw;
+            display: flex;
+            gap: 12px;
+            z-index: 100;
+        }
+        .settings-btn, .close-btn {
+            width: clamp(46px, 3.4vw, 70px);
+            height: clamp(46px, 3.4vw, 70px);
+            opacity: 0;
+            transition: opacity 0.3s ease, transform 0.1s ease, background 0.15s ease;
+        }
+        .settings-btn .material-icons-round, .close-btn .material-icons-round { font-size: clamp(24px, 1.8vw, 36px); }
+        .settings-btn:hover, .close-btn:hover, .settings-btn:focus-visible, .close-btn:focus-visible,
+        body.user-active .settings-btn, body.user-active .close-btn { opacity: 1; }
+        .close-btn:hover { background: var(--red-soft); }
+
+        /* ── Settings panel: a notebook sheet sliding in from the right ── */
+        .settings-panel {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: min(440px, 92vw);
+            height: 100vh;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            cursor: default;
+            background-color: var(--paper-2);
+            background-image: var(--notebook);
+            border-left: 3px solid var(--ink);
+            box-shadow: -6px 0 0 -1px var(--ink);
+            transform: translateX(110%);
+            transition: transform 0.3s ease;
+        }
+        .settings-panel.open { transform: translateX(0); }
+        .settings-panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 18px 8px 52px;
+            border-bottom: 2.5px solid var(--ink);
+        }
+        .settings-panel-header h2 { margin: 0; font-size: 34px; }
+        .settings-panel-body { flex: 1; overflow-y: auto; padding: 14px 18px 14px 52px; }
+        .settings-section { margin-bottom: 22px; }
+        .settings-section-title {
+            display: inline-block;
+            margin-bottom: 8px;
+            font-family: var(--brush);
+            font-size: 26px;
+            padding-bottom: 6px;
+            background: var(--pen-line) 0 100% / 100% 10px no-repeat;
+        }
+        .settings-field { margin-bottom: 14px; }
+        .settings-field > label { display: block; margin-bottom: 4px; }
+        .settings-field select, .settings-field input[type="text"] { width: 100%; }
+        .settings-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 6px 0;
+        }
+        .settings-toggle > label:first-child { margin: 0; }
+        .hint { font-size: 16px; color: var(--ink-soft); margin-top: 2px; }
+        .settings-link {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            justify-content: flex-start;
+            text-decoration: none;
+        }
+        .settings-link:hover { color: var(--ink); }
+        .settings-url {
+            margin-top: 6px;
+            font-size: 15px;
+            color: var(--ink-soft);
+            word-break: break-all;
+        }
+        .room-mini {
+            font-family: var(--brush);
+            font-size: 30px;
+            letter-spacing: 0.06em;
+            color: var(--red);
+            border: 2.5px solid var(--red);
+            border-radius: var(--wobble-sm);
+            padding: 0 8px;
+            display: inline-block;
+            transform: rotate(-3deg);
+        }
+        .volume-row { display: flex; align-items: center; gap: 10px; }
+        .volume-row input[type="range"] { flex: 1; accent-color: var(--red); }
+        .volume-row .icon-btn { width: 42px; height: 42px; flex: none; }
+        .volume-value { min-width: 3ch; text-align: right; }
+        .settings-panel-footer {
+            display: flex;
+            gap: 12px;
+            padding: 12px 18px 16px 52px;
+            border-top: 2.5px solid var(--ink);
+            background: var(--paper-2);
+        }
+        .settings-btn-save { flex: 1; }
+        .settings-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 999;
+            background: rgba(43, 37, 32, 0.45);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+        .settings-overlay.open { opacity: 1; pointer-events: auto; }
+        .settings-status { margin-bottom: 6px; }
+        .settings-status-item { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
+        .settings-status-item .status-ok { color: var(--green-ink); }
+        .settings-status-item .status-warn { color: var(--red); }
+
+        /* ── Full-screen paper cards: tap to start, party ended, disconnected ── */
+        .paper-card-screen {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4vh 4vw;
+            background: rgba(43, 37, 32, 0.55);
+        }
+        .start-screen { z-index: 9999; cursor: pointer; }
+        .end-screen { z-index: 9000; cursor: default; }
+        .paper-card {
+            position: relative;
+            max-width: min(92vw, 1100px);
+            padding: 5vh 5vw 4.5vh 7vw;
+            text-align: center;
+            background-color: var(--paper-2);
+            background-image: var(--notebook);
+            border: 3px solid var(--ink);
+            border-radius: var(--wobble);
+            box-shadow: 9px 10px 0 -1px var(--ink);
+            transform: rotate(-1.2deg);
+            animation: k-pop 0.45s ease;
+        }
+        .paper-card::before {
+            content: '';
+            position: absolute;
+            top: -18px; left: 50%;
+            width: clamp(100px, 10vw, 200px); height: clamp(26px, 2.4vw, 44px);
+            margin-left: calc(clamp(100px, 10vw, 200px) / -2);
+            background: rgba(255, 242, 168, 0.88);
+            border: 1px solid rgba(43, 37, 32, 0.25);
+            transform: rotate(-3deg);
+        }
+        .paper-card .card-icon { font-size: clamp(64px, 8vw, 170px); color: var(--red); }
+        .paper-card h1 { margin: 1vh 0; font-size: clamp(44px, 5.6vw, 130px); }
+        .paper-card h1 span { display: inline-block; padding-bottom: 0.1em; background: var(--pen-line) 0 100% / 100% 0.16em no-repeat; }
+        .paper-card p { margin: 1vh 0 0; font-size: clamp(20px, 2vw, 46px); color: var(--ink-soft); }
+        .paper-card .btn { margin-top: 3vh; font-size: clamp(20px, 1.8vw, 40px); padding: 0.3em 1em; }
+        .start-screen .paper-card .card-icon { animation: k-wiggle 1.2s ease-in-out infinite; display: inline-block; }
+
+        /* ── Modals built on the fly (PIN prompt, end-party confirm) ── */
+        .k-modal-backdrop {
+            position: fixed;
+            inset: 0;
+            z-index: 10001;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            cursor: default;
+            background: rgba(43, 37, 32, 0.55);
+        }
+        .k-modal {
+            width: min(480px, 100%);
+            padding: 22px 26px 20px 52px;
+            text-align: center;
+            background-color: var(--paper-2);
+            background-image: var(--notebook);
+            border: 3px solid var(--ink);
+            border-radius: var(--wobble);
+            box-shadow: 7px 8px 0 -1px var(--ink);
+            transform: rotate(-0.8deg);
+        }
+        .k-modal h2 { margin: 0 0 8px; font-size: 38px; }
+        .k-modal p { margin: 0 0 14px; color: var(--ink-soft); }
+        .k-modal input { text-align: center; letter-spacing: 6px; font-size: 24px; }
+        .k-modal .err { color: var(--red); min-height: 24px; margin: 6px 0 10px; }
+        .k-modal .actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+        @media (max-width: 900px) {
+            .idle-content { grid-template-columns: 1fr; gap: 3vh; text-align: center; }
+            .room-row { justify-content: center; }
+            .idle-queue { width: 100%; }
+            .qr-placeholder { width: clamp(160px, 34vw, 300px); height: clamp(160px, 34vw, 300px); }
+            .idle-screen { overflow-y: auto; align-items: flex-start; padding: 4vh 16px; }
+            .now-playing-overlay { max-width: 80vw; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.001ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.001ms !important;
+            }
+            .join-qr, .join-qr.visible { transform: rotate(2deg); }
+        }
+    </style>
+</head>
+<body>
+    <div id="player-app">
+        <!-- Player Buttons (Settings & End party) -->
+        <div class="player-buttons">
+            <button class="settings-btn icon-btn" id="settingsBtn" title="Settings" type="button">
+                <span class="material-icons-round">settings</span>
+            </button>
+            <button class="close-btn icon-btn" id="closeBtn" title="End party" type="button">
+                <span class="material-icons-round">power_settings_new</span>
+            </button>
+        </div>
+
+        <!-- Settings Overlay -->
+        <div class="settings-overlay" id="settingsOverlay"></div>
+
+        <!-- Settings Panel -->
+        <div class="settings-panel" id="settingsPanel" aria-hidden="true">
+            <div class="settings-panel-header">
+                <h2 id="settingsTitle">Settings</h2>
+                <button class="icon-btn" id="settingsClose" type="button" aria-label="Close">
+                    <span class="material-icons-round">close</span>
+                </button>
+            </div>
+            <div class="settings-panel-body">
+                <div class="settings-section">
+                    <div class="settings-section-title" id="statusTitle">Party</div>
+                    <div class="settings-status" id="systemStatus">
+                        <div class="settings-status-item">
+                            <span class="material-icons-round status-ok">check_circle</span>
+                            <span id="loadingText">Loading...</span>
+                        </div>
+                    </div>
+                    <div class="settings-field" style="margin-top: 10px;">
+                        <label id="controlPageLabel">Control Page</label>
+                        <a href="#" target="_blank" rel="noopener" id="controlPageLink" class="btn settings-link">
+                            <span class="material-icons-round">open_in_new</span>
+                            <span id="openControlPageText">Open Control Page</span>
+                        </a>
+                        <div class="settings-url" id="controlPageUrl"></div>
+                        <div class="hint" id="controlPageHint">Advanced controls, lyrics management, and song library</div>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <div class="settings-section-title" id="scoreScreenTitle">Score Screen</div>
+                    <div class="settings-toggle">
+                        <label id="scoreScreenLabel" for="configScoreScreen">Show score after each song</label>
+                        <label class="sketch-switch">
+                            <input type="checkbox" id="configScoreScreen">
+                            <span></span>
+                        </label>
+                    </div>
+                    <div class="hint" id="scoreScreenHint">Display a fun 1–100 score when a song finishes</div>
+                    <div class="settings-field" style="margin-top: 10px;">
+                        <label id="scoreModeLabel" for="configScoreMode">Scoring</label>
+                        <select id="configScoreMode" class="field">
+                            <option value="heuristic" id="scoreModeHeuristicOpt">Microphone</option>
+                            <option value="random" id="scoreModeRandomOpt">Random (just for fun)</option>
+                        </select>
+                        <div class="hint" id="scoreModeHint"></div>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <div class="settings-section-title" id="volumeTitle">Volume</div>
+                    <div class="volume-row">
+                        <button class="icon-btn" id="muteBtn" type="button" aria-label="Mute">
+                            <span class="material-icons-round" id="muteIcon">volume_up</span>
+                        </button>
+                        <input type="range" id="volumeSlider" min="0" max="100" step="5" value="100" aria-labelledby="volumeTitle">
+                        <span class="volume-value" id="volumeValue">100</span>
+                    </div>
+                    <div class="hint" id="volumeHint">Shortcuts: arrow up / down, M</div>
+                </div>
+
+                <div class="settings-section">
+                    <div class="settings-toggle">
+                        <label id="joinQrLabel" for="configJoinQr">Show join QR code</label>
+                        <label class="sketch-switch">
+                            <input type="checkbox" id="configJoinQr">
+                            <span></span>
+                        </label>
+                    </div>
+                    <div class="hint" id="joinQrHint">Shortcut: Q</div>
+                </div>
+
+                <div class="settings-section" id="jukeboxSection">
+                    <div class="settings-section-title" id="jukeboxTitle">Jukebox Mode</div>
+                    <button id="jukeboxToggleBtn" class="btn settings-link" type="button">
+                        <span class="material-icons-round" id="jukeboxToggleIcon">open_in_new</span>
+                        <span id="jukeboxToggleText">Open jukebox screen</span>
+                    </button>
+                    <div class="hint" id="jukeboxHint">Opens the jukebox in a new window — drag it to your second screen</div>
+                </div>
+
+                <div class="settings-section">
+                    <div class="settings-section-title" id="languageTitle">Language</div>
+                    <div class="settings-field">
+                        <select id="configLanguage" class="field">
+                            <option value="pt-BR">Português (Brasil)</option>
+                            <option value="es">Español</option>
+                            <option value="en">English</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="settings-panel-footer">
+                <button class="btn settings-btn-cancel" id="settingsCancelBtn" type="button">Cancel</button>
+                <button class="btn primary settings-btn-save" id="settingsSaveBtn" type="button">Save Changes</button>
+            </div>
+        </div>
+
+        <!-- Idle Screen -->
+        <div class="idle-screen paper-bg" id="idleScreen">
+            <div class="idle-content">
+                <div class="idle-text">
+                    <span class="logo-large" aria-hidden="true"><span class="material-icons-round">mic</span></span>
+                    <h1 class="welcome-text"><span id="welcomeText">Karaoke Player</span></h1>
+                    <p class="instruction-text"><span id="instructionText">Waiting for songs...</span></p>
+                    <div class="room-row">
+                        <span class="room-label" id="roomLabel">Party code</span>
+                        <span class="room-stamp" id="roomStamp"></span>
+                    </div>
+                    <div class="connect-box">
+                        <p class="connect-instruction" id="scanText">Scan to join or visit:</p>
+                        <span class="connect-url" id="serverUrl"></span>
+                    </div>
+                </div>
+                <div class="idle-side">
+                    <div class="polaroid">
+                        <div id="qrcode" class="qr-placeholder"></div>
+                        <div class="polaroid-caption" id="qrCaption">scan me!</div>
+                    </div>
+                    <div class="idle-queue" id="idleQueue" hidden>
+                        <h2 id="idleQueueTitle">Up next</h2>
+                        <ol id="idleQueueList"></ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Score Screen -->
+        <div class="score-screen paper-bg" id="scoreScreen">
+            <!-- Left 2/3: SCORE / number / stars / phrase -->
+            <div class="score-main">
+                <div class="score-label" id="scoreLabel">Score:</div>
+                <div class="score-number" id="scoreNumber">0</div>
+                <div class="score-stars" id="scoreStars" aria-hidden="true"></div>
+                <div class="score-phrase" id="scoreRating"></div>
+            </div>
+
+            <!-- Right 1/3: next song -->
+            <div class="score-side" id="scoreNext">
+                <div class="next-label" id="scoreNextLabel">Next Song:</div>
+                <div class="next-player"><span id="scoreNextPlayer"></span></div>
+                <div class="next-thumb"><img id="scoreNextThumb" alt=""></div>
+                <div class="next-title" id="scoreNextTitle"></div>
+                <div class="next-artist" id="scoreNextArtist"></div>
+                <div class="score-countdown" id="scoreCountdown"></div>
+            </div>
+        </div>
+
+        <!-- Video Player (YouTube iframe, see /karaoke/js/ytplayer.js) -->
+        <div class="video-container" id="videoStage"></div>
+
+        <!-- Embedding / playback error notice -->
+        <div class="video-notice" id="videoNotice" role="status" hidden>
+            <span class="material-icons-round" aria-hidden="true">videocam_off</span>
+            <h2 id="videoNoticeTitle">This video can't be played here</h2>
+            <p><span class="notice-song" id="videoNoticeSong"></span></p>
+            <p id="videoNoticeText">Skipping...</p>
+        </div>
+
+        <!-- Overlay -->
+        <div class="now-playing-overlay" id="infoOverlay">
+            <div class="overlay-title" id="overlayTitle">Song Title</div>
+            <div class="overlay-artist" id="overlayArtist">Artist Name</div>
+            <div class="overlay-user" id="overlayUser">Requested by User</div>
+            <div class="overlay-firstline" id="overlayFirstLine"></div>
+        </div>
+
+        <!-- Next Song Card -->
+        <div class="next-song-card" id="nextSongCard">
+            <span class="label" id="upNextLabel">Up Next</span>
+            <div class="info">
+                <div class="title" id="nextTitle">Next Song</div>
+                <div class="artist" id="nextArtist">Artist</div>
+                <div class="user" id="nextUser">Requested by User</div>
+            </div>
+        </div>
+
+        <!-- Activity Notifications -->
+        <div class="activity-container" id="activityContainer"></div>
+
+        <!-- Join QR overlay (Q key) -->
+        <div class="join-qr" id="joinQr" role="img" aria-hidden="true">
+            <div class="join-qr-caption" id="joinQrCaption">Scan to join</div>
+            <div class="join-qr-code" id="joinQrCode"></div>
+            <div class="join-qr-empty" id="joinQrEmpty" style="display:none;">No room</div>
+            <div class="join-qr-room" id="joinQrRoom"></div>
+            <div class="join-qr-url" id="joinQrUrl"></div>
+        </div>
+
+        <div class="progress-bar" id="progressBar"></div>
+
+        <!-- Party ended / room gone / disconnected -->
+        <div class="paper-card-screen end-screen" id="endScreen" hidden>
+            <div class="paper-card" role="alertdialog" aria-labelledby="endTitle">
+                <span class="material-icons-round card-icon" id="endIcon" aria-hidden="true">celebration</span>
+                <h1><span id="endTitle">The party is over</span></h1>
+                <p id="endText">The DJ ended the party. Thanks for singing!</p>
+                <a class="btn primary" id="endLink" href="/karaoke/">Back to karaoke</a>
+            </div>
+        </div>
+
+        <!-- Tap-to-start card (browsers block sound until the user interacts) -->
+        <div class="paper-card-screen start-screen" id="autoplayOverlay" role="button" tabindex="0" aria-labelledby="startTitle">
+            <div class="paper-card">
+                <span class="material-icons-round card-icon" aria-hidden="true">mic_external_on</span>
+                <h1><span id="startTitle">Tap / click to start the party</span></h1>
+                <p id="startText">Your browser needs one click before the songs can play with sound.</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="/karaoke/js/room.js"></script>
+
+    <script src="/karaoke/js/icons.js"></script>
+    <script src="/karaoke/js/escape.js"></script>
+    <script src="/karaoke/js/qrcode.min.js"></script>
+    <script src="/karaoke/js/ytplayer.js"></script>
+    <script>
+        // Every player belongs to a room (party): no ?r=CODE -> back to the landing page.
+        KRoom.require();
+
+        // Translations for player
+        const translations = {
+            'pt-BR': {
+                karaoke: 'Karaokê',
+                waitingForSongs: 'Esperando músicas...',
+                scanToJoin: 'Escaneie o QR code ou visite:',
+                scanMe: 'me escaneie!',
+                partyCode: 'Código da festa',
+                upNext: 'Próxima',
+                upNextList: 'Na fila',
+                pausedTag: '(pausada)',
+                moreInQueue: '+ mais {n}',
+                requestedBy: 'Pedido por',
+                firstLine: 'Primeira frase:',
+                disconnected: 'Desconectado',
+                connectionLost: 'Conexão com o servidor perdida. Tentando de novo...',
+                reload: 'Recarregar',
+                partyEndedTitle: 'A festa acabou',
+                partyEndedText: 'O DJ encerrou a festa. Obrigado por cantar!',
+                roomGoneTitle: 'Festa não encontrada',
+                roomGoneText: 'Essa festa não existe mais (ou expirou).',
+                backHome: 'Voltar ao karaokê',
+                tapToStart: 'Toque / clique para começar a festa',
+                tapToStartText: 'O navegador precisa de um clique antes de tocar as músicas com som.',
+                cantPlayTitle: 'Este vídeo não pode tocar aqui',
+                removedTitle: 'Este vídeo foi removido do YouTube',
+                brokenTitle: 'Este vídeo não carregou',
+                skippingNow: 'Pulando...',
+                pausedBroken: 'Pule esta música no painel de controle.',
+                songAdded: 'Música Adicionada',
+                songSkipped: 'Música Pulada',
+                songRemoved: 'Música Removida',
+                queueCleared: 'Fila Limpa',
+                queueReordered: 'Fila Reordenada',
+                by: 'por',
+                loading: 'Carregando...',
+                // Settings
+                settings: 'Configurações',
+                systemStatus: 'Festa',
+                partyConnected: 'Conectado à festa {code}',
+                adminYes: 'Você pode mudar as configurações da festa',
+                adminNo: 'Mudar configurações pede o PIN do DJ',
+                language: 'Idioma',
+                cancel: 'Cancelar',
+                saveChanges: 'Salvar Alterações',
+                settingsSaved: 'Configurações salvas!',
+                settingsError: 'Erro ao salvar configurações',
+                controlPage: 'Página de Controle',
+                openControlPage: 'Abrir Página de Controle',
+                controlPageHint: 'Controles avançados, gerenciamento de letras e biblioteca de músicas',
+                jukeboxMode: 'Modo Jukebox',
+                jukeboxOpen: 'Abrir tela da jukebox',
+                jukeboxHintBrowser: 'Abre a jukebox em uma nova janela — arraste para a sua segunda tela',
+                volume: 'Volume',
+                volumeHint: 'Atalhos: seta para cima / para baixo, M',
+                mute: 'Silenciar',
+                // Score screen
+                scoreScreenTitle: 'Tela de Pontuação',
+                scoreScreenLabel: 'Mostrar pontuação após cada música',
+                scoreScreenHint: 'Exibe uma pontuação divertida de 1 a 100 quando a música termina',
+                scoreMode: 'Pontuação',
+                scoreModeHeuristic: 'Microfone',
+                scoreModeRandom: 'Aleatória (só por diversão)',
+                scoreModeHint: 'O modo microfone ouve o microfone deste aparelho; o áudio nunca sai da página',
+                joinQrCaption: 'Escaneie para entrar',
+                joinQrLabel: 'Mostrar QR code para entrar',
+                joinQrHint: 'Atalho: Q',
+                joinQrNoNetwork: 'Sem festa',
+                scoreCountdown: 'Avançando em {n}s · toque para continuar',
+                scoreLabel: 'Pontuação:',
+                nextSongLabel: 'Próxima:',
+                ratingSuperstar: 'Superstar!',
+                ratingAmazing: 'Incrível!',
+                ratingGreat: 'Mandou bem!',
+                ratingNotBad: 'Nada mal',
+                ratingKeepPracticing: 'Continue praticando',
+                ratingOof: 'Eita...',
+                // End party
+                endParty: 'Encerrar festa',
+                shutdownConfirmTitle: 'Encerrar a festa?',
+                shutdownConfirmMessage: 'A fila e os cantores desta festa serão apagados e todos os aparelhos serão desconectados.',
+                shutdown: 'Encerrar',
+                shuttingDown: 'Encerrando...',
+                // DJ PIN
+                pinModalTitle: 'PIN do DJ necessário',
+                pinModalText: 'Digite o PIN do DJ para continuar.',
+                pinWrong: 'PIN incorreto. Tente novamente.',
+                pinLocked: 'Muitas tentativas erradas. Aguarde um minuto e tente de novo.',
+                pinFormat: 'O PIN deve ter de 4 a 12 dígitos.',
+                unlock: 'Desbloquear'
+            },
+            'es': {
+                karaoke: 'Karaoke',
+                waitingForSongs: 'Esperando canciones...',
+                scanToJoin: 'Escanea el código QR o visita:',
+                scanMe: '¡escanéame!',
+                partyCode: 'Código de la fiesta',
+                upNext: 'Siguiente',
+                upNextList: 'En la cola',
+                pausedTag: '(en pausa)',
+                moreInQueue: '+ {n} más',
+                requestedBy: 'Pedido por',
+                firstLine: 'Primera frase:',
+                disconnected: 'Desconectado',
+                connectionLost: 'Se perdió la conexión con el servidor. Reintentando...',
+                reload: 'Recargar',
+                partyEndedTitle: 'La fiesta terminó',
+                partyEndedText: 'El DJ terminó la fiesta. ¡Gracias por cantar!',
+                roomGoneTitle: 'Fiesta no encontrada',
+                roomGoneText: 'Esta fiesta ya no existe (o expiró).',
+                backHome: 'Volver al karaoke',
+                tapToStart: 'Toca / haz clic para empezar la fiesta',
+                tapToStartText: 'El navegador necesita un clic antes de reproducir las canciones con sonido.',
+                cantPlayTitle: 'Este video no se puede reproducir aquí',
+                removedTitle: 'Este video fue eliminado de YouTube',
+                brokenTitle: 'Este video no cargó',
+                skippingNow: 'Saltando...',
+                pausedBroken: 'Salta esta canción desde el panel de control.',
+                songAdded: 'Canción Agregada',
+                songSkipped: 'Canción Saltada',
+                songRemoved: 'Canción Eliminada',
+                queueCleared: 'Cola Limpia',
+                queueReordered: 'Cola Reordenada',
+                by: 'por',
+                loading: 'Cargando...',
+                // Settings
+                settings: 'Configuración',
+                systemStatus: 'Fiesta',
+                partyConnected: 'Conectado a la fiesta {code}',
+                adminYes: 'Puedes cambiar la configuración de la fiesta',
+                adminNo: 'Cambiar la configuración pide el PIN del DJ',
+                language: 'Idioma',
+                cancel: 'Cancelar',
+                saveChanges: 'Guardar Cambios',
+                settingsSaved: '¡Configuración guardada!',
+                settingsError: 'Error al guardar configuración',
+                controlPage: 'Página de Control',
+                openControlPage: 'Abrir Página de Control',
+                controlPageHint: 'Controles avanzados, gestión de letras y biblioteca de canciones',
+                jukeboxMode: 'Modo Jukebox',
+                jukeboxOpen: 'Abrir pantalla de jukebox',
+                jukeboxHintBrowser: 'Abre la jukebox en una ventana nueva — arrástrala a tu segunda pantalla',
+                volume: 'Volumen',
+                volumeHint: 'Atajos: flecha arriba / abajo, M',
+                mute: 'Silenciar',
+                // Score screen
+                scoreScreenTitle: 'Pantalla de Puntuación',
+                scoreScreenLabel: 'Mostrar puntuación tras cada canción',
+                scoreScreenHint: 'Muestra una puntuación divertida de 1 a 100 cuando termina la canción',
+                scoreMode: 'Puntuación',
+                scoreModeHeuristic: 'Micrófono',
+                scoreModeRandom: 'Aleatoria (solo por diversión)',
+                scoreModeHint: 'El modo micrófono escucha el micrófono de este dispositivo; el audio nunca sale de la página',
+                joinQrCaption: 'Escanea para unirte',
+                joinQrLabel: 'Mostrar código QR para unirse',
+                joinQrHint: 'Atajo: Q',
+                joinQrNoNetwork: 'Sin fiesta',
+                scoreCountdown: 'Continuando en {n}s · toca para seguir',
+                scoreLabel: 'Puntuación:',
+                nextSongLabel: 'Siguiente:',
+                ratingSuperstar: '¡Superestrella!',
+                ratingAmazing: '¡Increíble!',
+                ratingGreat: '¡Muy bien!',
+                ratingNotBad: 'Nada mal',
+                ratingKeepPracticing: 'Sigue practicando',
+                ratingOof: 'Uy...',
+                // End party
+                endParty: 'Terminar fiesta',
+                shutdownConfirmTitle: '¿Terminar la fiesta?',
+                shutdownConfirmMessage: 'La cola y los cantantes de esta fiesta se borrarán y todos los dispositivos se desconectarán.',
+                shutdown: 'Terminar',
+                shuttingDown: 'Terminando...',
+                // DJ PIN
+                pinModalTitle: 'Se requiere el PIN del DJ',
+                pinModalText: 'Introduce el PIN del DJ para continuar.',
+                pinWrong: 'PIN incorrecto. Inténtalo de nuevo.',
+                pinLocked: 'Demasiados intentos fallidos. Espera un minuto e inténtalo de nuevo.',
+                pinFormat: 'El PIN debe tener de 4 a 12 dígitos.',
+                unlock: 'Desbloquear'
+            },
+            'en': {
+                karaoke: 'Karaoke',
+                waitingForSongs: 'Waiting for songs...',
+                scanToJoin: 'Scan the QR code or visit:',
+                scanMe: 'scan me!',
+                partyCode: 'Party code',
+                upNext: 'Up Next',
+                upNextList: 'In the queue',
+                pausedTag: '(paused)',
+                moreInQueue: '+ {n} more',
+                requestedBy: 'Requested by',
+                firstLine: 'First line:',
+                disconnected: 'Disconnected',
+                connectionLost: 'Lost the connection to the server. Retrying...',
+                reload: 'Reload',
+                partyEndedTitle: 'The party is over',
+                partyEndedText: 'The DJ ended the party. Thanks for singing!',
+                roomGoneTitle: 'Party not found',
+                roomGoneText: 'This party does not exist any more (or it expired).',
+                backHome: 'Back to karaoke',
+                tapToStart: 'Tap / click to start the party',
+                tapToStartText: 'Your browser needs one click before the songs can play with sound.',
+                cantPlayTitle: 'This video can\'t be played here',
+                removedTitle: 'This video was removed from YouTube',
+                brokenTitle: 'This video failed to load',
+                skippingNow: 'Skipping...',
+                pausedBroken: 'Skip this song from the control page.',
+                songAdded: 'Song Added',
+                songSkipped: 'Song Skipped',
+                songRemoved: 'Song Removed',
+                queueCleared: 'Queue Cleared',
+                queueReordered: 'Queue Reordered',
+                by: 'by',
+                loading: 'Loading...',
+                // Settings
+                settings: 'Settings',
+                systemStatus: 'Party',
+                partyConnected: 'Connected to party {code}',
+                adminYes: 'You can change the party settings',
+                adminNo: 'Changing settings needs the DJ PIN',
+                language: 'Language',
+                cancel: 'Cancel',
+                saveChanges: 'Save Changes',
+                settingsSaved: 'Settings saved!',
+                settingsError: 'Error saving settings',
+                controlPage: 'Control Page',
+                openControlPage: 'Open Control Page',
+                controlPageHint: 'Advanced controls, lyrics management, and song library',
+                jukeboxMode: 'Jukebox Mode',
+                jukeboxOpen: 'Open jukebox screen',
+                jukeboxHintBrowser: 'Opens the jukebox in a new window — drag it to your second screen',
+                volume: 'Volume',
+                volumeHint: 'Shortcuts: arrow up / down, M',
+                mute: 'Mute',
+                // Score screen
+                scoreScreenTitle: 'Score Screen',
+                scoreScreenLabel: 'Show score after each song',
+                scoreScreenHint: 'Display a fun 1–100 score when a song finishes',
+                scoreMode: 'Scoring',
+                scoreModeHeuristic: 'Microphone',
+                scoreModeRandom: 'Random (just for fun)',
+                scoreModeHint: 'Microphone mode listens to this device\'s mic; the audio never leaves the page',
+                joinQrCaption: 'Scan to join',
+                joinQrLabel: 'Show join QR code',
+                joinQrHint: 'Shortcut: Q',
+                joinQrNoNetwork: 'No party',
+                scoreCountdown: 'Advancing in {n}s · tap to continue',
+                scoreLabel: 'Score:',
+                nextSongLabel: 'Next Song:',
+                ratingSuperstar: 'Superstar!',
+                ratingAmazing: 'Amazing!',
+                ratingGreat: 'Great job!',
+                ratingNotBad: 'Not bad',
+                ratingKeepPracticing: 'Keep practicing',
+                ratingOof: 'Oof...',
+                // End party
+                endParty: 'End party',
+                shutdownConfirmTitle: 'End the party?',
+                shutdownConfirmMessage: 'The queue and singers of this party will be deleted and every device will be disconnected.',
+                shutdown: 'End party',
+                shuttingDown: 'Ending...',
+                // DJ PIN
+                pinModalTitle: 'DJ PIN required',
+                pinModalText: 'Enter the DJ PIN to continue.',
+                pinWrong: 'Wrong PIN. Try again.',
+                pinLocked: 'Too many wrong attempts. Wait a minute and try again.',
+                pinFormat: 'The PIN must be 4 to 12 digits.',
+                unlock: 'Unlock'
+            }
+        };
+
+        function detectLanguage() {
+            // First check localStorage
+            const stored = localStorage.getItem('karaoke_language');
+            if (stored && translations[stored]) {
+                console.log('Language from localStorage:', stored);
+                return stored;
+            }
+            
+            // Get browser language
+            const browserLang = navigator.language || navigator.languages?.[0] || navigator.userLanguage || '';
+            console.log('Browser language detected:', browserLang);
+            
+            if (browserLang.toLowerCase().startsWith('pt')) return 'pt-BR';
+            if (browserLang.toLowerCase().startsWith('es')) return 'es';
+            if (browserLang.toLowerCase().startsWith('en')) return 'en';
+            
+            // Default to Portuguese
+            console.log('Defaulting to pt-BR');
+            return 'pt-BR';
+        }
+
+        const currentLang = detectLanguage();
+        console.log('Using language:', currentLang);
+        
+        function t(key) {
+            const value = translations[currentLang]?.[key] || translations['pt-BR']?.[key] || key;
+            return value;
+        }
+
+        // ── DJ PIN for admin actions (settings toggles, end party) ───────────
+        // The browser that created the room (host key) never needs a PIN. A player
+        // opened from another device keeps playing without one; only its admin
+        // actions answer 401 when a DJ PIN is set, and then we ask for it once.
+        // The PIN is remembered per room by KRoom (sent as X-Admin-Pin).
+        function promptAdminPin(wrong) {
+            return new Promise(resolve => {
+                const overlay = document.createElement('div');
+                overlay.className = 'k-modal-backdrop pin-modal';
+                overlay.setAttribute('role', 'dialog');
+                overlay.setAttribute('aria-modal', 'true');
+                const box = document.createElement('div');
+                box.className = 'k-modal';
+                box.innerHTML = `
+                    <h2>${escapeHtml(t('pinModalTitle'))}</h2>
+                    <p>${escapeHtml(t('pinModalText'))}</p>
+                    <input class="field" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="12" autocomplete="current-password">
+                    <div class="err" data-role="err"></div>
+                    <div class="actions">
+                        <button class="btn" type="button" data-role="cancel">${escapeHtml(t('cancel'))}</button>
+                        <button class="btn primary" type="button" data-role="ok">${escapeHtml(t('unlock'))}</button>
+                    </div>`;
+                overlay.appendChild(box);
+                document.body.appendChild(overlay);
+                const input = box.querySelector('input');
+                const err = box.querySelector('[data-role="err"]');
+                const okBtn = box.querySelector('[data-role="ok"]');
+                if (wrong) err.textContent = t('pinWrong');
+                setTimeout(() => input.focus(), 50);
+                const finish = (ok) => { overlay.remove(); resolve(ok); };
+                const submit = async () => {
+                    const pin = input.value.trim();
+                    if (!/^[0-9]{4,12}$/.test(pin)) { err.textContent = t('pinFormat'); return; }
+                    okBtn.disabled = true;
+                    try {
+                        const res = await KRoom.fetch('/admin/verify', { method: 'POST', headers: { 'X-Admin-Pin': pin } });
+                        if (res.ok) { KRoom.setPin(pin); finish(true); return; }
+                        err.textContent = res.status === 429 ? t('pinLocked') : t('pinWrong');
+                    } catch (e) {
+                        err.textContent = t('settingsError');
+                    } finally { okBtn.disabled = false; }
+                };
+                okBtn.addEventListener('click', submit);
+                box.querySelector('[data-role="cancel"]').addEventListener('click', () => finish(false));
+                input.addEventListener('keydown', (e) => {
+                    e.stopPropagation(); // keep player keyboard shortcuts out of the PIN field
+                    if (e.key === 'Enter') submit(); else if (e.key === 'Escape') finish(false);
+                });
+            });
+        }
+
+        // KRoom.fetch() for admin endpoints: KRoom sends the remembered DJ PIN
+        // (and the host key); on a PIN error we prompt once and retry.
+        // Returns the Response like fetch().
+        async function adminFetch(path, options = {}, retried = false) {
+            const res = await KRoom.fetch(path, options);
+            if (res.status !== 401 && res.status !== 429) return res;
+            let code = '';
+            try { code = ((await res.clone().json()).data || {}).code || ''; } catch (e) {}
+            if (res.status === 429) { if (code === 'admin_pin_locked') alert(t('pinLocked')); return res; }
+            if (code === 'admin_pin_invalid') KRoom.setPin(''); // stale PIN: stop sending it
+            if (!retried && (code === 'admin_pin_required' || code === 'admin_pin_invalid') &&
+                await promptAdminPin(code === 'admin_pin_invalid')) {
+                return adminFetch(path, options, true);
+            }
+            return res;
+        }
+
+        // True when an API response says the room does not exist (expired / ended).
+        async function isRoomGone(res) {
+            if (!res || res.status !== 404) return false;
+            try { return (((await res.clone().json()).data || {}).code || '') === 'room_not_found'; } catch (e) { return false; }
+        }
+
+        // ── Mic-based karaoke scoring ────────────────────────────────────────
+        // A reference-free estimate of a singing take from the device's default
+        // mic. We have no melody/note reference for songs (lyrics are plain text,
+        // no MIDI/LRC), so we judge the voice on its own merits: participation
+        // (did they actually sing) + pitch confidence (clear, in-tune-to-the-
+        // scale, stable tones). 100% client-side — mic audio never leaves the
+        // page and the video's own audio is never touched. Every threshold lives
+        // in SCORER_CFG so the feel can be calibrated without hunting through code.
+        const SCORER_CFG = {
+            FFT_SIZE: 2048,            // analyser window
+            CORR_WINDOW: 1024,         // samples used for autocorrelation (Pi-cheap)
+            SAMPLE_INTERVAL_MS: 50,    // ~20 Hz analysis cadence
+            MIN_FREQ: 90,              // Hz, low end of sung fundamentals
+            MAX_FREQ: 1000,            // Hz, high end of sung fundamentals
+            CORR_RMS_FLOOR: 0.005,     // below this, don't bother pitch-tracking
+            CLARITY_MIN: 0.92,         // autocorr peak strength to trust a pitch
+            MIN_TOTAL_FRAMES: 20,      // shorter than this (mic off / instant skip) → fall back
+            // Voice activity is measured RELATIVE to the room's own noise floor so
+            // a hissy internal mic doesn't read silence as singing. A frame is
+            // "voiced" only when it's both well above the floor and audibly loud.
+            NOISE_PERCENTILE: 0.2,     // low percentile of RMS taken as the noise floor
+            VAD_FLOOR_MULT: 3.5,       // voiced if RMS > noiseFloor * this …
+            VAD_ABS_MIN: 0.02,         // … and also above this absolute RMS
+            // Participation gates the whole score: sing for at least COVERAGE_TARGET
+            // of the active window to unlock full marks; silence → ~0 no matter how
+            // "clean"/"stable" the residual hum looks.
+            COVERAGE_TARGET: 0.40,     // coverage at/above → full participation credit
+            MIN_ACTIVE_FRACTION: 0.5,  // don't let a short burst inflate coverage
+            PARTICIPATION_BASE: 0.45,  // floor for fully-participating but tone-deaf takes
+            // Pitch-confidence sub-blend (weights sum to 1; intonation leads).
+            PW_CLARITY: 0.35,
+            PW_INTONATION: 0.50,
+            PW_STABILITY: 0.15,
+            INTONATION_CENTS_FLOOR: 35, // avg |cents-to-semitone| at/above → 0
+            JITTER_CENTS_FLOOR: 45,     // avg note-to-note jitter at/above → 0
+            JITTER_MAX_STEP_ST: 2,      // ignore bigger jumps (deliberate note changes)
+            // Vibrato (a small bonus folded into the stability sub-score)
+            VIB_WINDOW: 12,             // frames (~0.6 s at 20 Hz)
+            VIB_MIN_HZ: 4.5,
+            VIB_MAX_HZ: 7.5,
+            VIB_MIN_CENTS: 20,          // min oscillation amplitude to count
+            VIB_MAX_CENTS: 160,         // above this it's wandering, not vibrato
+            DITHER_STD: 10,             // Gaussian jitter on the final 1..100
+        };
+
+        class KaraokeScorer {
+            constructor() {
+                this.ctx = null;
+                this.analyser = null;
+                this.stream = null;
+                this.buf = null;          // Float32Array time-domain scratch
+                this._micPromise = null;  // cached getUserMedia attempt
+                this._micState = 'idle';  // idle | granted | denied
+                this._rafId = null;
+                this._wantRun = false;    // true between start() and pause()
+                this._lastSample = 0;
+                this._reset();
+            }
+
+            _reset() {
+                // Per-song feature buffers. We record raw per-frame features and
+                // derive everything (incl. the noise-floor-relative VAD) in a single
+                // pass at finalize(), which is what lets the threshold adapt.
+                this.s = { rms: [], freq: [], clarity: [] };
+            }
+
+            // Lazily acquire the mic. Idempotent; never prompts twice. Resolves bool.
+            ensureMic() {
+                if (this._micState === 'granted') return Promise.resolve(true);
+                if (this._micState === 'denied') return Promise.resolve(false);
+                if (this._micPromise) return this._micPromise;
+                this._micPromise = (async () => {
+                    if (!window.isSecureContext || !navigator.mediaDevices
+                        || !navigator.mediaDevices.getUserMedia) {
+                        console.warn('[scorer] mic unavailable (insecure context or no API)');
+                        this._micState = 'denied';
+                        return false;
+                    }
+                    try {
+                        this.stream = await navigator.mediaDevices.getUserMedia({
+                            audio: {
+                                echoCancellation: true,   // strip backing-track bleed
+                                noiseSuppression: true,
+                                autoGainControl: false,   // keep real loudness for VAD
+                            },
+                        });
+                        this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                        const src = this.ctx.createMediaStreamSource(this.stream);
+                        this.analyser = this.ctx.createAnalyser();
+                        this.analyser.fftSize = SCORER_CFG.FFT_SIZE;
+                        this.buf = new Float32Array(this.analyser.fftSize);
+                        src.connect(this.analyser); // not wired to destination → no feedback
+                        this._micState = 'granted';
+                        console.log('[scorer] mic ready @', this.ctx.sampleRate, 'Hz');
+                        return true;
+                    } catch (e) {
+                        console.warn('[scorer] mic denied/unavailable:', e && e.name);
+                        this._micState = 'denied';
+                        return false;
+                    }
+                })();
+                return this._micPromise;
+            }
+
+            // Called when a new song loads: stop any loop and clear per-song stats.
+            reset() {
+                this.pause();
+                this._reset();
+            }
+
+            // Begin/continue analysing (on video 'play'). Safe to call repeatedly.
+            async start() {
+                this._wantRun = true;
+                const ok = await this.ensureMic();
+                // A 'pause' may have landed while we were awaiting permission.
+                if (!ok || !this._wantRun) return;
+                if (this.ctx.state === 'suspended') {
+                    try { await this.ctx.resume(); } catch (e) {}
+                }
+                if (!this._wantRun || this._rafId !== null) return; // paused, or already looping
+                this._lastSample = 0;
+                const loop = (now) => {
+                    this._rafId = requestAnimationFrame(loop);
+                    if (now - this._lastSample < SCORER_CFG.SAMPLE_INTERVAL_MS) return;
+                    this._lastSample = now;
+                    this._analyseFrame();
+                };
+                this._rafId = requestAnimationFrame(loop);
+            }
+
+            // Pause analysing (on video 'pause') but keep accumulated stats.
+            pause() {
+                this._wantRun = false;
+                if (this._rafId !== null) { cancelAnimationFrame(this._rafId); this._rafId = null; }
+            }
+
+            _analyseFrame() {
+                this.analyser.getFloatTimeDomainData(this.buf);
+                const { freq, clarity, rms } = this._autoCorrelate(this.buf, this.ctx.sampleRate);
+                this.s.rms.push(rms);
+                this.s.freq.push(freq);
+                this.s.clarity.push(clarity);
+            }
+
+            // True when a window of consecutive pitches oscillates at vibrato rate.
+            _vibratoHit(b) {
+                const n = b.length;
+                let mean = 0; for (let i = 0; i < n; i++) mean += b[i]; mean /= n;
+                let amp = 0; for (let i = 0; i < n; i++) { const d = b[i] - mean; amp += d * d; }
+                amp = Math.sqrt(amp / n) * 100; // cents
+                if (amp < SCORER_CFG.VIB_MIN_CENTS || amp > SCORER_CFG.VIB_MAX_CENTS) return 0;
+                let crossings = 0;
+                for (let i = 1; i < n; i++) if ((b[i] - mean) * (b[i - 1] - mean) < 0) crossings++;
+                const windowSec = (n * SCORER_CFG.SAMPLE_INTERVAL_MS) / 1000;
+                const hz = (crossings / 2) / windowSec;
+                return (hz >= SCORER_CFG.VIB_MIN_HZ && hz <= SCORER_CFG.VIB_MAX_HZ) ? 1 : 0;
+            }
+
+            // Normalised autocorrelation → { freq, clarity (0..1), rms }.
+            _autoCorrelate(buf, sr) {
+                const N = Math.min(SCORER_CFG.CORR_WINDOW, buf.length);
+                let rms = 0;
+                for (let i = 0; i < N; i++) rms += buf[i] * buf[i];
+                rms = Math.sqrt(rms / N);
+                if (rms < SCORER_CFG.CORR_RMS_FLOOR) return { freq: -1, clarity: 0, rms };
+                const minTau = Math.floor(sr / SCORER_CFG.MAX_FREQ);
+                const maxTau = Math.min(Math.ceil(sr / SCORER_CFG.MIN_FREQ), N - 1);
+                const corrAt = new Array(maxTau + 2).fill(0);
+                let bestTau = -1, bestCorr = 0;
+                for (let tau = minTau; tau <= maxTau; tau++) {
+                    let corr = 0, e1 = 0, e2 = 0;
+                    for (let i = 0; i < N - tau; i++) {
+                        corr += buf[i] * buf[i + tau];
+                        e1 += buf[i] * buf[i];
+                        e2 += buf[i + tau] * buf[i + tau];
+                    }
+                    const norm = corr / (Math.sqrt(e1 * e2) || 1); // [-1, 1]
+                    corrAt[tau] = norm;
+                    if (norm > bestCorr) { bestCorr = norm; bestTau = tau; }
+                }
+                if (bestTau < 0) return { freq: -1, clarity: 0, rms };
+                // Parabolic interpolation around the peak for sub-sample accuracy.
+                let tau = bestTau;
+                const a = corrAt[bestTau - 1], b = corrAt[bestTau], c = corrAt[bestTau + 1];
+                if (a !== undefined && c !== undefined) {
+                    const denom = a - 2 * b + c;
+                    if (denom !== 0) tau = bestTau + 0.5 * (a - c) / denom;
+                }
+                return { freq: sr / tau, clarity: bestCorr, rms };
+            }
+
+            // Final 0..1 performance quality, or null only when the mic never ran
+            // (denied/insecure/instant skip) → caller keeps it fun. A working mic
+            // with no singing returns a real (low) score, not a random one.
+            finalize() {
+                this.pause();
+                const f = this.s, n = f.rms.length;
+                if (n < SCORER_CFG.MIN_TOTAL_FRAMES) return null;
+                const clamp01 = (x) => Math.max(0, Math.min(1, x));
+
+                // Noise-floor-relative voice activity: take a low percentile of RMS
+                // as the room floor, and require voicing to clear both a multiple of
+                // it and an absolute minimum. This is what stops a hissy internal mic
+                // from reading silence as singing.
+                const sorted = f.rms.slice().sort((a, b) => a - b);
+                const noiseFloor = sorted[Math.floor(SCORER_CFG.NOISE_PERCENTILE * (n - 1))];
+                const voicedThr = Math.max(SCORER_CFG.VAD_ABS_MIN, noiseFloor * SCORER_CFG.VAD_FLOOR_MULT);
+
+                let voiced = 0, firstV = -1, lastV = -1;
+                let clear = 0, claritySum = 0, centsSum = 0, jitterSum = 0, jitterCount = 0;
+                let prevMidi = null, prevClear = false, vibBuf = [], vibHits = 0;
+                for (let i = 0; i < n; i++) {
+                    const isVoiced = f.rms[i] > voicedThr;
+                    if (isVoiced) { voiced++; if (firstV < 0) firstV = i; lastV = i; }
+                    const isClear = isVoiced && f.freq[i] > 0 && f.clarity[i] >= SCORER_CFG.CLARITY_MIN;
+                    if (isClear) {
+                        clear++; claritySum += f.clarity[i];
+                        const midi = 69 + 12 * Math.log2(f.freq[i] / 440);
+                        centsSum += Math.abs(midi - Math.round(midi)) * 100; // 0..50 cents
+                        if (prevClear && prevMidi !== null) {
+                            const step = Math.abs(midi - prevMidi); // semitones
+                            if (step <= SCORER_CFG.JITTER_MAX_STEP_ST) { jitterSum += step * 100; jitterCount++; }
+                        }
+                        vibBuf.push(midi);
+                        if (vibBuf.length > SCORER_CFG.VIB_WINDOW) vibBuf.shift();
+                        if (vibBuf.length === SCORER_CFG.VIB_WINDOW) vibHits += this._vibratoHit(vibBuf);
+                        prevMidi = midi; prevClear = true;
+                    } else { prevClear = false; prevMidi = null; if (vibBuf.length) vibBuf = []; }
+                }
+
+                // Coverage over the active window (first→last voicing), but the window
+                // can't be shorter than MIN_ACTIVE_FRACTION of the song — so a 5-second
+                // burst can't masquerade as full participation.
+                const span = (firstV >= 0 && lastV >= firstV) ? (lastV - firstV + 1) : n;
+                const effSpan = Math.max(span, SCORER_CFG.MIN_ACTIVE_FRACTION * n);
+                const coverage = clamp01(voiced / effSpan);
+
+                const clarity = clear ? clamp01(claritySum / clear) : 0;
+                const avgCents = clear ? centsSum / clear : 50;
+                const intonation = clamp01(1 - avgCents / SCORER_CFG.INTONATION_CENTS_FLOOR);
+                const avgJitter = jitterCount ? jitterSum / jitterCount : SCORER_CFG.JITTER_CENTS_FLOOR;
+                const stability = clear ? clamp01(1 - avgJitter / SCORER_CFG.JITTER_CENTS_FLOOR) : 0;
+                const vibrato = clear ? clamp01((vibHits / clear) * 4) : 0; // small bonus
+                const stab = Math.min(1, 0.8 * stability + 0.3 * vibrato);
+
+                // Pitch confidence (how good the singing was, when they sang) …
+                const pitchConf = clear ? clamp01(
+                    SCORER_CFG.PW_CLARITY * clarity +
+                    SCORER_CFG.PW_INTONATION * intonation +
+                    SCORER_CFG.PW_STABILITY * stab) : 0;
+                // … gated by participation (did they sing). Silence → ~0 regardless.
+                const participation = clamp01(coverage / SCORER_CFG.COVERAGE_TARGET);
+                const q = clamp01(participation *
+                    (SCORER_CFG.PARTICIPATION_BASE + (1 - SCORER_CFG.PARTICIPATION_BASE) * pitchConf));
+
+                const r3 = (x) => +x.toFixed(3), r1 = (x) => +x.toFixed(1), r4 = (x) => +x.toFixed(4);
+                console.log('[scorer] metrics', {
+                    coverage: r3(coverage), participation: r3(participation),
+                    clarity: r3(clarity), intonation: r3(intonation), avgCents: r1(avgCents),
+                    stability: r3(stability), avgJitterCents: r1(avgJitter), vibrato: r3(vibrato),
+                    pitchConf: r3(pitchConf), quality: r3(q),
+                    noiseFloor: r4(noiseFloor), voicedThr: r4(voicedThr),
+                    frames: n, voiced, clear,
+                });
+                return q;
+            }
+        }
+
+        class Player {
+            constructor() {
+                this.ws = null;
+                // YouTube IFrame player with a video-element-like API (js/ytplayer.js)
+                this.video = new KYTPlayer(document.getElementById('videoStage'));
+                this.volumeKey = 'karaoke_player_volume';
+                this.restoreVolume();
+                this.idleScreen = document.getElementById('idleScreen');
+                this.infoOverlay = document.getElementById('infoOverlay');
+                this.progressBar = document.getElementById('progressBar');
+                this.nextSongCard = document.getElementById('nextSongCard');
+                this.activityContainer = document.getElementById('activityContainer');
+                this.scoreScreen = document.getElementById('scoreScreen');
+                this.scoreScreenEnabled = false; // kept in sync via /config + config_update
+                this.scoreMode = 'heuristic'; // 'heuristic' (mic-based) or 'random'; kept in sync via config
+                this.scoreTimers = []; // active timers/raf ids for the score screen
+                this.scorer = new KaraokeScorer(); // mic-based scoring for the score screen
+                this.lastQueue = []; // latest queue snapshot (for "up next" on the score screen)
+                this.currentSong = null;
+                this.cursorTimeout = null;
+                this.wsTimeout = null;
+                this.wsTimeoutDuration = 15000; // 15 seconds timeout - more tolerant for local connections
+                this.isPlayerWindow = true;
+                this.lastActivityId = null; // Track last activity to prevent duplicates
+                this.isReloading = false; // Track if page is reloading vs closing
+                this.pingInterval = null; // Keepalive ping interval
+                this.reconnectAttempts = 0;
+                this.maxReconnectAttempts = 5; // Allow more reconnection attempts
+                this.reconnectDelay = 2000; // Start with 2 second delay
+
+                this.userHasInteracted = false;
+                this.pendingPlay = false;
+                this.wantPlaying = false; // server says the current song should be playing
+                this.partyOver = false;   // party ended / room gone: stop reconnecting
+                this.errorSkipTimer = null; // pending auto-skip after a YouTube error
+                this.noticeTimer = null;
+                this.init();
+            }
+
+            init() {
+                this.updateUILanguage();
+                this.setupAutoplayOverlay();
+                this.setupWebSocket();
+                this.setupVideoEvents();
+                this.setupUI();
+                this.setupSettings();
+                this.setupWindowEvents();
+                this.setupInputEvents();
+                this.loadScoreSetting();
+            }
+
+            // ── Volume (local to this screen, remembered in localStorage) ──
+            restoreVolume() {
+                let vol = 1, muted = false;
+                try {
+                    const saved = JSON.parse(localStorage.getItem(this.volumeKey) || 'null');
+                    if (saved && typeof saved.volume === 'number') vol = Math.max(0, Math.min(1, saved.volume));
+                    if (saved && saved.muted === true) muted = true;
+                } catch (e) { /* ignore */ }
+                this.video.volume = vol;
+                this.video.muted = muted;
+            }
+
+            setVolume(vol, muted) {
+                if (typeof vol === 'number') this.video.volume = Math.max(0, Math.min(1, Math.round(vol * 100) / 100));
+                if (typeof muted === 'boolean') this.video.muted = muted;
+                try {
+                    localStorage.setItem(this.volumeKey, JSON.stringify({ volume: this.video.volume, muted: this.video.muted }));
+                } catch (e) { /* ignore */ }
+                this.renderVolume();
+            }
+
+            renderVolume() {
+                const slider = document.getElementById('volumeSlider');
+                const value = document.getElementById('volumeValue');
+                const icon = document.getElementById('muteIcon');
+                const pct = Math.round(this.video.volume * 100);
+                if (slider) slider.value = pct;
+                if (value) value.textContent = this.video.muted ? '0' : String(pct);
+                if (icon) icon.textContent = this.video.muted || pct === 0 ? 'volume_off' : (pct < 50 ? 'volume_down' : 'volume_up');
+            }
+
+            // Fetch just the score-screen setting on startup so the player knows
+            // whether to show it even before the settings panel is ever opened.
+            async loadScoreSetting() {
+                try {
+                    const response = await KRoom.fetch('/config');
+                    if (await isRoomGone(response)) { this.showPartyEnded('gone'); return; }
+                    const data = await response.json();
+                    if (data.success && data.data) {
+                        this.scoreScreenEnabled = data.data.score_screen_enabled === true;
+                        this.scoreMode = data.data.score_mode === 'random' ? 'random' : 'heuristic';
+                        // Pre-warm the mic so the permission prompt doesn't pop mid-song.
+                        if (this.micScoringActive()) this.scorer.ensureMic();
+                    }
+                } catch (error) {
+                    console.error('Failed to load score setting:', error);
+                }
+            }
+
+            setupWindowEvents() {
+                window.addEventListener('beforeunload', () => {
+                    // Close the companion jukebox window so it doesn't linger
+                    // after the player goes away.
+                    if (this.jukeboxWindow && !this.jukeboxWindow.closed) {
+                        this.jukeboxWindow.close();
+                    }
+                });
+            }
+
+            setupInputEvents() {
+                // Keyboard controls
+                document.addEventListener('keydown', (e) => {
+                    if (e.code === 'Space') {
+                        if (this.isTypingTarget(e.target)) return;
+                        e.preventDefault(); // Prevent scrolling
+                        if (this.isStartCardVisible()) { this.unlockPlayback(); return; }
+                        this.togglePlayPause();
+                    }
+                    // Q: toggle the join-QR overlay (ignored while typing or in a modal)
+                    if (typeof e.key === 'string' && e.key.toLowerCase() === 'q'
+                        && !e.ctrlKey && !e.altKey && !e.metaKey && !e.repeat) {
+                        if (this.isTypingTarget(e.target) || this.isModalOpen()) return;
+                        e.preventDefault();
+                        this.toggleJoinQr();
+                    }
+                    // Volume: arrow up / down, M to mute (local to this screen)
+                    if ((e.key === 'ArrowUp' || e.key === 'ArrowDown' || (typeof e.key === 'string' && e.key.toLowerCase() === 'm'))
+                        && !e.ctrlKey && !e.altKey && !e.metaKey) {
+                        if (this.isTypingTarget(e.target) || this.isModalOpen()) return;
+                        e.preventDefault();
+                        if (e.key === 'ArrowUp') this.setVolume(this.video.volume + 0.1, false);
+                        else if (e.key === 'ArrowDown') this.setVolume(this.video.volume - 0.1);
+                        else if (!e.repeat) this.setVolume(undefined, !this.video.muted);
+                    }
+                });
+
+                // Gamepad controls
+                this.gamepadIndex = null;
+                this.gamepadPollingInterval = null;
+                this.lastButtonState = false; // To prevent rapid toggling
+
+                window.addEventListener("gamepadconnected", (e) => {
+                    console.log("Gamepad connected at index %d: %s. %d buttons, %d axes.",
+                        e.gamepad.index, e.gamepad.id,
+                        e.gamepad.buttons.length, e.gamepad.axes.length);
+                    this.gamepadIndex = e.gamepad.index;
+                    this.startGamepadPolling();
+                });
+
+                window.addEventListener("gamepaddisconnected", (e) => {
+                    console.log("Gamepad disconnected from index %d: %s",
+                        e.gamepad.index, e.gamepad.id);
+                    if (this.gamepadIndex === e.gamepad.index) {
+                        this.gamepadIndex = null;
+                        this.stopGamepadPolling();
+                    }
+                });
+            }
+
+            startGamepadPolling() {
+                if (this.gamepadPollingInterval) return;
+                this.gamepadPollingInterval = setInterval(() => this.pollGamepad(), 100);
+            }
+
+            stopGamepadPolling() {
+                if (this.gamepadPollingInterval) {
+                    clearInterval(this.gamepadPollingInterval);
+                    this.gamepadPollingInterval = null;
+                }
+            }
+
+            pollGamepad() {
+                if (this.gamepadIndex === null) return;
+                
+                const gamepads = navigator.getGamepads();
+                const gp = gamepads[this.gamepadIndex];
+                
+                if (!gp) return;
+
+                // Button 0 is usually 'A' on Xbox or 'X' on PlayStation
+                const buttonPressed = gp.buttons[0].pressed;
+
+                if (buttonPressed && !this.lastButtonState) {
+                    this.togglePlayPause();
+                }
+
+                this.lastButtonState = buttonPressed;
+            }
+
+            togglePlayPause() {
+                // Send command to server to toggle play/pause
+                // This ensures state is synchronized across all clients and handles the case
+                // where queue is filled but nothing is playing yet
+                if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                    this.ws.send(JSON.stringify({
+                        type: 'player_action',
+                        payload: { action: 'toggle_play' }
+                    }));
+                }
+            }
+
+            // Try to play video, handling browser autoplay restrictions
+            tryPlay() {
+                const id = this.video.videoId;
+                // A YouTube error for this video is already known: play() would just hang.
+                if (this.video.error && this.video.error.code > 0) {
+                    this.handleVideoError(this.video.error.code);
+                    return;
+                }
+                this.video.play().then(() => {
+                    this.userHasInteracted = true;
+                    this.hideAutoplayOverlay();
+                }).catch(e => {
+                    // Replaced/stopped videos and YouTube errors are handled elsewhere.
+                    if (e && (e.name === 'AbortError' || e.name === 'YouTubeError' || e.name === 'NotSupportedError')) return;
+                    if (this.video.videoId !== id || !this.wantPlaying) return;
+                    console.warn('Autoplay blocked, showing the start card:', e && e.message);
+                    this.pendingPlay = true;
+                    this.showAutoplayOverlay();
+                });
+            }
+
+            showAutoplayOverlay() {
+                document.getElementById('autoplayOverlay').hidden = false;
+            }
+
+            hideAutoplayOverlay() {
+                document.getElementById('autoplayOverlay').hidden = true;
+                this.pendingPlay = false;
+            }
+
+            isStartCardVisible() {
+                return !document.getElementById('autoplayOverlay').hidden;
+            }
+
+            // The click on the start card is the user gesture browsers need for sound
+            // (the YouTube iframe inherits it). Called from the card's click/Enter/Space.
+            unlockPlayback() {
+                this.userHasInteracted = true;
+                this.hideAutoplayOverlay();
+                // Mic scoring: the AudioContext may have been created before any gesture.
+                if (this.scorer.ctx && this.scorer.ctx.state === 'suspended') {
+                    this.scorer.ctx.resume().catch(() => {});
+                }
+                if (this.micScoringActive()) this.scorer.ensureMic();
+                if (this.video.videoId && this.video.paused && this.wantPlaying) {
+                    this.tryPlay();
+                }
+            }
+
+            setupAutoplayOverlay() {
+                // Shown on load: browsers block sound until the user interacts.
+                const overlay = document.getElementById('autoplayOverlay');
+                overlay.addEventListener('click', () => this.unlockPlayback());
+                overlay.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') { e.preventDefault(); this.unlockPlayback(); }
+                });
+
+                // Any user interaction on the page unlocks autoplay
+                const markInteracted = () => {
+                    this.userHasInteracted = true;
+                };
+                document.addEventListener('click', markInteracted, { once: true });
+                document.addEventListener('keydown', markInteracted, { once: true });
+                document.addEventListener('touchstart', markInteracted, { once: true });
+            }
+
+            // Call this before any intentional reload
+            markAsReloading() {
+                this.isReloading = true;
+            }
+
+            updateUILanguage() {
+                // Update static text elements
+                document.getElementById('welcomeText').textContent = t('karaoke') + ' Player';
+                document.getElementById('instructionText').textContent = t('waitingForSongs');
+                document.getElementById('scanText').textContent = t('scanToJoin');
+                document.getElementById('qrCaption').textContent = t('scanMe');
+                document.getElementById('roomLabel').textContent = t('partyCode');
+                document.getElementById('idleQueueTitle').textContent = t('upNextList');
+                document.getElementById('upNextLabel').textContent = t('upNext');
+                document.getElementById('startTitle').textContent = t('tapToStart');
+                document.getElementById('startText').textContent = t('tapToStartText');
+                document.getElementById('closeBtn').title = t('endParty');
+                document.getElementById('settingsBtn').title = t('settings');
+                document.documentElement.lang = currentLang;
+            }
+
+            setupUI() {
+                // Hide cursor on inactivity
+                document.addEventListener('mousemove', () => {
+                    document.body.classList.add('user-active');
+                    clearTimeout(this.cursorTimeout);
+                    this.cursorTimeout = setTimeout(() => {
+                        document.body.classList.remove('user-active');
+                    }, 3000);
+                });
+
+                // Room code + join link / QR (public room link, no LAN info any more)
+                this.renderJoinInfo();
+            }
+
+            renderJoinInfo() {
+                const url = KRoom.joinUrl();
+                document.getElementById('roomStamp').textContent = KRoom.code;
+                document.getElementById('serverUrl').textContent = url.replace(/^https?:\/\//, '');
+                const qrContainer = document.getElementById('qrcode');
+                qrContainer.innerHTML = '';
+                new QRCode(qrContainer, {
+                    text: url,
+                    width: 360,
+                    height: 360,
+                    colorDark: '#2b2520',
+                    colorLight: '#ffffff',
+                    correctLevel: QRCode.CorrectLevel.M
+                });
+                // Same URL feeds the Q-key join overlay
+                this.setJoinQrUrl(url);
+            }
+
+            // Hand-written queue list on the idle screen (shown while nothing plays).
+            renderIdleQueue(queue, nowPlaying, isPlaying) {
+                const box = document.getElementById('idleQueue');
+                const list = document.getElementById('idleQueueList');
+                const MAX = 6;
+                const items = [];
+                if (nowPlaying && nowPlaying.song && !isPlaying) items.push({ item: nowPlaying, paused: true });
+                (queue || []).filter(q => q.status === 'pending' && q.song).forEach(q => items.push({ item: q, paused: false }));
+                if (!items.length) { box.hidden = true; list.innerHTML = ''; return; }
+                const shown = items.slice(0, MAX);
+                list.innerHTML = shown.map(({ item, paused }) => `
+                    <li>${escapeHtml(item.song.title)}${item.song.artist ? ` <span class="q-artist">· ${escapeHtml(item.song.artist)}</span>` : ''}
+                        <span class="q-user">(${escapeHtml(item.user_name || '')})</span>${paused ? ` <span class="q-paused">${escapeHtml(t('pausedTag'))}</span>` : ''}</li>`).join('')
+                    + (items.length > MAX ? `<li class="q-more">${escapeHtml(t('moreInQueue').replace('{n}', items.length - MAX))}</li>` : '');
+                box.hidden = false;
+            }
+
+            // ── Join QR overlay (Q key) ──────────────────────────────────────
+            isTypingTarget(el) {
+                if (!el || !el.tagName) return false;
+                const tag = el.tagName.toUpperCase();
+                return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable === true;
+            }
+
+            isModalOpen() {
+                if (this.isStartCardVisible()) return true;
+                if (!document.getElementById('endScreen').hidden) return true;
+                // Dialogs built on the fly (end-party confirm, PIN prompt) use .k-modal-backdrop.
+                if (document.querySelector('[role="dialog"], [aria-modal="true"], .k-modal-backdrop, .pin-modal')) return true;
+                return false;
+            }
+
+            toggleJoinQr() {
+                this.joinQrVisible = !this.joinQrVisible;
+                const box = document.getElementById('joinQr');
+                box.classList.toggle('visible', this.joinQrVisible);
+                box.setAttribute('aria-hidden', this.joinQrVisible ? 'false' : 'true');
+                document.body.classList.toggle('join-qr-on', this.joinQrVisible);
+                const cb = document.getElementById('configJoinQr');
+                if (cb) cb.checked = this.joinQrVisible;
+                this.renderJoinQr();
+            }
+
+            setJoinQrUrl(url) {
+                if (url === this.joinQrUrl) return;
+                this.joinQrUrl = url;
+                this.renderJoinQr();
+            }
+
+            renderJoinQr() {
+                const box = document.getElementById('joinQr');
+                if (!box) return;
+                const url = this.joinQrUrl || '';
+                const caption = t('joinQrCaption');
+                const codeEl = document.getElementById('joinQrCode');
+                const emptyEl = document.getElementById('joinQrEmpty');
+                const urlEl = document.getElementById('joinQrUrl');
+                document.getElementById('joinQrCaption').textContent = caption;
+                document.getElementById('joinQrRoom').textContent = KRoom.code;
+                emptyEl.textContent = t('joinQrNoNetwork');
+                codeEl.innerHTML = '';
+                if (url) {
+                    new QRCode(codeEl, {
+                        text: url,
+                        width: 256,
+                        height: 256,
+                        colorDark: '#2b2520',
+                        colorLight: '#ffffff',
+                        correctLevel: QRCode.CorrectLevel.M
+                    });
+                }
+                codeEl.style.display = url ? '' : 'none';
+                emptyEl.style.display = url ? 'none' : '';
+                urlEl.textContent = url.replace(/^https?:\/\//, '');
+                urlEl.style.display = url ? '' : 'none';
+                box.setAttribute('aria-label', url ? `${caption}: ${url}` : `${caption}: ${t('joinQrNoNetwork')}`);
+                // Let toasts in the same corner sit below the card
+                document.documentElement.style.setProperty('--join-qr-h', box.offsetHeight + 'px');
+            }
+
+            setupWebSocket() {
+                if (this.partyOver) return;
+                const ws = new WebSocket(KRoom.wsUrl());
+                this.ws = ws;
+
+                ws.onopen = () => {
+                    console.log('Player connected to WS');
+                    // Reset reconnection tracking on successful connection
+                    this.reconnectAttempts = 0;
+                    this.reconnectDelay = 2000;
+                    this.hideDisconnectMessage();
+                    // Start keepalive ping
+                    this.startPingInterval();
+                    this.resetWsTimeout();
+                };
+
+                ws.onmessage = (event) => {
+                    let msg;
+                    try { msg = JSON.parse(event.data); } catch (e) { return; }
+                    this.handleMessage(msg);
+                    this.resetWsTimeout();
+                };
+
+                ws.onclose = (event) => {
+                    console.log('WebSocket closed', event && event.code);
+                    if (this.ws !== ws) return; // an older socket we already replaced
+                    this.stopPingInterval();
+                    if (event && event.code === 4404) { // room deleted / expired
+                        this.showPartyEnded('gone');
+                        return;
+                    }
+                    this.handleDisconnection();
+                };
+
+                ws.onerror = (error) => {
+                    console.error('WebSocket error:', error);
+                    // Don't immediately handle disconnection on error - wait for close event
+                };
+            }
+
+            startPingInterval() {
+                // Stop any existing interval
+                this.stopPingInterval();
+                // Send ping every 10 seconds to keep connection alive
+                this.pingInterval = setInterval(() => {
+                    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                        this.ws.send(JSON.stringify({ type: 'ping' }));
+                    }
+                }, 10000);
+            }
+
+            stopPingInterval() {
+                if (this.pingInterval) {
+                    clearInterval(this.pingInterval);
+                    this.pingInterval = null;
+                }
+            }
+
+            resetWsTimeout() {
+                clearTimeout(this.wsTimeout);
+                this.wsTimeout = setTimeout(() => {
+                    console.log('WebSocket timeout - server may be down');
+                    this.handleDisconnection();
+                }, this.wsTimeoutDuration);
+            }
+
+            handleDisconnection() {
+                clearTimeout(this.wsTimeout);
+                this.stopPingInterval();
+                if (this.partyOver) return;
+                // A stale socket (e.g. after the timeout fired) must not reconnect twice.
+                if (this.ws && this.ws.readyState !== WebSocket.CLOSED) {
+                    const old = this.ws;
+                    this.ws = null;
+                    try { old.close(); } catch (e) {}
+                }
+                if (this.reconnectTimer) return; // a reconnect is already scheduled
+
+                // Don't show disconnection if music is playing - try harder to reconnect
+                const isPlayingMusic = this.video && !this.video.paused && !!this.video.videoId;
+                const maxAttempts = isPlayingMusic ? this.maxReconnectAttempts * 2 : this.maxReconnectAttempts;
+
+                const schedule = (delay) => {
+                    this.reconnectTimer = setTimeout(() => {
+                        this.reconnectTimer = null;
+                        this.setupWebSocket();
+                    }, delay);
+                };
+
+                // A WebSocket refused before the upgrade only shows up as code 1006: ask the
+                // API once (and again when giving up) whether the room still exists.
+                if (this.reconnectAttempts === 0 || this.reconnectAttempts >= maxAttempts) {
+                    KRoom.fetch('/room').then(isRoomGone).then(gone => {
+                        if (gone) this.showPartyEnded('gone');
+                    }).catch(() => {});
+                }
+
+                if (this.reconnectAttempts < maxAttempts) {
+                    this.reconnectAttempts++;
+                    // Exponential backoff with max of 10 seconds
+                    const delay = Math.min(this.reconnectDelay * Math.pow(1.5, this.reconnectAttempts - 1), 10000);
+                    console.log(`Reconnection attempt ${this.reconnectAttempts}/${maxAttempts} in ${delay}ms`);
+                    schedule(delay);
+                } else {
+                    console.log('Max reconnection attempts reached');
+                    // Only show the disconnect card if not actively playing music
+                    if (!isPlayingMusic) this.showDisconnectMessage();
+                    // Keep trying slowly in the background; the card hides on reconnect.
+                    this.reconnectAttempts = 0;
+                    schedule(15000);
+                }
+            }
+
+            // Paper card over everything: 'ended' (DJ ended the party), 'gone' (room
+            // not found / expired) or 'disconnected' (server unreachable, still retrying).
+            showEndCard(kind) {
+                const screen = document.getElementById('endScreen');
+                const title = document.getElementById('endTitle');
+                const text = document.getElementById('endText');
+                const icon = document.getElementById('endIcon');
+                const link = document.getElementById('endLink');
+                screen.dataset.kind = kind;
+                if (kind === 'disconnected') {
+                    icon.textContent = 'power_off';
+                    title.textContent = t('disconnected');
+                    text.textContent = t('connectionLost');
+                    link.textContent = t('reload');
+                    link.setAttribute('href', location.href);
+                } else {
+                    icon.textContent = kind === 'gone' ? 'search_off' : 'celebration';
+                    title.textContent = t(kind === 'gone' ? 'roomGoneTitle' : 'partyEndedTitle');
+                    text.textContent = t(kind === 'gone' ? 'roomGoneText' : 'partyEndedText');
+                    link.textContent = t('backHome');
+                    link.setAttribute('href', '/karaoke/');
+                }
+                this.hideAutoplayOverlay();
+                screen.hidden = false;
+            }
+
+            showDisconnectMessage() {
+                if (this.partyOver) return;
+                this.showEndCard('disconnected');
+            }
+
+            hideDisconnectMessage() {
+                const screen = document.getElementById('endScreen');
+                if (screen.dataset.kind === 'disconnected') screen.hidden = true;
+            }
+
+            // The party is over for good: stop playback and reconnects, show the card.
+            showPartyEnded(kind) {
+                this.partyOver = true;
+                clearTimeout(this.wsTimeout);
+                clearTimeout(this.reconnectTimer);
+                this.reconnectTimer = null;
+                this.stopPingInterval();
+                if (this.ws) {
+                    const old = this.ws;
+                    this.ws = null;
+                    try { old.close(); } catch (e) {}
+                }
+                this.wantPlaying = false;
+                this.stop();
+                this.closeSettings();
+                this.showEndCard(kind === 'gone' ? 'gone' : 'ended');
+            }
+
+            handleMessage(msg) {
+                console.log('WS Message:', msg);
+                this.reconnectAttempts = 0; // Reset on successful message
+                
+                switch(msg.type) {
+                    case 'init':
+                    case 'queue_update':
+                        this.handleQueueUpdate(msg.payload);
+                        break;
+                    case 'config_update':
+                        this.handleConfigUpdate(msg.payload);
+                        break;
+                    case 'pong':
+                        // Server is alive
+                        break;
+                    case 'server_shutdown':
+                        this.handleServerShutdown();
+                        break;
+                }
+            }
+
+            handleConfigUpdate(config) {
+                if (config) {
+                    if (config.score_mode !== undefined) {
+                        this.scoreMode = config.score_mode === 'random' ? 'random' : 'heuristic';
+                    }
+                    if (config.score_screen_enabled !== undefined) {
+                        this.scoreScreenEnabled = config.score_screen_enabled === true;
+                    }
+                    if (this.micScoringActive()) this.scorer.ensureMic();
+                    const panel = document.getElementById('settingsPanel');
+                    if (panel && panel.classList.contains('open')) {
+                        document.getElementById('configScoreScreen').checked = this.scoreScreenEnabled;
+                        document.getElementById('configScoreMode').value = this.scoreMode;
+                    }
+                }
+            }
+
+            // `server_shutdown` = the DJ ended the party (the room is deleted).
+            handleServerShutdown() {
+                console.log('The DJ ended the party');
+                this.showPartyEnded('ended');
+            }
+
+            async confirmShutdown() {
+                // "End party": a paper confirm dialog (room admin; asks for the DJ PIN if needed)
+                const confirmOverlay = document.createElement('div');
+                confirmOverlay.className = 'k-modal-backdrop';
+                confirmOverlay.setAttribute('role', 'dialog');
+                confirmOverlay.setAttribute('aria-modal', 'true');
+
+                const confirmBox = document.createElement('div');
+                confirmBox.className = 'k-modal';
+                confirmBox.innerHTML = `
+                    <span class="material-icons-round" style="font-size: 56px; color: var(--red);">warning_amber</span>
+                    <h2>${escapeHtml(t('shutdownConfirmTitle'))}</h2>
+                    <p>${escapeHtml(t('shutdownConfirmMessage'))}</p>
+                    <div class="actions">
+                        <button class="btn" type="button" data-role="cancel">${escapeHtml(t('cancel'))}</button>
+                        <button class="btn danger" type="button" data-role="confirm">${escapeHtml(t('shutdown'))}</button>
+                    </div>
+                `;
+
+                confirmOverlay.appendChild(confirmBox);
+                document.body.appendChild(confirmOverlay);
+
+                // Wait for user response
+                return new Promise((resolve) => {
+                    confirmBox.querySelector('[data-role="cancel"]').addEventListener('click', () => {
+                        confirmOverlay.remove();
+                        resolve(false);
+                    });
+
+                    confirmBox.querySelector('[data-role="confirm"]').addEventListener('click', async () => {
+                        try {
+                            const res = await adminFetch('/shutdown', { method: 'POST' });
+                            if (!res.ok) { // no/wrong DJ PIN: leave the party running
+                                confirmOverlay.remove();
+                                resolve(false);
+                                return;
+                            }
+                            confirmOverlay.remove();
+                            this.showPartyEnded('ended');
+                        } catch (e) {
+                            console.error('End party failed:', e);
+                            confirmOverlay.remove();
+                        }
+                        resolve(true);
+                    });
+
+                    confirmOverlay.addEventListener('click', (e) => {
+                        if (e.target === confirmOverlay) {
+                            confirmOverlay.remove();
+                            resolve(false);
+                        }
+                    });
+                });
+            }
+
+            handleQueueUpdate(payload) {
+                const nowPlaying = payload.now_playing;
+                const action = payload.action;
+                const queue = payload.queue || [];
+                const activity = payload.activity;
+                const isPlaying = payload.is_playing;
+
+                this.lastQueue = queue;
+                this.wantPlaying = !!(nowPlaying && isPlaying);
+
+                // Show activity notification if present and not a duplicate
+                if (activity) {
+                    // Only show if it's a new activity (different from last or more than 500ms passed)
+                    if (this.lastActivityId !== `${activity.action}-${activity.user_name}-${activity.song_title || ''}`) {
+                        this.lastActivityId = `${activity.action}-${activity.user_name}-${activity.song_title || ''}`;
+                        this.showActivity(activity);
+                        // Clear the lastActivityId after a short delay to allow same action again later
+                        setTimeout(() => {
+                            if (this.lastActivityId === `${activity.action}-${activity.user_name}-${activity.song_title || ''}`) {
+                                this.lastActivityId = null;
+                            }
+                        }, 1000);
+                    }
+                }
+
+                if (nowPlaying && isPlaying) {
+                    // If it's a new song or we were idle
+                    if (!this.currentSong || this.currentSong.id !== nowPlaying.id) {
+                        this.playSong(nowPlaying);
+                    } else {
+                        // Same song, check action
+                        if (action === 'pause') this.video.pause();
+                        if (action === 'resume') this.tryPlay();
+                        if (action === 'restart') {
+                            this.video.currentTime = 0;
+                            this.tryPlay();
+                        }
+                    }
+                } else if (nowPlaying && !isPlaying) {
+                    // Song is loaded but paused
+                    if (!this.currentSong || this.currentSong.id !== nowPlaying.id) {
+                        this.loadSongPaused(nowPlaying);
+                    } else {
+                        this.video.pause();
+                    }
+                } else {
+                    this.stop();
+                }
+
+                // Update next song card + the hand-written list on the idle page
+                this.updateNextSong(queue);
+                this.renderIdleQueue(queue, nowPlaying, isPlaying);
+            }
+
+            showActivity(activity) {
+                const iconMap = {
+                    'add': 'add_circle',
+                    'skip': 'skip_next',
+                    'remove': 'remove_circle',
+                    'clear': 'delete_sweep',
+                    'reorder': activity.direction === 'up' ? 'arrow_upward' : activity.direction === 'down' ? 'arrow_downward' : 'swap_vert'
+                };
+
+                const actionMap = {
+                    'add': t('songAdded'),
+                    'skip': t('songSkipped'),
+                    'remove': t('songRemoved'),
+                    'clear': t('queueCleared'),
+                    'reorder': t('queueReordered')
+                };
+
+                // Limit to max 5 notifications
+                const existingNotifications = this.activityContainer.querySelectorAll('.activity-notification');
+                if (existingNotifications.length >= 5) {
+                    existingNotifications[0].remove();
+                }
+
+                const notification = document.createElement('div');
+                notification.className = 'activity-notification';
+                notification.innerHTML = `
+                    <div class="activity-icon ${this.escapeHtml(activity.action)}">
+                        <span class="material-icons-round">${iconMap[activity.action] || 'info'}</span>
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-action">${this.escapeHtml(actionMap[activity.action] || activity.action)}</div>
+                        ${activity.song_title ? `<div class="activity-details">${this.escapeHtml(activity.song_title)}</div>` : ''}
+                        <div class="activity-user">${this.escapeHtml(t('by'))} ${this.escapeHtml(activity.user_name)}</div>
+                    </div>
+                `;
+
+                this.activityContainer.appendChild(notification);
+
+                // Remove after animation completes
+                setTimeout(() => {
+                    notification.remove();
+                }, 5000);
+            }
+
+            escapeHtml(text) {
+                return window.escapeHtml(text);
+            }
+
+            // Fill the now-playing paper strip (title, artist, singer, first-line hint).
+            fillNowPlaying(item) {
+                const song = item.song || {};
+                document.getElementById('overlayTitle').textContent = song.title || '';
+                document.getElementById('overlayArtist').textContent = song.artist || '';
+                document.getElementById('overlayUser').textContent = `${t('requestedBy')} ${item.user_name || ''}`;
+                const firstLine = document.getElementById('overlayFirstLine');
+                firstLine.innerHTML = song.lyrics_start
+                    ? `${this.escapeHtml(t('firstLine'))} <span>“${this.escapeHtml(song.lyrics_start)}”</span>`
+                    : '';
+            }
+
+            // A new song is being loaded: forget any pending error skip / notice.
+            resetVideoError() {
+                clearTimeout(this.errorSkipTimer);
+                this.errorSkipTimer = null;
+                this.errorSkipFor = null;
+                this.hideVideoNotice();
+            }
+
+            playSong(item) {
+                console.log('Playing:', item);
+                this.hideScoreScreen();
+                this.resetVideoError();
+                this.scorer.reset(); // fresh stats; the 'play' event starts capture
+                this.currentSong = item;
+                const song = item.song || {};
+
+                // Update UI
+                this.idleScreen.classList.add('hidden');
+                this.fillNowPlaying(item);
+
+                // Show overlay briefly
+                this.infoOverlay.classList.add('visible');
+                clearTimeout(this.infoOverlayTimer);
+                this.infoOverlayTimer = setTimeout(() => this.infoOverlay.classList.remove('visible'), 8000);
+
+                // Setup video: every song is a YouTube embed now
+                this.progressBar.style.width = '0%';
+                if (!song.youtube_id) {
+                    this.video.stop();
+                    this.handleVideoError(2);
+                    return;
+                }
+                this.video.load(song.youtube_id, { autoplay: true, start: 0 });
+                this.tryPlay();
+            }
+
+            loadSongPaused(item) {
+                console.log('Loading song paused:', item);
+                this.hideScoreScreen();
+                this.resetVideoError();
+                this.scorer.reset();
+                this.currentSong = item;
+                const song = item.song || {};
+
+                // Update UI but keep idle screen visible
+                this.fillNowPlaying(item);
+                this.progressBar.style.width = '0%';
+
+                // Load video but don't play
+                if (song.youtube_id) this.video.load(song.youtube_id, { autoplay: false, start: 0 });
+                else this.video.stop();
+            }
+
+            stop() {
+                this.hideScoreScreen();
+                this.resetVideoError();
+                this.scorer.reset();
+                this.currentSong = null;
+                this.video.stop();
+                this.idleScreen.classList.remove('hidden');
+                this.infoOverlay.classList.remove('visible');
+                this.nextSongCard.classList.remove('visible');
+                this.progressBar.style.width = '0%';
+            }
+
+            // ── YouTube errors (embedding disabled, removed, bad id) ──
+            // Show a hand-drawn notice for ~4 s, then skip. Several error events for
+            // the same song (or a play() retry) never skip twice.
+            handleVideoError(code) {
+                const item = this.currentSong;
+                if (!item) return;
+                const song = item.song || {};
+                let titleKey = 'brokenTitle';
+                if (code === 101 || code === 150) titleKey = 'cantPlayTitle';
+                else if (code === 100) titleKey = 'removedTitle';
+                console.warn(`[player] YouTube error ${code} for "${song.title}" (${song.youtube_id || 'no id'})`);
+
+                if (!this.wantPlaying) {
+                    // The DJ has this song loaded but paused: just say so, don't skip yet.
+                    this.showVideoNotice(t(titleKey), song, t('pausedBroken'), 0);
+                    return;
+                }
+                if (this.errorSkipFor === item.id) return; // already skipping this one
+                this.errorSkipFor = item.id;
+                this.showVideoNotice(t(titleKey), song, t('skippingNow'), 4000);
+                clearTimeout(this.errorSkipTimer);
+                this.errorSkipTimer = setTimeout(() => {
+                    this.errorSkipTimer = null;
+                    // Only skip if that song is still the current one (the DJ may have moved on).
+                    if (!this.currentSong || this.currentSong.id !== item.id) return;
+                    this.hideVideoNotice();
+                    KRoom.fetch('/queue/skip', { method: 'POST' }).catch(e => console.error('Skip failed:', e));
+                }, 4000);
+            }
+
+            showVideoNotice(title, song, text, ms) {
+                const box = document.getElementById('videoNotice');
+                document.getElementById('videoNoticeTitle').textContent = title;
+                document.getElementById('videoNoticeSong').textContent =
+                    song && song.title ? (song.artist ? `${song.title} · ${song.artist}` : song.title) : '';
+                document.getElementById('videoNoticeText').textContent = text;
+                box.hidden = false;
+                clearTimeout(this.noticeTimer);
+                if (ms > 0) this.noticeTimer = setTimeout(() => { box.hidden = true; }, ms);
+            }
+
+            hideVideoNotice() {
+                clearTimeout(this.noticeTimer);
+                document.getElementById('videoNotice').hidden = true;
+            }
+
+            updateNextSong(queue) {
+                // Find the first pending song
+                const nextSong = queue.find(item => item.status === 'pending');
+
+                // Show next song if available, even when nothing is currently playing
+                if (nextSong && nextSong.song) {
+                    document.getElementById('nextTitle').textContent = nextSong.song.title;
+                    document.getElementById('nextArtist').textContent = nextSong.song.artist;
+                    const userEl = document.getElementById('nextUser');
+                    const codeBadge = nextSong.song.code
+                        ? `<span class="next-code-badge">${this.escapeHtml(nextSong.song.code)}</span> `
+                        : '';
+                    userEl.innerHTML = `${codeBadge}${this.escapeHtml(t('requestedBy'))} ${this.escapeHtml(nextSong.user_name)}`;
+
+                    // Thumbnail intentionally removed for a cleaner card
+
+                    this.nextSongCard.classList.add('visible');
+                } else {
+                    this.nextSongCard.classList.remove('visible');
+                }
+            }
+
+            // ── Score Screen ──
+
+            // True only when the score screen is on AND set to mic-based scoring.
+            // In "random" mode we never touch the mic (no permission prompt, no capture).
+            micScoringActive() {
+                return this.scoreScreenEnabled && this.scoreMode === 'heuristic';
+            }
+
+            // Draw a score 1–100 from a bimodal Gaussian mixture:
+            // 50/50 between N(mean=25, std=20) and N(mean=80, std=10).
+            // Out-of-bounds → reevaluate (rejection sampling); never clamp.
+            sampleBimodalScore() {
+                const gauss = (m, s) => {
+                    let u1 = Math.random();
+                    while (u1 === 0) u1 = Math.random(); // avoid log(0)
+                    const u2 = Math.random();
+                    return m + s * Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+                };
+                while (true) {
+                    const x = Math.random() < 0.3 ? gauss(40, 20) : gauss(75, 15);
+                    const score = Math.round(x);
+                    if (score >= 1 && score <= 100) return score;
+                }
+            }
+
+            // Box–Muller Gaussian sample, used for the dither below.
+            _gauss(m, s) {
+                let u1 = Math.random();
+                while (u1 === 0) u1 = Math.random(); // avoid log(0)
+                const u2 = Math.random();
+                return m + s * Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+            }
+
+            // Real score for the screen: the mic measurement mapped to 1–100 with a
+            // tight dither so identical takes vary slightly. Falls back to the fun
+            // random score when there was no usable mic signal.
+            computeFinalScore() {
+                if (this.scoreMode === 'random') {
+                    const score = this.sampleBimodalScore();
+                    console.log(`[score] RANDOM (score_mode=random) → ${score}`);
+                    return score;
+                }
+                const q = this.scorer.finalize(); // 0..1 or null (logs the metric breakdown)
+                if (q === null) {
+                    const score = this.sampleBimodalScore();
+                    console.log(`[score] RANDOM (no usable mic signal) → ${score}`);
+                    return score;
+                }
+                const base = q * 99 + 1;                         // calculated, pre-dither
+                const dither = this._gauss(0, SCORER_CFG.DITHER_STD);
+                const final = Math.max(1, Math.min(100, Math.round(base + dither)));
+                console.log(`[score] CALCULATED quality=${q.toFixed(3)} `
+                    + `base=${base.toFixed(1)} dither=${dither >= 0 ? '+' : ''}${dither.toFixed(1)} `
+                    + `→ ${final}`);
+                return final;
+            }
+
+            scoreRatingKey(score) {
+                if (score >= 90) return 'ratingSuperstar';
+                if (score >= 75) return 'ratingAmazing';
+                if (score >= 60) return 'ratingGreat';
+                if (score >= 40) return 'ratingNotBad';
+                if (score >= 20) return 'ratingKeepPracticing';
+                return 'ratingOof';
+            }
+
+            clearScoreTimers() {
+                this.scoreTimers.forEach(id => {
+                    clearTimeout(id);
+                    clearInterval(id);
+                    cancelAnimationFrame(id);
+                });
+                this.scoreTimers = [];
+            }
+
+            showScoreScreen() {
+                const SCORE_SECONDS = 8;
+                this.clearScoreTimers();
+                this._scoreAdvancing = false;
+
+                const score = this.computeFinalScore();
+                const reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+                // Static labels (localized)
+                document.getElementById('scoreLabel').textContent = t('scoreLabel');
+
+                // Rating phrase (sticky note) starts hidden; revealed after the count-up finishes.
+                const phraseEl = document.getElementById('scoreRating');
+                phraseEl.textContent = t(this.scoreRatingKey(score));
+                phraseEl.classList.remove('show');
+
+                // Ink stars: 1–5 filled, popped in one by one after the count-up.
+                const starsEl = document.getElementById('scoreStars');
+                const filled = Math.max(1, Math.min(5, Math.round(score / 20)));
+                const tilts = [-8, 5, -3, 7, -6];
+                starsEl.innerHTML = tilts.map((tilt, i) => `
+                    <svg viewBox="0 0 50 50" class="${i < filled ? 'on' : ''}" style="--tilt:${tilt}deg">
+                        <path d="M25 3.5 L31.2 18.4 L47 19.6 L34.8 30.1 L38.9 46 L25.3 37.4 L11.4 46.3 L15.4 30.3 L3.2 19.2 L19.1 18 Z"/>
+                    </svg>`).join('');
+
+                // Up next (first pending song in the latest queue snapshot)
+                const next = (this.lastQueue || []).find(q => q.status === 'pending');
+                const nextEl = document.getElementById('scoreNext');
+                if (next && next.song) {
+                    document.getElementById('scoreNextLabel').textContent = t('nextSongLabel');
+                    document.getElementById('scoreNextPlayer').textContent = next.user_name;
+                    document.getElementById('scoreNextTitle').textContent = next.song.title;
+                    document.getElementById('scoreNextArtist').textContent = next.song.artist;
+                    const thumb = document.getElementById('scoreNextThumb');
+                    const thumbUrl = KRoom.thumb(next.song);
+                    thumb.parentElement.style.display = thumbUrl ? '' : 'none';
+                    thumb.onerror = () => { thumb.parentElement.style.display = 'none'; };
+                    if (thumbUrl) thumb.src = thumbUrl;
+                    nextEl.style.display = '';
+                } else {
+                    nextEl.style.display = 'none';
+                }
+
+                // Countdown
+                let remaining = SCORE_SECONDS;
+                const cd = document.getElementById('scoreCountdown');
+                const renderCd = () => { cd.textContent = t('scoreCountdown').replace('{n}', remaining); };
+                renderCd();
+                const interval = setInterval(() => {
+                    remaining -= 1;
+                    if (remaining <= 0) this.advanceFromScore();
+                    else renderCd();
+                }, 1000);
+                this.scoreTimers.push(interval);
+
+                // Tap anywhere to skip the countdown
+                this.scoreScreen.onclick = () => this.advanceFromScore();
+
+                this.scoreScreen.classList.add('visible');
+
+                // Animate the big number counting up; then the stars and the phrase.
+                this.animateScoreNumber(score, reduceMotion ? 1 : 1400, () => {
+                    phraseEl.classList.add('show');
+                    Array.from(starsEl.children).forEach((star, i) => {
+                        this.scoreTimers.push(setTimeout(() => star.classList.add('show'), reduceMotion ? 0 : i * 140));
+                    });
+                });
+            }
+
+            animateScoreNumber(target, durationMs, onComplete) {
+                const el = document.getElementById('scoreNumber');
+                const start = performance.now();
+                const tick = (now) => {
+                    const p = Math.min((now - start) / durationMs, 1);
+                    const eased = 1 - Math.pow(1 - p, 3); // ease-out cubic
+                    el.textContent = Math.round(eased * target);
+                    if (p < 1) {
+                        this.scoreTimers.push(requestAnimationFrame(tick));
+                    } else {
+                        el.textContent = target;
+                        if (onComplete) onComplete();
+                    }
+                };
+                this.scoreTimers.push(requestAnimationFrame(tick));
+            }
+
+            hideScoreScreen() {
+                this.clearScoreTimers();
+                this.scoreScreen.classList.remove('visible');
+                this.scoreScreen.onclick = null;
+            }
+
+            advanceFromScore() {
+                if (this._scoreAdvancing) return; // guard against tap + countdown firing together
+                this._scoreAdvancing = true;
+                this.hideScoreScreen();
+                KRoom.fetch('/queue/play', { method: 'POST' }).catch(e => console.error('queue/play failed:', e));
+            }
+
+            setupVideoEvents() {
+                // 'ended' only fires when a video reaches its natural end (skips load
+                // another video instead), so the score screen never follows a skip.
+                this.video.addEventListener('ended', () => {
+                    console.log('Video ended');
+                    if (!this.currentSong) return;
+                    // Show the score screen (if enabled) before advancing; it calls
+                    // advanceFromScore() when its countdown finishes or is tapped.
+                    if (this.scoreScreenEnabled) {
+                        this.showScoreScreen(); // computeFinalScore() finalizes the scorer
+                    } else {
+                        this.scorer.reset();
+                        KRoom.fetch('/queue/play', { method: 'POST' }).catch(e => console.error('queue/play failed:', e));
+                    }
+                });
+
+                // Drive the mic scorer off real playback state so a DJ pause/resume
+                // mid-song pauses/continues accumulation correctly. Per-song stats
+                // are cleared on new-song load (playSong/loadSongPaused/stop).
+                this.video.addEventListener('play', () => {
+                    // Playback really started: sound is allowed, and the video must be visible
+                    // (a song loaded paused keeps the idle page up until it starts).
+                    this.userHasInteracted = true;
+                    this.hideAutoplayOverlay();
+                    if (this.currentSong) this.idleScreen.classList.add('hidden');
+                    if (this.micScoringActive()) this.scorer.start();
+                });
+                this.video.addEventListener('pause', () => this.scorer.pause());
+
+                this.video.addEventListener('timeupdate', () => {
+                    if (this.video.duration) {
+                        const pct = (this.video.currentTime / this.video.duration) * 100;
+                        this.progressBar.style.width = `${pct}%`;
+                    }
+                });
+
+                // YouTube errors: 101/150 embedding disabled, 100 removed, 2 bad id, 5 HTML5 error.
+                this.video.addEventListener('error', (e) => {
+                    console.error('Video error:', e.code, this.video.error);
+                    if (e.code > 0) this.handleVideoError(e.code);
+                });
+            }
+
+            // Settings Panel Methods
+            setupSettings() {
+                const settingsBtn = document.getElementById('settingsBtn');
+                const closeBtn = document.getElementById('closeBtn');
+                const settingsOverlay = document.getElementById('settingsOverlay');
+                const settingsClose = document.getElementById('settingsClose');
+                const settingsSaveBtn = document.getElementById('settingsSaveBtn');
+                const settingsCancelBtn = document.getElementById('settingsCancelBtn');
+                const languageSelect = document.getElementById('configLanguage');
+
+                settingsBtn.addEventListener('click', () => this.openSettings());
+                settingsOverlay.addEventListener('click', () => this.closeSettings());
+                settingsClose.addEventListener('click', () => this.closeSettings());
+                settingsCancelBtn.addEventListener('click', () => this.closeSettings());
+                settingsSaveBtn.addEventListener('click', () => this.saveSettings());
+
+                // End party button (room admin)
+                closeBtn.addEventListener('click', () => this.confirmShutdown());
+
+                // Language change handler
+                languageSelect.addEventListener('change', (e) => {
+                    try { localStorage.setItem('karaoke_language', e.target.value); } catch (err) {}
+                });
+
+                // Control page link (this room)
+                const controlUrl = location.origin + KRoom.page('control');
+                document.getElementById('controlPageLink').href = KRoom.page('control');
+                document.getElementById('controlPageUrl').textContent = controlUrl.replace(/^https?:\/\//, '');
+
+                // Jukebox: open the kiosk page of this room in its own window
+                document.getElementById('jukeboxToggleBtn').addEventListener('click', () => this.openJukebox());
+
+                // Volume (local to this screen, applies immediately)
+                const slider = document.getElementById('volumeSlider');
+                slider.addEventListener('input', () => this.setVolume(Number(slider.value) / 100, false));
+                document.getElementById('muteBtn').addEventListener('click', () => this.setVolume(undefined, !this.video.muted));
+                this.renderVolume();
+
+                // Join QR toggle in the gear menu applies immediately
+                const joinQrCb = document.getElementById('configJoinQr');
+                if (joinQrCb) {
+                    joinQrCb.checked = !!this.joinQrVisible;
+                    joinQrCb.addEventListener('change', () => {
+                        if (joinQrCb.checked !== !!this.joinQrVisible) this.toggleJoinQr();
+                    });
+                }
+
+                // Update settings panel labels
+                this.updateSettingsLabels();
+            }
+
+            // Pop the jukebox kiosk into its own window (drag it to the second screen).
+            // Keep a handle so it closes together with the player on unload.
+            openJukebox() {
+                this.jukeboxWindow = window.open(KRoom.page('jukebox'), 'karaokeJukebox_' + KRoom.code);
+                this.closeSettings();
+            }
+
+            updateSettingsLabels() {
+                document.getElementById('settingsTitle').textContent = t('settings');
+                document.getElementById('statusTitle').textContent = t('systemStatus');
+                document.getElementById('loadingText').textContent = t('loading');
+                document.getElementById('controlPageLabel').textContent = t('controlPage');
+                document.getElementById('openControlPageText').textContent = t('openControlPage');
+                document.getElementById('controlPageHint').textContent = t('controlPageHint');
+                document.getElementById('scoreScreenTitle').textContent = t('scoreScreenTitle');
+                document.getElementById('scoreScreenLabel').textContent = t('scoreScreenLabel');
+                document.getElementById('scoreScreenHint').textContent = t('scoreScreenHint');
+                document.getElementById('scoreModeLabel').textContent = t('scoreMode');
+                document.getElementById('scoreModeHeuristicOpt').textContent = t('scoreModeHeuristic');
+                document.getElementById('scoreModeRandomOpt').textContent = t('scoreModeRandom');
+                document.getElementById('scoreModeHint').textContent = t('scoreModeHint');
+                document.getElementById('volumeTitle').textContent = t('volume');
+                document.getElementById('volumeHint').textContent = t('volumeHint');
+                document.getElementById('muteBtn').setAttribute('aria-label', t('mute'));
+                document.getElementById('joinQrLabel').textContent = t('joinQrLabel');
+                document.getElementById('joinQrHint').textContent = t('joinQrHint');
+                this.renderJoinQr();
+                document.getElementById('jukeboxTitle').textContent = t('jukeboxMode');
+                document.getElementById('jukeboxToggleText').textContent = t('jukeboxOpen');
+                document.getElementById('jukeboxHint').textContent = t('jukeboxHintBrowser');
+                document.getElementById('languageTitle').textContent = t('language');
+                document.getElementById('settingsCancelBtn').textContent = t('cancel');
+                document.getElementById('settingsSaveBtn').textContent = t('saveChanges');
+            }
+
+            async openSettings() {
+                const panel = document.getElementById('settingsPanel');
+                const overlay = document.getElementById('settingsOverlay');
+
+                // Load current config
+                await this.loadConfig();
+                if (this.partyOver) return;
+                this.renderVolume();
+
+                panel.classList.add('open');
+                panel.setAttribute('aria-hidden', 'false');
+                overlay.classList.add('open');
+            }
+
+            closeSettings() {
+                const panel = document.getElementById('settingsPanel');
+                const overlay = document.getElementById('settingsOverlay');
+
+                panel.classList.remove('open');
+                panel.setAttribute('aria-hidden', 'true');
+                overlay.classList.remove('open');
+            }
+
+            async loadConfig() {
+                try {
+                    const response = await KRoom.fetch('/config');
+                    if (await isRoomGone(response)) { this.showPartyEnded('gone'); return; }
+                    const data = await response.json();
+
+                    if (data.success && data.data) {
+                        const config = data.data;
+                        this.scoreScreenEnabled = config.score_screen_enabled === true;
+                        this.scoreMode = config.score_mode === 'random' ? 'random' : 'heuristic';
+                        if (this.micScoringActive()) this.scorer.ensureMic();
+                        document.getElementById('configScoreScreen').checked = this.scoreScreenEnabled;
+                        document.getElementById('configScoreMode').value = this.scoreMode;
+                        document.getElementById('configLanguage').value = currentLang;
+                    }
+
+                    // Update party status
+                    this.updateSystemStatus(data.data);
+                } catch (error) {
+                    console.error('Failed to load config:', error);
+                }
+            }
+
+            updateSystemStatus(config) {
+                const statusEl = document.getElementById('systemStatus');
+                const isAdmin = !!(config && config.is_admin);
+                statusEl.innerHTML = `
+                    <div class="settings-status-item">
+                        <span class="material-icons-round status-ok">check_circle</span>
+                        <span>${escapeHtml(t('partyConnected').replace('{code}', ''))}<span class="room-mini">${escapeHtml(KRoom.code)}</span></span>
+                    </div>
+                    <div class="settings-status-item">
+                        <span class="material-icons-round ${isAdmin ? 'status-ok' : 'status-warn'}">${isAdmin ? 'lock_open' : 'lock'}</span>
+                        <span>${escapeHtml(t(isAdmin ? 'adminYes' : 'adminNo'))}</span>
+                    </div>
+                `;
+            }
+
+            async saveSettings() {
+                const config = {
+                    score_screen_enabled: document.getElementById('configScoreScreen').checked,
+                    score_mode: document.getElementById('configScoreMode').value === 'random' ? 'random' : 'heuristic',
+                };
+                const changed = config.score_screen_enabled !== this.scoreScreenEnabled || config.score_mode !== this.scoreMode;
+
+                // Ticking the box is a user gesture — the ideal moment to ask for the mic
+                // (only when mic-based scoring is the active mode).
+                if (config.score_screen_enabled && config.score_mode === 'heuristic') this.scorer.ensureMic();
+
+                const newLang = document.getElementById('configLanguage').value;
+                const applyLanguage = () => {
+                    if (newLang !== currentLang) {
+                        try { localStorage.setItem('karaoke_language', newLang); } catch (e) {}
+                        // Mark as reloading
+                        this.markAsReloading();
+                        // Reload to apply new language
+                        setTimeout(() => location.reload(), 500);
+                    } else {
+                        this.closeSettings();
+                    }
+                };
+
+                // Only the room settings need the server (room admin); the language is local.
+                if (!changed) { applyLanguage(); return; }
+
+                try {
+                    const response = await adminFetch('/config', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(config)
+                    });
+
+                    const data = await response.json().catch(() => ({}));
+
+                    if (data.success) {
+                        this.scoreScreenEnabled = config.score_screen_enabled;
+                        this.scoreMode = config.score_mode;
+                        this.showSettingsNotification(t('settingsSaved'), 'success');
+                        applyLanguage();
+                    } else {
+                        this.showSettingsNotification(t('settingsError'), 'error');
+                    }
+                } catch (error) {
+                    console.error('Failed to save config:', error);
+                    this.showSettingsNotification(t('settingsError'), 'error');
+                }
+            }
+
+            showSettingsNotification(message, type) {
+                const notification = document.createElement('div');
+                notification.className = `activity-notification ${type === 'error' ? 'activity-removed' : 'activity-added'}`;
+                notification.innerHTML = `
+                    <div class="activity-icon"><span class="material-icons-round">${type === 'error' ? 'error' : 'check_circle'}</span></div>
+                    <div class="activity-content">
+                        <div class="activity-action">${escapeHtml(message)}</div>
+                    </div>
+                `;
+
+                this.activityContainer.appendChild(notification);
+
+                setTimeout(() => {
+                    notification.remove();
+                }, 5000);
+            }
+        }
+
+        const player = new Player();
+    </script>
+</body>
+</html>

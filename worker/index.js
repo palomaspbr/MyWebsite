@@ -1,7 +1,12 @@
 import { handleLoaf, LOAF_PREFIX } from './loaf.js';
+import { handleKaraoke, KARAOKE_PREFIX } from './karaoke/index.js';
+
+// Karaoke rooms are Durable Objects; the class must be exported from the main module.
+export { KaraokeRoom } from './karaoke/room.js';
 
 /* The site's Worker (wrangler.jsonc). Static files are served straight from the assets;
-   this script only runs for /loaf_tower/api/* (the Loaf Tower leaderboard, worker/loaf.js) and
+   this script only runs for /loaf_tower/api/* (the Loaf Tower leaderboard, worker/loaf.js),
+   /karaoke/api/* (the karaoke app, worker/karaoke/) and
    /jiujitsu/api/* (assets.run_worker_first), which is the
    Chacrinha Jiu-Jitsu API backed by a D1 database.
 
@@ -586,6 +591,8 @@ export default {
     const url = new URL(request.url);
     // Loaf Tower leaderboard (worker/loaf.js)
     if (url.pathname.startsWith(LOAF_PREFIX + '/')) return handleLoaf(request, env);
+    // Karaoke (worker/karaoke/): rooms, queue, catalog, YouTube search
+    if (url.pathname.startsWith(KARAOKE_PREFIX)) return handleKaraoke(request, env);
     if (url.pathname !== API_PREFIX && !url.pathname.startsWith(API_PREFIX + '/')) {
       // Not the API: hand back to the static assets (normally never reached, see wrangler.jsonc).
       return env.ASSETS.fetch(request);

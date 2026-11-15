@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Karaoke Night</title>
+    <meta name="description" content="Karaoke Night: start a karaoke party, guests queue songs from their phones, the TV plays them.">
+    <meta name="theme-color" content="#fbf6e9">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='24' cy='22' r='14' fill='%23ffd43b' stroke='%232b2520' stroke-width='4'/%3E%3Cpath d='M33 31 L54 56' stroke='%232b2520' stroke-width='9' stroke-linecap='round'/%3E%3C/svg%3E">
+    <link rel="stylesheet" href="/karaoke/css/sketch.css">
+    <style>
+        main { max-width: 760px; margin: 0 auto; padding: 18px 18px 50px 56px; }
+        .hero { display: flex; align-items: center; gap: 16px; margin-top: 8px; }
+        .hero svg.mic { width: 92px; height: 110px; flex: none; transform: rotate(-12deg); }
+        .hero h1 { font-size: clamp(42px, 9vw, 66px); margin: 0; }
+        .hero .underline { display: block; width: 100%; height: 14px; margin-top: -2px; }
+        .tagline { margin: 6px 0 0; color: var(--ink-soft); font-size: 21px; }
+        .back { display: inline-block; margin-bottom: 4px; font-size: 18px; }
+
+        .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin: 28px 0; }
+        .card { padding: 18px 18px 20px; }
+        .card h2 { font-size: 32px; margin: 0 0 8px; }
+        .card:nth-child(1) { transform: rotate(-0.6deg); }
+        .card:nth-child(2) { transform: rotate(0.5deg); }
+        .card p { margin: 6px 0 14px; }
+        .card .btn { width: 100%; }
+
+        .code-input {
+            width: 100%;
+            font-family: var(--brush);
+            font-size: 40px;
+            letter-spacing: 10px;
+            text-align: center;
+            text-transform: uppercase;
+            padding: 4px 8px;
+            margin-bottom: 12px;
+        }
+        .err { color: var(--red); min-height: 1.4em; margin: 6px 0 0; }
+
+        #created { padding: 20px; margin: 10px 0 30px; }
+        #created h2 { font-size: 34px; margin: 0 0 6px; }
+        .created-grid { display: grid; grid-template-columns: auto 1fr; gap: 20px; align-items: center; }
+        .polaroid { background: #fff; padding: 10px 10px 30px; border: 2px solid var(--ink); border-radius: 4px 10px 6px 12px / 12px 5px 10px 4px; box-shadow: 4px 5px 0 -1px rgba(43,37,32,.85); transform: rotate(-2.5deg); }
+        .polaroid #qr { width: 168px; height: 168px; }
+        .polaroid #qr img, .polaroid #qr canvas { width: 100% !important; height: 100% !important; }
+        .polaroid .cap { text-align: center; font-family: var(--brush); font-size: 22px; margin-top: 4px; }
+        .big-code { font-size: 64px; padding: 0 16px; margin: 4px 0 10px; }
+        .links { display: flex; flex-direction: column; gap: 10px; }
+        .links .btn { justify-content: flex-start; }
+        .links small { color: var(--ink-soft); }
+
+        h2.section { font-size: 34px; margin: 40px 0 12px; display: table; padding: 0 8px; background: linear-gradient(100deg, transparent 2%, var(--hi) 4%, var(--hi) 94%, transparent 97%) 0 62% / 100% 52% no-repeat; transform: rotate(-1deg); }
+        .steps { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
+        .steps li { display: grid; grid-template-columns: 44px 1fr; gap: 12px; align-items: start; }
+        .steps .num { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-family: var(--brush); font-size: 24px; background: var(--yellow); border: 2.5px solid var(--ink); border-radius: var(--blob); }
+        .note { margin: 22px 0; padding: 12px 16px; background: var(--hi); border: 2.5px dashed var(--ink); border-radius: var(--wobble-2); }
+        footer { margin-top: 40px; color: var(--ink-soft); font-size: 17px; }
+
+        @media (max-width: 640px) {
+            main { padding-left: 50px; padding-right: 14px; }
+            .cards { grid-template-columns: 1fr; }
+            .created-grid { grid-template-columns: 1fr; justify-items: center; text-align: center; }
+            .hero svg.mic { width: 64px; height: 78px; }
+        }
+        @media (prefers-reduced-motion: reduce) { .wiggle { animation: none; } }
+    </style>
+</head>
+<body>
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+        <filter id="rough" x="-5%" y="-20%" width="110%" height="140%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="2" seed="7" result="n"/>
+            <feDisplacementMap in="SourceGraphic" in2="n" scale="2.4" xChannelSelector="R" yChannelSelector="G"/>
+        </filter>
+    </svg>
+    <main>
+        <a class="back" href="/">&larr; palomaliz.com.br</a>
+        <header class="hero">
+            <svg class="mic" viewBox="0 0 90 110" aria-hidden="true">
+                <g filter="url(#rough)" stroke="#2b2520" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+                    <path d="M44 52 L38 104" stroke-width="9"/>
+                    <path d="M44 52 L38 104" stroke="#c0392b" stroke-width="4"/>
+                    <circle cx="45" cy="30" r="24" fill="#ffd43b"/>
+                    <path d="M28 18 Q45 30 62 18 M24 32 Q45 44 66 32 M30 46 Q45 54 60 46" fill="none" stroke-width="2"/>
+                    <path d="M74 10 q8 6 4 16 M80 4 q12 10 6 26" fill="none" stroke-width="2.5"/>
+                </g>
+            </svg>
+            <div>
+                <h1>Karaoke Night</h1>
+                <svg class="underline" viewBox="0 0 300 14" preserveAspectRatio="none" aria-hidden="true">
+                    <path d="M3 9 C 60 3, 120 12, 180 6 S 270 4, 297 8" fill="none" stroke="#c0392b" stroke-width="4" stroke-linecap="round" filter="url(#rough)"/>
+                </svg>
+                <p class="tagline">Phones pick the songs, the TV plays them, everybody sings.</p>
+            </div>
+        </header>
+
+        <section id="created" class="sketch tape" hidden>
+            <h2>Your party is ready!</h2>
+            <div class="created-grid">
+                <div class="polaroid">
+                    <div id="qr"></div>
+                    <div class="cap">scan to join</div>
+                </div>
+                <div>
+                    <div>Party code</div>
+                    <div class="code-stamp big-code" id="createdCode">----</div>
+                    <div class="links">
+                        <a class="btn primary" id="lnkPlayer" target="_blank" rel="noopener"><span class="material-icons-round">tv</span> Open the player <small>(TV / projector)</small></a>
+                        <a class="btn" id="lnkControl" target="_blank" rel="noopener"><span class="material-icons-round">tune</span> DJ control panel</a>
+                        <a class="btn" id="lnkSing"><span class="material-icons-round">smartphone</span> Pick songs on this device</a>
+                        <a class="btn" id="lnkJukebox" target="_blank" rel="noopener"><span class="material-icons-round">qr_code_2</span> Jukebox screen <small>(second screen)</small></a>
+                    </div>
+                </div>
+            </div>
+            <p class="muted">This browser is the party's host: it can change settings and end the party. Want other phones to need a code for that? Set a DJ PIN in the control panel.</p>
+        </section>
+
+        <div class="cards">
+            <section class="card sketch">
+                <h2>Start a party</h2>
+                <p>Get a party code, put the player on the TV and let your friends scan the QR code.</p>
+                <button class="btn primary" id="createBtn" type="button">Start a party!</button>
+                <p class="err" id="createErr" role="alert"></p>
+            </section>
+            <section class="card sketch-2">
+                <h2>Join a party</h2>
+                <form id="joinForm" autocomplete="off">
+                    <label for="joinCode" class="muted">Type the 4-letter party code</label>
+                    <input id="joinCode" class="field code-input" maxlength="4" placeholder="ABCD" inputmode="text" autocapitalize="characters" spellcheck="false">
+                    <button class="btn" type="submit">Let me sing</button>
+                    <p class="err" id="joinErr" role="alert"></p>
+                </form>
+            </section>
+        </div>
+
+        <h2 class="section">How it works</h2>
+        <ol class="steps">
+            <li><span class="num">1</span><div><strong>Start a party.</strong> Open the player on the TV or a projector (one click there to allow sound).</div></li>
+            <li><span class="num">2</span><div><strong>Guests scan the QR code</strong> with their phones, type their name and search the songbook, or find any karaoke video on YouTube and add it.</div></li>
+            <li><span class="num">3</span><div><strong>The queue plays by itself.</strong> Fair-play mode rotates singers, the DJ panel can skip, pause, reorder and tidy up the shared songbook.</div></li>
+            <li><span class="num">4</span><div><strong>Optional extras:</strong> a jukebox screen with a big QR code and song-code entry, a score screen after each song, and a printable songbook with song codes.</div></li>
+        </ol>
+        <p class="note">Songs play as YouTube embeds. A few channels don't allow their videos on other websites; those are hidden from the search, so just pick another version.</p>
+
+        <footer>Made by Paloma. Parties end by themselves after a day without activity.</footer>
+    </main>
+
+    <script src="/karaoke/js/room.js"></script>
+
+    <script src="/karaoke/js/icons.js"></script>
+    <script src="/karaoke/js/qrcode.min.js"></script>
+    <script>
+    (function () {
+        'use strict';
+        const params = new URLSearchParams(location.search);
+        // Old-style links (/karaoke/?r=CODE) go straight to the guest page.
+        if (KRoom.code) { location.replace(KRoom.page('sing')); return; }
+
+        const $ = (id) => document.getElementById(id);
+        const joinInput = $('joinCode');
+        if (params.get('join')) setTimeout(() => joinInput.focus(), 50);
+
+        function showCreated(code) {
+            const base = (name) => '/karaoke/' + name + '/?r=' + code;
+            $('createdCode').textContent = code;
+            $('lnkPlayer').href = base('player');
+            $('lnkControl').href = base('control');
+            $('lnkSing').href = base('sing');
+            $('lnkJukebox').href = base('jukebox');
+            const qr = $('qr');
+            qr.innerHTML = '';
+            new QRCode(qr, { text: location.origin + base('sing'), width: 336, height: 336, colorDark: '#2b2520', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
+            $('created').hidden = false;
+            $('created').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        $('createBtn').addEventListener('click', async () => {
+            const btn = $('createBtn');
+            btn.disabled = true;
+            btn.textContent = 'Setting up the stage...';
+            $('createErr').textContent = '';
+            try {
+                const code = await KRoom.create();
+                try { localStorage.setItem('karaoke_last_party', code); } catch (e) { /* private mode */ }
+                showCreated(code);
+                btn.textContent = 'Start another party';
+            } catch (e) {
+                $('createErr').textContent = e.message || 'Could not create the party. Try again?';
+                btn.textContent = 'Start a party!';
+            } finally {
+                btn.disabled = false;
+            }
+        });
+
+        joinInput.addEventListener('input', () => {
+            joinInput.value = joinInput.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
+            $('joinErr').textContent = '';
+        });
+
+        $('joinForm').addEventListener('submit', async (ev) => {
+            ev.preventDefault();
+            const code = joinInput.value.trim().toUpperCase();
+            if (!KRoom.CODE_RE.test(code)) { $('joinErr').textContent = 'Party codes have 4 letters (no I or O).'; return; }
+            try {
+                if (await KRoom.exists(code)) location.href = '/karaoke/sing/?r=' + code;
+                else $('joinErr').textContent = "That party doesn't exist (or it already ended).";
+            } catch (e) {
+                $('joinErr').textContent = 'Could not reach the server. Check your connection.';
+            }
+        });
+
+        // A host coming back: offer their last party.
+        try {
+            const last = localStorage.getItem('karaoke_last_party');
+            if (last && localStorage.getItem('karaoke_host_' + last)) {
+                KRoom.exists(last).then(ok => { if (ok) showCreated(last); }).catch(() => {});
+            }
+        } catch (e) { /* private mode */ }
+    })();
+    </script>
+</body>
+</html>

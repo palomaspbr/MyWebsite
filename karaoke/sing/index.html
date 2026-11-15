@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en" translate="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="google" content="notranslate">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#fbf6e9">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Karaoke</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='24' cy='22' r='14' fill='%23ffd43b' stroke='%232b2520' stroke-width='4'/%3E%3Cpath d='M33 31 L54 56' stroke='%232b2520' stroke-width='9' stroke-linecap='round'/%3E%3C/svg%3E">
+    <!-- Online version: shared hand-drawn theme first, then the guest styles. -->
+    <link rel="stylesheet" href="/karaoke/css/sketch.css?v=1">
+    <link rel="stylesheet" href="/karaoke/css/app.css?v=1">
+    <link rel="stylesheet" href="/karaoke/css/videokind.css?v=2">
+    <script src="/karaoke/js/room.js?v=1"></script>
+    <script src="/karaoke/js/icons.js"></script>
+</head>
+<body>
+    <div id="app">
+        <!-- Navigation -->
+        <nav class="navbar">
+            <div class="nav-brand">
+                <span class="logo" aria-hidden="true"><span class="material-icons-round">mic</span></span>
+                <span class="brand-text">Karaoke</span>
+            </div>
+            <!-- Online version: the party code replaces the LAN connection info. -->
+            <button class="code-stamp room-code" id="roomCodeBtn" type="button" data-i18n-title="inviteFriends" title="Invite friends">----</button>
+            <div class="nav-user">
+                <span class="user-display" id="userDisplay">Anonymous</span>
+                <button class="btn-icon" id="btnShare" type="button" title="Invite friends" data-i18n-title="inviteFriends">
+                    <span class="material-icons-round">qr_code_2</span>
+                </button>
+                <button class="btn-icon" id="btnSettings" type="button" title="Settings" data-i18n-title="settings">
+                    <span class="material-icons-round">settings</span>
+                </button>
+            </div>
+        </nav>
+
+        <!-- Now Playing Bar -->
+        <div class="now-playing" id="nowPlaying">
+            <div class="np-info">
+                <div class="np-thumbnail">
+                    <img id="npThumbnail" src="" alt="">
+                    <span class="material-icons-round np-icon">music_note</span>
+                </div>
+                <div class="np-details">
+                    <span class="np-title" id="npTitle" data-i18n="noSongPlaying">No song playing</span>
+                    <span class="np-artist" id="npArtist">-</span>
+                    <span class="np-user" id="npUser"></span>
+                </div>
+            </div>
+            <div class="np-controls">
+                <button class="btn-icon btn-play" id="btnPlayPause" type="button" data-i18n-title="playPause">
+                    <span class="material-icons-round">play_arrow</span>
+                </button>
+                <button class="btn-icon" id="btnRemoteControl" type="button" data-i18n-title="remoteControl">
+                    <span class="material-icons-round">settings_remote</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Tab Navigation (notebook tabs) -->
+        <div class="tabs" role="tablist">
+            <button class="tab active" data-tab="catalog" type="button">
+                <span class="material-icons-round">library_music</span>
+                <span data-i18n="catalog">Catalog</span>
+            </button>
+            <button class="tab" data-tab="search" type="button">
+                <span class="material-icons-round">playlist_add</span>
+                <span data-i18n="addSongsTab">Add songs</span>
+            </button>
+            <button class="tab" data-tab="queue" type="button">
+                <span class="material-icons-round">queue_music</span>
+                <span data-i18n="queue">Queue</span>
+                <span class="badge" id="queueBadge">0</span>
+            </button>
+        </div>
+
+        <!-- Tab Content -->
+        <main class="content">
+            <!-- Catalog Tab -->
+            <section class="tab-content active" id="catalogTab">
+                <div class="catalog-header" id="catalogHeader">
+                    <div class="pdf-download-container">
+                        <!-- Online version: opens the printable catalog page instead of a PDF download. -->
+                        <button class="btn-pdf-download" id="btnDownloadPdf" type="button">
+                            <span class="material-icons-round">print</span>
+                            <span data-i18n="downloadCatalog">Printable catalog</span>
+                        </button>
+                    </div>
+                    <div class="search-container">
+                        <div class="search-box">
+                            <span class="material-icons-round">search</span>
+                            <input type="text" id="catalogSearch" placeholder="Search your catalog..." data-i18n-placeholder="searchCatalog">
+                        </div>
+                    </div>
+                </div>
+                <div class="filter-chips">
+                    <select id="languageFilter" class="language-filter" onchange="app.renderCatalog()">
+                        <option value="" data-i18n="allLanguages">All Languages</option>
+                    </select>
+                    <select id="sortFilter" class="language-filter" onchange="app.renderCatalog()">
+                        <option value="all" data-i18n="bySong">By Song</option>
+                        <option value="artists" data-i18n="byArtist">By Artist</option>
+                        <option value="recent" data-i18n="recent">Recent</option>
+                        <option value="popular" data-i18n="popular">Popular</option>
+                    </select>
+                    <div class="filter-chips-spacer"></div>
+                    <button class="chip" type="button" data-filter="myDownloads" data-i18n="myDownloads">Added by me</button>
+                </div>
+                <div class="catalog-container" id="catalogResults">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p data-i18n="loadingCatalog">Loading catalog...</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Add songs (YouTube) Tab -->
+            <section class="tab-content" id="searchTab">
+                <div class="search-container">
+                    <div class="search-box">
+                        <span class="material-icons-round">ondemand_video</span>
+                        <input type="text" id="searchInput" placeholder="Search for karaoke songs on YouTube..." data-i18n-placeholder="searchPlaceholder">
+                        <button class="btn-search" id="btnSearch" type="button" data-i18n-title="search" title="Search">
+                            <span class="material-icons-round">search</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="results-container" id="searchResults">
+                    <div class="empty-state">
+                        <span class="material-icons-round">youtube_searched_for</span>
+                        <p data-i18n="searchHint">Search for your favorite karaoke songs</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Queue Tab -->
+            <section class="tab-content" id="queueTab">
+                <div class="queue-header">
+                    <h2 data-i18n="musicQueue">Music Queue</h2>
+                </div>
+                <div class="my-songs" id="mySongs" hidden></div>
+                <div class="queue-container" id="queueList">
+                    <div class="empty-state">
+                        <span class="material-icons-round">queue_music</span>
+                        <p data-i18n="emptyQueue">Queue is empty</p>
+                        <small data-i18n="emptyQueueHint">Add songs from the catalog or search</small>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Toast Notifications (sticky notes) -->
+        <div class="toast-container" id="toasts"></div>
+
+        <!-- Welcome Modal -->
+        <div class="modal" id="welcomeModal">
+            <div class="modal-backdrop"></div>
+            <div class="modal-content welcome-modal-content">
+                <div class="modal-header">
+                    <h3 data-i18n="welcome">Welcome to Karaoke!</h3>
+                </div>
+                <div class="modal-body">
+                    <p class="welcome-party"><span data-i18n="partyCode">Party code</span> <span class="code-stamp" id="welcomeRoomCode">----</span></p>
+                    <p data-i18n="welcomeDesc">What is your name?</p>
+                    <input type="text" id="welcomeInput" class="welcome-input" placeholder="Enter your name" maxlength="50">
+                    <div id="welcomeError" class="error-message" style="display: none;"></div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-primary" id="btnWelcomeContinue" type="button" data-i18n="continue">Continue</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Remote Control Modal -->
+        <div class="modal" id="remoteModal">
+            <div class="modal-backdrop"></div>
+            <div class="modal-content remote-modal-content">
+                <div class="modal-header">
+                    <h3 data-i18n="remoteControl">Remote Control</h3>
+                    <button class="btn-icon modal-close" type="button">
+                        <span class="material-icons-round">close</span>
+                    </button>
+                </div>
+                <div class="modal-body remote-modal-body">
+                    <div class="remote-section">
+                        <h4 data-i18n="playbackControls">Playback Controls</h4>
+                        <div class="remote-buttons">
+                            <button class="remote-btn" id="remoteRestart" type="button">
+                                <span class="material-icons-round">replay</span>
+                                <span data-i18n="restartSong">Restart</span>
+                            </button>
+                            <button class="remote-btn" id="remotePauseResume" type="button">
+                                <span class="material-icons-round" id="remotePauseResumeIcon">pause</span>
+                                <span id="remotePauseResumeText" data-i18n="pause">Pause</span>
+                            </button>
+                            <button class="remote-btn" id="remoteSkip" type="button">
+                                <span class="material-icons-round">skip_next</span>
+                                <span data-i18n="skipSong">Skip Song</span>
+                            </button>
+                            <button class="remote-btn remote-btn-danger" id="remoteClearQueue" type="button">
+                                <span class="material-icons-round">delete_sweep</span>
+                                <span data-i18n="clearQueue">Clear Queue</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="remote-section">
+                        <h4 data-i18n="queueManagement">Queue Management</h4>
+                        <div class="remote-queue-list" id="remoteQueueList">
+                            <!-- Queue items with reorder/delete options -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Confirmation Modal -->
+        <div class="modal" id="confirmModal">
+            <div class="modal-backdrop"></div>
+            <div class="modal-content confirm-modal-content">
+                <div class="modal-header">
+                    <h3 id="confirmTitle" data-i18n="confirm">Confirm</h3>
+                    <button class="btn-icon modal-close" type="button">
+                        <span class="material-icons-round">close</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p id="confirmMessage" data-i18n="areYouSure">Are you sure?</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-secondary" id="confirmCancel" type="button" data-i18n="cancel">Cancel</button>
+                    <button class="btn-primary btn-danger" id="confirmOk" type="button" data-i18n="confirm">Confirm</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal -->
+        <div class="modal" id="modal">
+            <div class="modal-backdrop"></div>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="modalTitle">Modal</h3>
+                    <button class="btn-icon modal-close" type="button">
+                        <span class="material-icons-round">close</span>
+                    </button>
+                </div>
+                <div class="modal-body" id="modalBody"></div>
+                <div class="modal-footer" id="modalFooter"></div>
+            </div>
+        </div>
+
+        <!-- Metadata Confirmation Modal -->
+        <div class="modal" id="metadataModal">
+            <div class="modal-backdrop"></div>
+            <div class="modal-content metadata-modal-content">
+                <div class="modal-header">
+                    <h3 id="metadataModalTitle" data-i18n="confirmMetadata">Confirm Song Metadata</h3>
+                    <button class="btn-icon modal-close" type="button" onclick="app.closeMetadataModal()">
+                        <span class="material-icons-round">close</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p id="metadataModalDesc" class="metadata-desc" data-i18n="confirmMetadataDesc">
+                        Please review and confirm or edit before adding the song.
+                    </p>
+                    <div class="metadata-video-info">
+                        <span class="material-icons-round" aria-hidden="true">ondemand_video</span>
+                        <div>
+                            <div id="metadataVideoTitle" class="metadata-video-title"></div>
+                            <div id="metadataVideoChannel" class="metadata-video-channel"></div>
+                        </div>
+                    </div>
+                    <form id="metadataForm">
+                        <div class="form-group">
+                            <label for="metadataTitle" data-i18n="songTitle">Song Title *</label>
+                            <input type="text" id="metadataTitle" required placeholder="Enter the song title" data-i18n-placeholder="enterSongTitle">
+                        </div>
+                        <div class="swap-button-container">
+                            <button type="button" class="btn-icon btn-swap" onclick="app.swapTitleArtist()" title="Swap Title and Artist">
+                                <span class="material-icons-round">swap_vert</span>
+                            </button>
+                        </div>
+                        <div class="form-group">
+                            <label for="metadataArtist" data-i18n="artistName">Artist Name *</label>
+                            <input type="text" id="metadataArtist" required placeholder="Enter the artist name" data-i18n-placeholder="enterArtistName">
+                        </div>
+                        <div class="form-group">
+                            <label for="metadataLanguage" data-i18n="language">Language</label>
+                            <select id="metadataLanguage" required>
+                                <option value="">-- Select language --</option>
+                                <option value="PT-BR">Português (BR)</option>
+                                <option value="PT">Português (PT)</option>
+                                <option value="EN">English</option>
+                                <option value="ES">Español</option>
+                                <option value="FR">Français</option>
+                                <option value="IT">Italiano</option>
+                                <option value="DE">Deutsch</option>
+                                <option value="JA">日本語</option>
+                                <option value="KO">한국어</option>
+                                <option value="OTHER">Other</option>
+                            </select>
+                        </div>
+                        <input type="hidden" id="metadataVideoId">
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-secondary" type="button" onclick="app.closeMetadataModal()" data-i18n="cancel">Cancel</button>
+                    <button class="btn-primary" type="button" onclick="app.submitMetadata()" data-i18n="confirmDownload">Confirm &amp; add</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Modal -->
+        <div class="modal" id="settingsModal">
+            <div class="modal-backdrop"></div>
+            <div class="modal-content settings-modal-content">
+                <div class="modal-header">
+                    <h3 data-i18n="settings">Settings</h3>
+                    <button class="btn-icon modal-close" type="button" onclick="app.closeSettingsModal()">
+                        <span class="material-icons-round">close</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <!-- Name Section -->
+                    <div class="settings-section">
+                        <h4 data-i18n="nameSettings">Your Name</h4>
+                        <div class="settings-group">
+                            <div class="form-group">
+                                <label for="settingName" data-i18n="changeName">Change Name</label>
+                                <input type="text" id="settingName" class="welcome-input" maxlength="50">
+                                <div id="settingNameError" class="error-message" style="display:none;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Language Section -->
+                    <div class="settings-section">
+                        <h4 data-i18n="languageSection">Language</h4>
+                        <div class="settings-group">
+                            <div class="form-group">
+                                <label for="settingLanguage" data-i18n="interfaceLanguage">Interface Language</label>
+                                <select id="settingLanguage">
+                                    <option value="pt-BR">Português (BR)</option>
+                                    <option value="es">Español</option>
+                                    <option value="en">English</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="settings-section settings-exit">
+                        <button class="btn-secondary btn-danger btn-wide" type="button" onclick="app.signOut()">
+                            <span class="material-icons-round">logout</span>
+                            <span data-i18n="signOut">Sign out</span>
+                        </button>
+                        <!-- Online version: leave the party and go back to the karaoke start page. -->
+                        <button class="btn-secondary btn-danger btn-wide" type="button" id="btnLeaveParty">
+                            <span class="material-icons-round">exit_to_app</span>
+                            <span data-i18n="leaveParty">Leave party</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-secondary" type="button" onclick="app.closeSettingsModal()" data-i18n="cancel">Cancel</button>
+                    <button class="btn-primary" type="button" onclick="app.saveSettings()" data-i18n="save">Save</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Invite Modal (online version: replaces the LAN "connection info" modal) -->
+        <div class="modal" id="shareModal">
+            <div class="modal-backdrop"></div>
+            <div class="modal-content share-modal-content">
+                <div class="modal-header">
+                    <h3 data-i18n="inviteFriends">Invite friends</h3>
+                    <button class="btn-icon modal-close" type="button">
+                        <span class="material-icons-round">close</span>
+                    </button>
+                </div>
+                <div class="modal-body share-modal-body">
+                    <div class="share-code">
+                        <small data-i18n="partyCode">Party code</small>
+                        <span class="code-stamp share-code-stamp" id="shareRoomCode">----</span>
+                    </div>
+                    <div class="connection-qr-section">
+                        <p data-i18n="scanQrCode">Scan this QR code to join the party:</p>
+                        <div class="connection-qr-container" id="shareQrcode"></div>
+                    </div>
+                    <div class="connection-url-section">
+                        <p data-i18n="orVisitUrl">Or share this link:</p>
+                        <div class="connection-url-box" id="shareUrl"></div>
+                        <div class="share-actions">
+                            <button class="btn-secondary" id="btnCopyLink" type="button">
+                                <span class="material-icons-round">content_copy</span>
+                                <span data-i18n="copyLink">Copy link</span>
+                            </button>
+                            <button class="btn-secondary" id="btnNativeShare" type="button" hidden>
+                                <span class="material-icons-round">share</span>
+                                <span data-i18n="shareLink">Share</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-primary" id="btnShareDone" type="button" data-i18n="gotIt">Got it!</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Song Detail Modal -->
+        <div class="modal" id="songDetailModal">
+            <div class="modal-backdrop" onclick="app.closeSongDetail()"></div>
+            <div class="modal-content song-detail-content">
+                <div class="modal-header">
+                    <h3 data-i18n="songDetails">Song Details</h3>
+                    <button class="btn-icon modal-close" type="button" onclick="app.closeSongDetail()">
+                        <span class="material-icons-round">close</span>
+                    </button>
+                </div>
+                <div class="modal-body song-detail-body">
+                    <div class="detail-thumb-wrap" id="detailThumbWrap"></div>
+                    <div class="detail-text">
+                        <div id="detailTitle" class="detail-title"></div>
+                        <div id="detailArtist" class="detail-artist"></div>
+                        <div id="detailVideoKind" style="display:none;"></div>
+                        <div id="detailLyrics" class="song-lyrics song-lyrics-full" style="display:none;"></div>
+                        <div class="detail-meta-grid">
+                            <div class="detail-meta-item">
+                                <span class="material-icons-round">tag</span>
+                                <span id="detailCode"></span>
+                            </div>
+                            <div class="detail-meta-item">
+                                <span class="material-icons-round">language</span>
+                                <span id="detailLanguage"></span>
+                            </div>
+                            <div class="detail-meta-item">
+                                <span class="material-icons-round">schedule</span>
+                                <span id="detailDuration"></span>
+                            </div>
+                            <div class="detail-meta-item">
+                                <span class="material-icons-round">play_circle</span>
+                                <span id="detailPlays"></span>
+                            </div>
+                            <div class="detail-meta-item">
+                                <span class="material-icons-round">calendar_today</span>
+                                <span id="detailAdded"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="detailAddToQueue" class="btn-primary" type="button">
+                        <span class="material-icons-round">add</span>
+                        <span data-i18n="addToQueue">Add to queue</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Online version: shown when the party does not exist or the DJ ended it. -->
+        <div class="room-gone" id="roomGone" hidden>
+            <div class="room-gone-note" role="alertdialog" aria-labelledby="roomGoneTitle" aria-describedby="roomGoneText">
+                <span class="room-gone-icon" aria-hidden="true"><span class="material-icons-round">mic</span></span>
+                <h2 id="roomGoneTitle">Party not found</h2>
+                <p id="roomGoneText"></p>
+                <a class="btn primary" id="roomGoneLink" href="/karaoke/">Back to the start</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="/karaoke/js/escape.js?v=1"></script>
+    <script src="/karaoke/js/qrcode.min.js"></script>
+    <script src="/karaoke/js/videokind.js?v=1"></script>
+    <script src="/karaoke/js/app.js?v=1"></script>
+</body>
+</html>

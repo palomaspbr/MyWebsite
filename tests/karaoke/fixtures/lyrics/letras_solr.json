@@ -1,0 +1,56 @@
+{
+  "response": {
+    "numFound": 760,
+    "start": 0,
+    "maxScore": 37.271473,
+    "docs": [
+      {
+        "art": "Chitãozinho & Xororó",
+        "dns": "chitaozinho-e-xororo",
+        "txt": "Evidências",
+        "url": "768469",
+        "score": 37.271473
+      },
+      {
+        "art": "Ana Gabriel",
+        "dns": "ana-gabriel",
+        "txt": "Evidencias",
+        "url": "167414",
+        "score": 28.754158
+      },
+      {
+        "art": "Gabi Sampaio",
+        "dns": "gabi-sampaio",
+        "txt": "Na Terra Como no Céu ",
+        "url": "na-terra-como-no-ceu",
+        "score": 20.18128
+      }
+    ]
+  },
+  "highlighting": {
+    "mus768469": {
+      "letra": [
+        " <b>evidências</b>\r\nMas pra que viver fingindo\r\nSe eu não posso"
+      ]
+    },
+    "mus167414": {
+      "letra": [
+        " quiero\r\nEvitar las apariencias, ocultando <b>evidencias</b>"
+      ]
+    },
+    "mus3111281": {
+      "letra": [
+        " <b>evidências</b> surgirão\r\nTeu espírito está aqui\r\n\r\nA atmosfera"
+      ]
+    },
+    "alb419107": {},
+    "alb64349": {},
+    "alb33759": {},
+    "art87888": {},
+    "art94878": {},
+    "mtag681235": {},
+    "mtag654602": {},
+    "mtag590548": {},
+    "icm603": {}
+  }
+}

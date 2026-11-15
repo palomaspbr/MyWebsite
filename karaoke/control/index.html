@@ -1,0 +1,2768 @@
+<!DOCTYPE html>
+<html lang="en" translate="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="google" content="notranslate">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='24' cy='22' r='14' fill='%23ffd43b' stroke='%232b2520' stroke-width='4'/%3E%3Cpath d='M33 31 L54 56' stroke='%232b2520' stroke-width='9' stroke-linecap='round'/%3E%3C/svg%3E">
+    <title>Karaoke DJ</title>
+    <link rel="stylesheet" href="/karaoke/css/sketch.css">
+    <link rel="stylesheet" href="/karaoke/css/videokind.css">
+    <style>
+        /* DJ control panel in the site's hand-drawn notebook look (tokens from /karaoke/css/sketch.css).
+           Layout: now-playing strip on top, notebook-margin sidebar with tab-like items, main column. */
+        html, body { height: 100%; }
+        body { overflow: hidden; font-size: 17px; background-image: none; }
+
+        .app {
+            display: grid;
+            grid-template-columns: 240px minmax(0, 1fr);
+            grid-template-rows: auto minmax(0, 1fr);
+            height: 100vh;
+            height: 100dvh;
+        }
+
+        /* ── Now playing strip ── */
+        .now-playing-strip {
+            grid-column: 1 / -1;
+            position: relative; z-index: 20;
+            display: flex; align-items: center; gap: 12px;
+            min-height: 66px; padding: 8px 18px;
+            background: var(--paper-2);
+            border-bottom: 2.5px solid var(--ink);
+            box-shadow: 0 4px 0 -1px rgba(43, 37, 32, 0.12);
+        }
+        .np-art {
+            width: 50px; height: 50px; flex-shrink: 0; overflow: hidden;
+            background: var(--paper-3);
+            border: 2px solid var(--ink); border-radius: var(--wobble-sm);
+            transform: rotate(-3deg);
+        }
+        .np-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .np-art .placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+        .np-info { flex: 1; min-width: 0; }
+        .np-title { font-family: var(--brush); font-size: 23px; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .np-meta { font-size: 15px; color: var(--ink-soft); display: flex; gap: 10px; min-width: 0; }
+        .np-artist { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .np-singer { color: var(--red); white-space: nowrap; flex-shrink: 0; }
+        .np-controls { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+        .np-btn {
+            width: 42px; height: 42px; padding: 0;
+            display: inline-flex; align-items: center; justify-content: center;
+            color: var(--ink); background: var(--paper-2);
+            border: 2.5px solid var(--ink); border-radius: var(--blob);
+            box-shadow: var(--shadow-sm); cursor: pointer;
+            transition: transform 0.1s ease, background 0.15s ease;
+        }
+        .np-btn:hover { background: var(--hi); transform: rotate(-8deg); }
+        .np-btn:active { transform: translate(2px, 2px); box-shadow: none; }
+        .np-btn.primary { width: 52px; height: 52px; background: var(--yellow); }
+        .np-btn .material-icons-round { font-size: 22px; }
+        .np-btn.primary .material-icons-round { font-size: 28px; }
+        .np-btn.nav-toggle { display: none; }
+
+        /* ── Sidebar: a notebook margin with tab-like items ── */
+        .side-nav {
+            display: flex; flex-direction: column;
+            overflow-y: auto; overflow-x: hidden;
+            padding: 12px 0 18px 12px;
+            background-color: var(--paper-3);
+            background-image: repeating-linear-gradient(180deg, transparent 0 31px, rgba(201, 219, 233, 0.55) 31px 32px);
+            border-right: 6px double var(--margin);
+        }
+        .nav-brand { display: flex; align-items: center; gap: 10px; padding: 2px 12px 8px 4px; flex-wrap: wrap; }
+        .nav-brand-text { font-family: var(--brush); font-size: 27px; line-height: 1; }
+        .nav-brand .code-stamp { font-size: 21px; background: var(--paper-2); }
+        .nav-group { padding: 0; }
+        .nav-label { font-family: var(--brush); font-size: 17px; color: var(--red); padding: 10px 8px 2px; letter-spacing: 0.5px; }
+        .nav-divider { height: 0; border-top: 2px dashed rgba(43, 37, 32, 0.18); margin: 6px 14px 2px 4px; }
+        .nav-item {
+            display: flex; align-items: center; gap: 9px; width: 100%;
+            margin: 3px 0; padding: 6px 12px 6px 10px;
+            font: inherit; font-size: 18px; color: var(--ink); text-align: left; text-decoration: none;
+            background: transparent;
+            border: 2px solid transparent; border-right: none;
+            border-radius: 16px 0 0 14px / 12px 0 0 16px;
+            cursor: pointer; position: relative;
+            transition: background 0.15s ease, transform 0.1s ease;
+        }
+        .nav-item:hover { color: var(--ink); background: rgba(255, 242, 168, 0.7); transform: translateX(2px); }
+        .nav-item.active {
+            background: var(--paper);
+            border-color: var(--ink);
+            box-shadow: -3px 3px 0 -1px var(--ink);
+            transform: none;
+        }
+        .nav-item .material-icons-round { font-size: 21px; }
+        .nav-item .needs { font-size: 15px; color: var(--ink-soft); margin-left: -3px; }
+        .nav-item.danger-item:hover { background: var(--red-soft); }
+        .nav-badge {
+            margin-left: auto; min-width: 24px; height: 22px; padding: 0 6px;
+            display: inline-flex; align-items: center; justify-content: center;
+            font-size: 14px; line-height: 1; color: #fff; background: var(--red);
+            border: 2px solid var(--ink); border-radius: var(--blob);
+        }
+        .nav-badge.hidden { display: none; }
+        .nav-badge.count-only { background: transparent; color: var(--ink-soft); border-color: transparent; }
+
+        /* Access card at the foot of the sidebar: who may do what. */
+        .access-card {
+            margin: 14px 12px 4px 2px; padding: 10px 12px;
+            background: var(--paper-2);
+            border: 2px solid var(--ink); border-radius: var(--wobble-2);
+            box-shadow: var(--shadow-sm);
+            font-size: 15px;
+        }
+        .access-title { font-family: var(--brush); font-size: 19px; margin-bottom: 4px; }
+        .access-row { display: flex; gap: 8px; align-items: flex-start; padding: 6px 0; border-top: 1.5px solid var(--line); }
+        .access-row:first-of-type { border-top: none; }
+        .access-row > .material-icons-round { font-size: 20px; margin-top: 1px; }
+        .access-row b { font-weight: normal; font-family: var(--brush); font-size: 17px; display: block; line-height: 1.1; }
+        .access-row small { display: block; color: var(--ink-soft); line-height: 1.2; }
+        .access-row .btn { margin-top: 5px; }
+        .access-row.ok > .material-icons-round { color: var(--green-ink); }
+        .access-row.locked > .material-icons-round { color: var(--red); }
+        .access-row.off > .material-icons-round { color: var(--ink-faint); }
+
+        /* ── Content area ── */
+        .content-area { overflow: hidden; display: flex; flex-direction: column; min-width: 0; background: var(--paper); }
+        .view-section { display: none; flex-direction: column; height: 100%; overflow: hidden; }
+        .view-section.active { display: flex; }
+        .view-header {
+            display: flex; align-items: center; gap: 12px; flex-wrap: wrap; flex-shrink: 0;
+            padding: 12px 24px 10px;
+            border-bottom: 2px dashed rgba(43, 37, 32, 0.22);
+        }
+        .view-title { margin: 0; font-size: 34px; padding-bottom: 6px; background: var(--pen-line) 0 100% / 100% 10px no-repeat; }
+        .view-subtitle { font-size: 17px; color: var(--ink-soft); }
+        .view-actions { margin-left: auto; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .view-body {
+            flex: 1; overflow-y: auto; padding: 16px 24px 30px;
+            background-image: repeating-linear-gradient(180deg, transparent 0 31px, rgba(201, 219, 233, 0.6) 31px 32px);
+            background-attachment: local;
+        }
+        .view-toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; flex-shrink: 0; padding: 12px 24px; }
+
+        /* Notes about who may do what (filled by renderAccess). */
+        .access-note:empty { display: none; }
+        .access-note {
+            display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+            margin: 10px 24px 0; padding: 8px 12px;
+            font-size: 16px;
+            background: var(--blue);
+            border: 2px solid var(--ink); border-radius: 3px 10px 4px 12px / 12px 4px 10px 3px;
+            box-shadow: 2px 3px 0 -1px rgba(43, 37, 32, 0.7);
+        }
+        .access-note.locked { background: var(--hi); }
+        .access-note.off { background: var(--paper-3); }
+        .access-note.ok { background: var(--green); }
+        .access-note > .material-icons-round { font-size: 20px; }
+        .access-note > span:not(.material-icons-round) { flex: 1; min-width: 200px; }
+
+        /* ── Hand-ruled tables ── */
+        .data-table {
+            width: 100%;
+            border-collapse: separate; border-spacing: 0;
+            background: var(--paper-2);
+            border: 2.5px solid var(--ink); border-radius: var(--wobble);
+            box-shadow: var(--shadow);
+            overflow: clip;
+        }
+        .data-table thead th { position: sticky; top: 0; z-index: 1; }
+        .data-table th {
+            text-align: left; padding: 8px 12px 5px;
+            font-family: var(--brush); font-weight: normal; font-size: 19px; color: var(--ink);
+            background: var(--paper-3);
+            border-bottom: 2.5px solid var(--ink);
+            white-space: nowrap;
+        }
+        .data-table td { padding: 7px 12px; font-size: 17px; vertical-align: middle; border-bottom: 1.5px solid var(--line); }
+        .data-table tbody tr:last-child td { border-bottom: none; }
+        .data-table tbody tr:hover td { background: rgba(255, 242, 168, 0.45); }
+        .data-table tr.playing td { background: var(--hi); }
+        .data-table .code-stamp { font-size: 17px; }
+        .q-pos { font-family: var(--brush); font-size: 20px; color: var(--ink-soft); }
+        .q-pos.now { color: var(--red); }
+        .table-thumb {
+            width: 52px; height: 39px; flex-shrink: 0; overflow: hidden;
+            display: inline-block; vertical-align: middle;
+            background: var(--paper-3);
+            border: 2px solid var(--ink); border-radius: var(--wobble-sm);
+        }
+        .table-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .table-song { display: flex; align-items: center; gap: 12px; }
+        .table-song-info { display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+        .table-song-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 320px; font-size: 18px; }
+        .table-song-verse { font-size: 14px; color: var(--ink-soft); font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 320px; }
+        .table-muted { color: var(--ink-soft); }
+        .table-actions { display: flex; gap: 6px; align-items: center; }
+        .tbl-btn {
+            width: 36px; height: 36px; padding: 0; flex-shrink: 0;
+            display: inline-flex; align-items: center; justify-content: center;
+            color: var(--ink); background: var(--paper-2);
+            border: 2px solid var(--ink); border-radius: var(--blob);
+            cursor: pointer; transition: transform 0.1s ease, background 0.15s ease;
+        }
+        .tbl-btn:hover { background: var(--hi); transform: rotate(-8deg); }
+        .tbl-btn.success:hover { background: var(--green); }
+        .tbl-btn.danger:hover { background: var(--red-soft); }
+        .tbl-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+        .tbl-btn .material-icons-round { font-size: 19px; }
+        .lang-tag { font-size: 15px; padding: 0 8px; background: #fff; border: 1.5px solid var(--ink); border-radius: var(--wobble-2); white-space: nowrap; }
+        .status-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 15px; padding: 1px 10px; border: 2px solid var(--ink); border-radius: var(--wobble-2); background: #fff; }
+        .status-chip.on { background: var(--green); }
+        .status-chip i { width: 9px; height: 9px; border-radius: var(--blob); background: var(--ink-faint); display: inline-block; }
+        .status-chip.on i { background: var(--green-ink); }
+
+        /* ── Buttons (sketch.css .btn + the original variants) ── */
+        .btn { white-space: nowrap; }
+        .btn .material-icons-round { font-size: 19px; }
+        .btn-primary { background: var(--yellow); }
+        .btn-danger { background: var(--red-soft); }
+        .btn-sm { font-size: 16px; padding: 3px 11px; }
+        .btn-sm .material-icons-round { font-size: 17px; }
+
+        /* ── DJ PIN / catalog password ── */
+        .pin-input { letter-spacing: 4px; font-variant-numeric: tabular-nums; }
+        .pin-error { font-size: 16px; color: var(--red); margin-top: 6px; min-height: 20px; }
+        .pin-row { display: flex; gap: 10px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
+        .pin-row input { flex: 1; min-width: 160px; }
+        .pin-status { font-size: 16px; margin-top: 10px; display: flex; align-items: center; gap: 6px; color: var(--ink-soft); }
+        .pin-status .material-icons-round { font-size: 19px; }
+        .pin-status.on .material-icons-round { color: var(--green-ink); }
+        .pin-status.off .material-icons-round { color: var(--red); }
+        .pin-notice {
+            position: fixed; right: 16px; bottom: 16px; z-index: 900; max-width: 380px;
+            display: flex; gap: 10px; align-items: flex-start; font-size: 16px;
+        }
+        .pin-notice > .material-icons-round { font-size: 24px; }
+        .pin-notice-actions { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+        .modal-lead { color: var(--ink-soft); font-size: 17px; margin: 0 0 12px; }
+        .modal-lead strong { color: var(--ink); font-weight: normal; background: var(--hi); padding: 0 4px; }
+
+        /* ── Search ── */
+        .search-wrapper { position: relative; }
+        .search-wrapper > .material-icons-round {
+            position: absolute; left: 11px; top: 50%; transform: translateY(-50%);
+            font-size: 20px; color: var(--ink-soft); pointer-events: none;
+        }
+        .search-input { width: 290px; padding-left: 38px !important; }
+
+        /* ── Tabs (review filters) ── */
+        .tab-btn {
+            padding: 3px 12px; font: inherit; font-size: 16px; color: var(--ink);
+            background: var(--paper-2);
+            border: 2px solid var(--ink); border-radius: var(--wobble-2);
+            cursor: pointer; transition: background 0.15s ease, transform 0.1s ease;
+        }
+        .tab-btn:hover { background: var(--hi); }
+        .tab-btn.active { background: var(--yellow); box-shadow: var(--shadow-sm); transform: rotate(-1deg); }
+
+        /* ── Stats footer of the queue ── */
+        .stats-bar {
+            display: flex; justify-content: space-around; gap: 10px; flex-shrink: 0;
+            padding: 10px 24px;
+            background: var(--paper-3);
+            border-top: 2.5px solid var(--ink);
+        }
+        .stat { text-align: center; }
+        .stat-value { font-family: var(--brush); font-size: 26px; line-height: 1; }
+        .stat-label { font-size: 14px; color: var(--ink-soft); }
+
+        /* ── Empty state ── */
+        .empty-state { text-align: center; padding: 50px 20px; color: var(--ink-soft); }
+        .empty-state .material-icons-round { font-size: 56px; display: block; margin: 0 auto 8px; opacity: 0.55; }
+        .empty-state p { font-size: 19px; margin: 4px 0; }
+        .empty-state.locked .material-icons-round { color: var(--red); opacity: 0.8; }
+
+        /* ── Modals: sheets of paper ── */
+        .modal-overlay {
+            position: fixed; inset: 0; z-index: 1000;
+            display: none; align-items: center; justify-content: center;
+            padding: 16px;
+            background: rgba(43, 37, 32, 0.45);
+        }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            width: min(520px, 100%); max-height: calc(100vh - 32px); overflow-y: auto;
+            padding: 18px 22px 20px;
+            background-color: var(--paper-2);
+            background-image: repeating-linear-gradient(180deg, transparent 0 31px, rgba(201, 219, 233, 0.55) 31px 32px);
+            border: 2.5px solid var(--ink); border-radius: var(--wobble);
+            box-shadow: 6px 7px 0 -1px var(--ink);
+            animation: k-pop 0.25s ease;
+        }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 14px; }
+        .modal-header h3 { margin: 0; font-size: 28px; }
+        .modal-close { background: none; border: none; color: var(--ink-soft); cursor: pointer; padding: 4px; border-radius: var(--blob); }
+        .modal-close:hover { color: var(--red); background: var(--hi); }
+        .modal-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; margin-top: 20px; }
+        .modal-thumb { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; display: block; border: 2.5px solid var(--ink); border-radius: var(--wobble-2); }
+        .modal-quote { margin-bottom: 14px; padding: 8px 14px; font-style: italic; background: var(--hi); border-left: 4px solid var(--red); border-radius: 2px 8px 8px 2px; }
+        .modal-info { padding: 8px 12px; margin-bottom: 8px; background: #fff; border: 1.5px dashed var(--ink-soft); border-radius: var(--wobble-2); }
+        .modal-info small { display: block; color: var(--ink-soft); font-size: 14px; }
+        .modal-warning { display: none; padding: 8px 12px; margin-bottom: 14px; background: var(--orange); border: 2px solid var(--ink); border-radius: var(--wobble-2); font-size: 16px; }
+
+        /* ── Forms ── */
+        .form-group { margin-bottom: 14px; }
+        .form-group label { display: block; font-size: 16px; color: var(--ink-soft); margin-bottom: 4px; }
+        .form-hint { font-size: 14px; color: var(--ink-soft); margin-top: 4px; }
+
+        /* ── Settings ── */
+        .settings-form { max-width: 640px; }
+        .settings-section { margin-bottom: 26px; }
+        .settings-section h4 { margin: 0 0 6px; font-size: 25px; }
+        .settings-section > p { color: var(--ink-soft); font-size: 16px; margin: 0 0 10px; }
+        .settings-group { padding: 14px 16px; }
+        .setting-item { display: flex; justify-content: space-between; align-items: center; gap: 14px; }
+        .setting-info label { font-size: 18px; display: block; }
+        .setting-info small { font-size: 15px; color: var(--ink-soft); display: block; line-height: 1.25; }
+        .setting-radio-group { display: flex; flex-direction: column; gap: 4px; padding: 6px 10px; }
+        .radio-option {
+            display: flex; align-items: flex-start; gap: 10px; padding: 8px 6px;
+            border-bottom: 1.5px solid var(--line); cursor: pointer;
+            border-radius: 4px; transition: background 0.15s ease;
+        }
+        .radio-option:last-child { border-bottom: none; }
+        .radio-option:hover { background: rgba(255, 242, 168, 0.6); }
+        .radio-option input[type="radio"] { margin-top: 5px; width: 18px; height: 18px; accent-color: var(--red); flex-shrink: 0; }
+        .radio-label { flex: 1; }
+        .radio-title { font-size: 18px; display: block; }
+        .radio-label small { font-size: 15px; color: var(--ink-soft); display: block; line-height: 1.25; }
+        .settings-note { color: var(--ink-soft); font-size: 15px; margin: 10px 0 0; }
+        .hidden { display: none !important; }
+
+        /* ── Party panel ── */
+        .party-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(290px, 100%), 1fr)); gap: 26px; max-width: 980px; align-items: start; }
+        .party-card { padding: 22px 20px 18px; }
+        .party-card h2 { margin: 0 0 8px; font-size: 27px; }
+        .party-card p { margin: 6px 0; color: var(--ink-soft); }
+        .party-code { display: inline-block; margin: 8px 0 6px; padding: 2px 18px; font-size: 64px; line-height: 1.1; letter-spacing: 6px; border-width: 3.5px; }
+        .party-qr { width: 196px; height: 196px; margin: 12px auto; padding: 8px; background: var(--paper-2); border: 2.5px solid var(--ink); border-radius: var(--wobble-2); transform: rotate(1.5deg); }
+        .party-qr img, .party-qr canvas { width: 100% !important; height: 100% !important; display: block; }
+        .party-link { display: block; word-break: break-all; font-size: 17px; margin: 6px 0 10px; }
+        .party-links { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
+        .party-links .btn { justify-content: flex-start; }
+        .party-links small { display: block; color: var(--ink-soft); margin: -6px 0 0 8px; font-size: 14px; }
+        .party-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
+        .party-row select.field { width: auto; flex: 1; min-width: 150px; }
+        .party-center { text-align: center; }
+
+        /* ── Toasts: sticky notes ── */
+        .toast-stack {
+            position: fixed; top: 78px; right: 16px; z-index: 1100;
+            display: flex; flex-direction: column; gap: 10px; align-items: flex-end;
+            max-width: min(380px, calc(100vw - 32px)); pointer-events: none;
+        }
+        .toast { pointer-events: auto; font-size: 17px; animation: k-pop 0.3s ease; }
+        .toast:nth-child(even) { transform: rotate(1deg); }
+        .toast.leaving { opacity: 0; transition: opacity 0.3s ease; }
+
+        /* ── Party is over ── */
+        .party-over { position: fixed; inset: 0; z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(43, 37, 32, 0.55); }
+        .party-over-card { width: min(460px, 100%); padding: 30px 26px; text-align: center; }
+        .party-over-card h2 { margin: 0 0 8px; font-size: 44px; }
+        .party-over-card .material-icons-round { font-size: 60px; color: var(--red); }
+        .party-over-card p { color: var(--ink-soft); }
+
+        /* ── Small inputs ── */
+        .verify-input { width: 100%; padding: 6px 10px; font-size: 17px; }
+
+        /* ── Review songs ── */
+        .review-layout { display: grid; grid-template-columns: minmax(0, 1fr) 310px; overflow: hidden; padding: 0; background-image: none; }
+        .review-main {
+            overflow-y: auto; padding: 16px 24px 28px; min-width: 0;
+            background-image: repeating-linear-gradient(180deg, transparent 0 31px, rgba(201, 219, 233, 0.6) 31px 32px);
+            background-attachment: local;
+        }
+        .review-list { overflow-y: auto; background: var(--paper-3); border-left: 2.5px solid var(--ink); }
+        .review-filters { display: flex; gap: 6px; flex-wrap: wrap; }
+        .review-filters .tab-btn { min-height: 34px; }
+        .review-list-head { font-family: var(--brush); font-size: 19px; color: var(--red); padding: 10px 14px 4px; }
+        .review-row {
+            display: flex; align-items: center; gap: 10px; width: 100%; min-height: 54px; padding: 6px 14px;
+            font: inherit; color: var(--ink); text-align: left; cursor: pointer;
+            background: transparent; border: none; border-bottom: 1.5px solid var(--line);
+        }
+        .review-row:hover { background: rgba(255, 242, 168, 0.6); }
+        .review-row.active { background: var(--hi); box-shadow: inset 4px 0 0 var(--red); }
+        .review-row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+        .review-row-title { font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .review-row-sub { font-size: 14px; color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .review-row .material-icons-round { font-size: 19px; color: var(--ink-faint); flex-shrink: 0; }
+        .review-row .material-icons-round.ready { color: var(--green-ink); }
+        .review-card { max-width: 780px; }
+        .review-evidence {
+            display: flex; gap: 16px; align-items: flex-start; padding: 14px;
+            background: var(--paper-2);
+            border: 2.5px solid var(--ink); border-radius: var(--wobble);
+            box-shadow: var(--shadow);
+        }
+        .review-thumb {
+            position: relative; width: 190px; aspect-ratio: 16 / 9; flex-shrink: 0; overflow: hidden;
+            background: var(--paper-3);
+            border: 2px solid var(--ink); border-radius: var(--wobble-sm);
+            transform: rotate(-1.5deg);
+        }
+        .review-thumb img, .review-thumb iframe { width: 100%; height: 100%; object-fit: cover; display: block; border: 0; background: #000; }
+        .review-play {
+            position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+            width: 50px; height: 50px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            color: var(--ink); background: var(--yellow);
+            border: 2.5px solid var(--ink); border-radius: var(--blob);
+            box-shadow: var(--shadow-sm);
+        }
+        .review-play .material-icons-round { font-size: 30px; }
+        .review-evidence-text { flex: 1; min-width: 0; }
+        .review-label { font-family: var(--brush); font-size: 16px; color: var(--red); }
+        .review-yt-title { font-size: 18px; margin: 2px 0 6px; word-break: break-word; }
+        .review-meta { font-size: 15px; color: var(--ink-soft); display: flex; gap: 12px; flex-wrap: wrap; }
+        .review-reasons { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+        .review-reason { font-size: 14px; padding: 0 9px; background: var(--orange); border: 1.5px solid var(--ink); border-radius: var(--wobble-2); }
+        .review-status { display: flex; align-items: center; gap: 8px; font-size: 16px; color: var(--ink-soft); margin: 14px 0 4px; min-height: 22px; flex-wrap: wrap; }
+        .review-status.error { color: var(--red); }
+        .review-status.looking {
+            align-items: flex-start; gap: 12px; padding: 10px 14px; color: var(--ink);
+            background: var(--hi);
+            border: 2px solid var(--ink); border-radius: 3px 10px 4px 12px / 12px 4px 10px 3px;
+            box-shadow: 3px 4px 0 -1px rgba(43, 37, 32, 0.8);
+            transform: rotate(-0.6deg);
+        }
+        .review-status.looking > .material-icons-round { font-size: 30px; color: var(--red); }
+        .review-status.looking strong { font-family: var(--brush); font-weight: normal; font-size: 21px; display: block; }
+        .review-status.looking .dots::after { content: ''; animation: k-dots 1.4s steps(4, end) infinite; }
+        @keyframes k-dots { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75%, 100% { content: '...'; } }
+        .review-sections-wait { opacity: 0.6; }
+        .review-section { margin-top: 18px; padding: 2px 0; outline: none; }
+        .review-section h3, .review-vkrow h3 { font-size: 24px; margin: 0 0 8px; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+        .review-section.focused h3 { color: var(--red); }
+        .review-hint { font-family: var(--hand); font-size: 15px; color: var(--ink-soft); }
+        .review-options { display: flex; flex-direction: column; gap: 7px; }
+        .review-option {
+            display: flex; align-items: center; gap: 10px; width: 100%; min-height: 46px; padding: 7px 12px;
+            font: inherit; font-size: 17px; color: var(--ink); text-align: left; cursor: pointer;
+            background: var(--paper-2);
+            border: 2px solid var(--ink); border-radius: var(--wobble-2);
+            transition: background 0.12s ease, transform 0.1s ease;
+        }
+        .review-option:nth-child(even) { border-radius: var(--wobble); }
+        .review-option:hover { background: #fffbe0; transform: translateX(2px); }
+        .review-option.selected { background: var(--hi); box-shadow: var(--shadow-sm); }
+        .review-option .review-key {
+            width: 26px; height: 26px; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 15px; color: var(--ink-soft);
+            border: 2px solid var(--ink-soft); border-radius: var(--blob);
+        }
+        .review-option.selected .review-key { background: var(--red); color: #fff; border-color: var(--ink); }
+        .review-option-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+        .review-option-main { word-break: break-word; }
+        .review-option-more { font-size: 15px; color: var(--ink-soft); white-space: pre-line; word-break: break-word; font-style: italic; }
+        .review-option.muted { border-style: dashed; background: transparent; }
+        .review-option.muted .review-option-main { color: var(--ink-soft); }
+        .review-option.muted.selected { background: var(--hi); }
+        .review-badges { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; flex-shrink: 0; max-width: 45%; }
+        .review-badge { font-size: 13px; padding: 0 7px; white-space: nowrap; background: #fff; border: 1.5px solid var(--ink-soft); border-radius: var(--wobble-2); }
+        .review-badge.agree { background: var(--green); border-color: var(--ink); }
+        .review-custom { display: flex; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+        .review-custom input, .review-custom select {
+            flex: 1; min-width: 170px; min-height: 42px; padding: 7px 12px;
+            font: inherit; font-size: 17px; color: var(--ink); background: #fff;
+            border: 2.5px solid var(--ink); border-radius: var(--wobble-2); outline: none;
+        }
+        .review-custom input:focus, .review-custom select:focus { background: #fffef3; box-shadow: 0 0 0 3px var(--hi); }
+        .review-warning { margin-top: 8px; font-size: 16px; padding: 8px 12px; background: var(--orange); border: 2px solid var(--ink); border-radius: var(--wobble-2); }
+        .review-note { margin-top: 8px; font-size: 15px; color: var(--ink-soft); font-style: italic; }
+        .review-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+        .review-chip {
+            min-height: 42px; padding: 4px 14px; cursor: pointer;
+            display: inline-flex; align-items: center; gap: 6px;
+            font: inherit; font-size: 17px; color: var(--ink);
+            background: var(--paper-2);
+            border: 2px solid var(--ink); border-radius: var(--wobble-2);
+            transition: background 0.12s ease, transform 0.1s ease;
+        }
+        .review-chip:hover { background: #fffbe0; transform: rotate(-1.5deg); }
+        .review-chip.selected { background: var(--yellow); box-shadow: var(--shadow-sm); }
+        .review-chip small { color: var(--ink-soft); font-size: 13px; }
+        .review-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 22px; padding-top: 14px; border-top: 2px dashed rgba(43, 37, 32, 0.25); }
+        .review-actions .btn { min-height: 46px; }
+        .review-actions .btn-danger { margin-left: auto; }
+        .review-vkrow { margin-top: 18px; }
+        .review-evidence-text .vk-chips { margin-top: 8px; }
+        .catalog-warn-toggle { display: inline-flex; align-items: center; gap: 8px; font-size: 16px; color: var(--ink-soft); cursor: pointer; white-space: nowrap; min-height: 34px; }
+        .sketch-switch.sm { width: 46px; height: 26px; }
+        .sketch-switch.sm span::before { width: 15px; height: 15px; }
+        .sketch-switch.sm input:checked + span::before { transform: translateX(20px); }
+        .table-song-info .vk-chips { margin-top: 3px; }
+        .review-keys { font-size: 15px; color: var(--ink-soft); margin-top: 12px; }
+        .review-keys kbd { font-family: inherit; font-size: 14px; padding: 0 6px; background: #fff; border: 1.5px solid var(--ink-soft); border-bottom-width: 3px; border-radius: 5px; }
+
+        .spinner-sm {
+            width: 16px; height: 16px; flex-shrink: 0;
+            border: 2.5px solid var(--ink-faint); border-top-color: var(--red);
+            border-radius: var(--blob); animation: spin 0.9s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── Phone: the sidebar becomes a drawer, tables become ruled cards ── */
+        .nav-scrim { display: none; }
+        @media (max-width: 760px) {
+            .app { grid-template-columns: minmax(0, 1fr); }
+            .now-playing-strip { padding: 6px 10px; gap: 8px; min-height: 60px; }
+            .np-btn.nav-toggle { display: inline-flex; width: 40px; height: 40px; }
+            .np-art { width: 40px; height: 40px; }
+            .np-title { font-size: 19px; }
+            .np-meta { font-size: 13px; }
+            .np-artist { display: none; }
+            .np-controls { gap: 5px; }
+            .np-btn { width: 36px; height: 36px; }
+            .np-btn.primary { width: 44px; height: 44px; }
+            .np-btn .material-icons-round { font-size: 19px; }
+            .side-nav {
+                position: fixed; top: 0; left: 0; bottom: 0; z-index: 950;
+                width: min(300px, 86vw);
+                transform: translateX(-105%); transition: transform 0.2s ease;
+                box-shadow: 6px 0 0 -2px rgba(43, 37, 32, 0.35);
+            }
+            .app.nav-open .side-nav { transform: none; }
+            .app.nav-open .nav-scrim { display: block; position: fixed; inset: 0; z-index: 940; background: rgba(43, 37, 32, 0.4); }
+            .view-header { padding: 10px 14px 8px; }
+            .view-title { font-size: 29px; }
+            .view-actions { margin-left: 0; width: 100%; }
+            .search-wrapper { flex: 1 1 100%; }
+            .search-input { width: 100%; }
+            .view-body { padding: 12px 12px 26px; }
+            .view-toolbar { padding: 10px 12px; }
+            .view-toolbar .verify-input { flex: 1 1 120px; width: auto !important; }
+            .access-note { margin: 8px 12px 0; }
+            .stats-bar { padding: 8px 12px; }
+            .data-table thead { display: none; }
+            .data-table, .data-table tbody { display: block; }
+            .data-table tr { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 9px 10px; border-bottom: 1.5px solid var(--line); }
+            .data-table tbody tr:last-child { border-bottom: none; }
+            .data-table td { display: block; padding: 0; border: none !important; font-size: 16px; }
+            .data-table td.col-song { flex: 1 1 calc(100% - 70px); min-width: 0; }
+            .data-table td.col-actions { margin-left: auto; }
+            .data-table td.col-meta { font-size: 15px; }
+            .table-song-name, .table-song-verse { max-width: none; white-space: normal; }
+            .settings-group { padding: 12px; }
+            .review-layout { grid-template-columns: minmax(0, 1fr); overflow-y: auto; }
+            .review-main { overflow: visible; padding: 12px 12px 20px; }
+            .review-list { border-left: none; border-top: 2.5px solid var(--ink); overflow: visible; }
+            .review-evidence { flex-direction: column; }
+            .review-thumb { width: 100%; }
+            .review-badges { max-width: 40%; }
+            .review-keys { display: none; }
+            .review-actions .btn { flex: 1 1 auto; }
+            .review-actions .btn-danger { margin-left: 0; }
+            .party-code { font-size: 52px; }
+            .pin-notice { left: 16px; max-width: none; }
+            .toast-stack { top: 70px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app" id="app">
+        <!-- Now Playing Strip -->
+        <div class="now-playing-strip">
+            <button type="button" class="np-btn nav-toggle" id="navToggle" title="Menu" aria-label="Menu" aria-expanded="false" aria-controls="sideNav"><span class="material-icons-round">menu</span></button>
+            <div class="np-art" id="nowPlayingArt"><div class="placeholder"><span class="material-icons-round">mic</span></div></div>
+            <div class="np-info">
+                <div class="np-title" id="nowPlayingTitle">No song playing</div>
+                <div class="np-meta">
+                    <span class="np-artist" id="nowPlayingArtist">—</span>
+                    <span class="np-singer" id="nowPlayingUser"></span>
+                </div>
+            </div>
+            <div class="np-controls">
+                <button class="np-btn" onclick="restartSong()" title="Restart"><span class="material-icons-round">replay</span></button>
+                <button class="np-btn primary" id="playPauseBtn" onclick="playPause()" title="Play/Pause"><span class="material-icons-round">play_arrow</span></button>
+                <button class="np-btn" onclick="skipSong()" title="Skip"><span class="material-icons-round">skip_next</span></button>
+            </div>
+        </div>
+
+        <!-- Side Nav -->
+        <nav class="side-nav" id="sideNav">
+            <div class="nav-brand"><span class="nav-brand-text">Karaoke DJ</span><span class="code-stamp" id="navRoomCode" title="Room code"></span></div>
+            <div class="nav-group">
+                <div class="nav-label">Party</div>
+                <button class="nav-item" data-view="party">
+                    <span class="material-icons-round">celebration</span> Party
+                </button>
+                <button class="nav-item active" data-view="queue">
+                    <span class="material-icons-round">queue_music</span> Queue
+                    <span class="nav-badge hidden" id="queueBadge">—</span>
+                </button>
+                <button class="nav-item" data-view="catalog">
+                    <span class="material-icons-round">library_music</span> Catalog
+                    <span class="nav-badge count-only" id="catalogNavCount"></span>
+                </button>
+                <button class="nav-item" data-view="players">
+                    <span class="material-icons-round">groups</span> Players
+                    <span class="nav-badge count-only" id="playersNavCount"></span>
+                </button>
+            </div>
+            <div class="nav-divider"></div>
+            <div class="nav-group">
+                <div class="nav-label">Site catalog</div>
+                <button class="nav-item" data-view="review" title="Needs the site's catalog password">
+                    <span class="material-icons-round">fact_check</span> Review songs <span class="material-icons-round needs" aria-label="needs the catalog password">key</span>
+                    <span class="nav-badge hidden" id="reviewBadge">0</span>
+                </button>
+                <button class="nav-item" data-view="trash" title="Needs the site's catalog password">
+                    <span class="material-icons-round">delete</span> Trash <span class="material-icons-round needs" aria-label="needs the catalog password">key</span>
+                    <span class="nav-badge hidden" id="trashBadge">0</span>
+                </button>
+                <button class="nav-item" data-view="languages" title="Changes need the site's catalog password">
+                    <span class="material-icons-round">language</span> Languages <span class="material-icons-round needs" aria-label="needs the catalog password">key</span>
+                </button>
+            </div>
+            <div class="nav-divider"></div>
+            <div class="nav-group">
+                <div class="nav-label">This party</div>
+                <button class="nav-item" data-view="settings" title="Room DJ settings">
+                    <span class="material-icons-round">settings</span> Settings <span class="material-icons-round needs" aria-label="room DJ only">headphones</span>
+                </button>
+                <button class="nav-item" id="navPrintBtn" title="Open the printable song catalog in a new tab">
+                    <span class="material-icons-round">print</span> Printable catalog
+                </button>
+                <button class="nav-item" id="navGuestBtn" title="Open the guest page in a new tab">
+                    <span class="material-icons-round">phone_android</span> Guest page
+                </button>
+                <button class="nav-item danger-item" id="navEndPartyBtn" title="Room DJ only">
+                    <span class="material-icons-round">power_settings_new</span> End party <span class="material-icons-round needs" aria-label="room DJ only">headphones</span>
+                </button>
+            </div>
+            <div class="access-card" id="accessCard" aria-live="polite">
+                <div class="access-title">Who can do what</div>
+                <div class="access-row" id="accessDj">
+                    <span class="material-icons-round">headphones</span>
+                    <div><b>Room DJ</b><small id="accessDjText">Checking...</small>
+                        <button type="button" class="btn btn-sm hidden" id="accessDjBtn"><span class="material-icons-round">lock_open</span> Enter DJ PIN</button></div>
+                </div>
+                <div class="access-row" id="accessCatalog">
+                    <span class="material-icons-round">key</span>
+                    <div><b>Site catalog</b><small id="accessCatalogText">Checking...</small>
+                        <button type="button" class="btn btn-sm hidden" id="accessCatalogBtn"></button></div>
+                </div>
+            </div>
+        </nav>
+        <div class="nav-scrim" id="navScrim"></div>
+
+        <!-- Content Area -->
+        <div class="content-area">
+
+            <!-- ═══ View: Party ═══ -->
+            <section class="view-section" id="view-party">
+                <div class="view-header">
+                    <h1 class="view-title">Party</h1>
+                    <span class="view-subtitle">Share the code, open the screens</span>
+                </div>
+                <div class="view-body">
+                    <div class="party-grid">
+                        <div class="sketch party-card tape party-center">
+                            <h2>Room code</h2>
+                            <div class="code-stamp party-code" id="partyCode"></div>
+                            <p>Guests scan this or open the link on their phones.</p>
+                            <div class="party-qr" id="partyQr" aria-label="QR code with the join link"></div>
+                            <a class="party-link" id="partyJoinLink" href="#" target="_blank" rel="noopener"></a>
+                            <button type="button" class="btn" id="copyJoinBtn"><span class="material-icons-round">content_copy</span> Copy link</button>
+                        </div>
+                        <div class="sketch-2 party-card">
+                            <h2>Screens</h2>
+                            <div class="party-links">
+                                <a class="btn" id="openPlayerLink" href="#" target="_blank" rel="noopener"><span class="material-icons-round">tv</span> Open the player</a>
+                                <small>For the TV or projector. Click once there to start the sound (browser autoplay rule).</small>
+                                <a class="btn" id="openJukeboxLink" href="#" target="_blank" rel="noopener"><span class="material-icons-round">storefront</span> Open the jukebox</a>
+                                <small>A kiosk screen with a big QR code, the queue and song-code entry.</small>
+                                <a class="btn" id="openGuestLink" href="#" target="_blank" rel="noopener"><span class="material-icons-round">phone_android</span> Open the guest page</a>
+                                <small>What guests see: search, pick a song, join the queue.</small>
+                            </div>
+                        </div>
+                        <div class="sketch party-card">
+                            <h2>Songbook</h2>
+                            <p>A printable catalog grouped by language with the song codes. Print it or save it as PDF.</p>
+                            <div class="party-row">
+                                <select class="field" id="printLangSelect" aria-label="Catalog labels language">
+                                    <option value="PT-BR">Português (BR)</option>
+                                    <option value="es">Español</option>
+                                    <option value="en">English</option>
+                                </select>
+                                <button type="button" class="btn" id="printCatalogBtn"><span class="material-icons-round">print</span> Printable catalog</button>
+                            </div>
+                        </div>
+                        <div class="sketch-2 party-card">
+                            <h2>End the party</h2>
+                            <p>Deletes this room: the queue, the singers and the code. Every screen shows that the party is over. The song catalog is kept.</p>
+                            <p><span class="material-icons-round" style="font-size:17px;vertical-align:-3px">headphones</span> Room DJ only.</p>
+                            <div class="party-row"><button type="button" class="btn btn-danger" id="endPartyBtn"><span class="material-icons-round">power_settings_new</span> End party</button></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ═══ View: Queue ═══ -->
+            <section class="view-section active" id="view-queue">
+                <div class="view-header">
+                    <h1 class="view-title">Queue</h1>
+                    <span class="view-subtitle" id="queueCount">—</span>
+                    <div class="view-actions">
+                        <button class="btn btn-sm" onclick="clearQueue()" title="Room DJ only"><span class="material-icons-round">playlist_remove</span> Clear</button>
+                        <button class="btn btn-sm" onclick="shuffleQueue()" title="Room DJ only"><span class="material-icons-round">shuffle</span> Shuffle</button>
+                    </div>
+                </div>
+                <div class="view-body" id="queueTableBody"></div>
+                <div class="stats-bar">
+                    <div class="stat"><div class="stat-value" id="statSongs">0</div><div class="stat-label">Songs</div></div>
+                    <div class="stat"><div class="stat-value" id="statArtists">0</div><div class="stat-label">Artists</div></div>
+                    <div class="stat"><div class="stat-value" id="statPlays">0</div><div class="stat-label">Total Plays</div></div>
+                </div>
+            </section>
+
+            <!-- ═══ View: Players (session) ═══ -->
+            <section class="view-section" id="view-players">
+                <div class="view-header">
+                    <h1 class="view-title">Players</h1>
+                    <span class="view-subtitle" id="playersCount">—</span>
+                    <div class="view-actions">
+                        <button class="btn btn-sm" onclick="loadPlayers()"><span class="material-icons-round">refresh</span> Refresh</button>
+                    </div>
+                </div>
+                <div class="view-body" id="playersTableBody"></div>
+            </section>
+
+            <!-- ═══ View: Catalog ═══ -->
+            <section class="view-section" id="view-catalog">
+                <div class="view-header">
+                    <h1 class="view-title">Catalog</h1>
+                    <span class="view-subtitle" id="catalogCountLabel"></span>
+                    <div class="view-actions">
+                        <label class="catalog-warn-toggle" title="Songs whose video has the original singer or shows no lyrics: the ones you may want to replace"><span class="sketch-switch sm"><input type="checkbox" id="catalogWarnOnly"><span></span></span> Only songs with warnings</label>
+                        <div class="search-wrapper">
+                            <span class="material-icons-round">search</span>
+                            <input type="text" class="field search-input" id="catalogSearch" placeholder="Search songs or enter code..." oninput="filterCatalog()" onkeypress="if(event.key==='Enter')handleCatalogSearchEnter()">
+                        </div>
+                    </div>
+                </div>
+                <div class="access-note" data-access-note="catalog-edit"></div>
+                <div class="view-body" id="catalogTableBody"></div>
+            </section>
+
+            <!-- ═══ View: Review songs ═══ -->
+            <section class="view-section" id="view-review">
+                <div class="view-header">
+                    <h1 class="view-title">Review songs</h1>
+                    <span class="view-subtitle" id="reviewSummary">Loading...</span>
+                    <div class="view-actions">
+                        <div class="review-filters" id="reviewFilters">
+                            <button type="button" class="tab-btn active" data-review-filter="all">All (<span id="reviewCountAll">0</span>)</button>
+                            <button type="button" class="tab-btn" data-review-filter="unverified">Needs checking (<span id="reviewCountUnverified">0</span>)</button>
+                            <button type="button" class="tab-btn" data-review-filter="missing_first_line">Missing first line (<span id="reviewCountMissing">0</span>)</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="access-note" data-access-note="catalog"></div>
+                <div class="view-body review-layout">
+                    <div class="review-main" id="reviewCard"></div>
+                    <aside class="review-list" id="reviewList" aria-label="Songs to review"></aside>
+                </div>
+            </section>
+
+            <!-- ═══ View: Trash ═══ -->
+            <section class="view-section" id="view-trash">
+                <div class="view-header">
+                    <h1 class="view-title">Trash</h1>
+                    <span class="view-subtitle" id="trashSummary">Loading...</span>
+                </div>
+                <div class="access-note" data-access-note="catalog"></div>
+                <div class="view-body" id="trashList"></div>
+            </section>
+
+            <!-- ═══ View: Settings ═══ -->
+            <section class="view-section" id="view-settings">
+                <div class="view-header">
+                    <h1 class="view-title">Settings</h1>
+                    <div class="view-actions">
+                        <button class="btn btn-primary" onclick="saveSettings()">
+                            <span class="material-icons-round">save</span> Save Settings
+                        </button>
+                    </div>
+                </div>
+                <div class="access-note" data-access-note="dj"></div>
+                <div class="view-body">
+                    <div class="settings-form">
+                        <div class="settings-section">
+                            <h4 data-auth-i18n="secTitle">Security</h4>
+                            <div class="settings-group sketch">
+                                <div class="setting-info"><label data-auth-i18n="pinSettingLabel">DJ PIN</label><small data-auth-i18n="pinSettingHelp">Protects this party's settings, clearing and shuffling the queue and ending the party from anyone else who has the room link. The browser that created the party never needs it.</small></div>
+                                <div class="pin-status off" id="adminPinStatus"><span class="material-icons-round">lock_open</span><span id="adminPinStatusText"></span></div>
+                                <div class="pin-row">
+                                    <input type="password" id="adminPinNew" class="field pin-input" inputmode="numeric" pattern="[0-9]*" maxlength="12" autocomplete="new-password" placeholder="New PIN (4–12 digits)">
+                                    <button type="button" class="btn btn-primary" id="adminPinSaveBtn"><span class="material-icons-round">lock</span> <span id="adminPinSaveLabel">Set PIN</span></button>
+                                    <button type="button" class="btn btn-danger hidden" id="adminPinRemoveBtn"><span class="material-icons-round">lock_open</span> <span data-auth-i18n="pinRemove">Remove PIN</span></button>
+                                </div>
+                                <div class="pin-error" id="adminPinSettingError"></div>
+                                <p class="settings-note">The song catalog is shared by every party on this site: editing it needs the site's catalog password, not the DJ PIN.</p>
+                            </div>
+                        </div>
+                        <div class="settings-section">
+                            <h4>Queue Organization</h4>
+                            <p>Choose how new songs are added to the queue</p>
+                            <div class="settings-group setting-radio-group sketch-2">
+                                <label class="radio-option"><input type="radio" name="queueStrategy" value="fifo"><div class="radio-label"><span class="radio-title">Classic Queue (FIFO)</span><small>First come, first served. Songs are added in order.</small></div></label>
+                                <label class="radio-option"><input type="radio" name="queueStrategy" value="fair"><div class="radio-label"><span class="radio-title">Fair Play (Anti-Starvation)</span><small>Newcomers get priority! Everyone sings before anyone sings twice.</small></div></label>
+                            </div>
+                        </div>
+                        <div class="settings-section">
+                            <h4>Guest queue reordering</h4>
+                            <p>Choose whether guests can move any song in the queue or only change the order of their own.</p>
+                            <div class="settings-group setting-radio-group sketch">
+                                <label class="radio-option"><input type="radio" name="guestReorder" value="all"><div class="radio-label"><span class="radio-title">Move any song</span></div></label>
+                                <label class="radio-option"><input type="radio" name="guestReorder" value="own_only"><div class="radio-label"><span class="radio-title">Only their own songs</span></div></label>
+                            </div>
+                            <p class="settings-note hidden" id="guestReorderNote" data-auth-i18n="guestReorderNote">Set a DJ PIN to enforce this. Without a PIN the guest app hides the buttons, but the server cannot tell guests from the DJ.</p>
+                        </div>
+                        <div class="settings-section">
+                            <h4>Jukebox Screen</h4>
+                            <p>Controls available on the public jukebox screen</p>
+                            <div class="settings-group setting-radio-group sketch-2">
+                                <label class="radio-option"><input type="radio" name="jukeboxControls" value="add_only"><div class="radio-label"><span class="radio-title">Add only (guest-safe)</span><small>Guests can add songs by code and see the queue. No skip/pause/clear.</small></div></label>
+                                <label class="radio-option"><input type="radio" name="jukeboxControls" value="full"><div class="radio-label"><span class="radio-title">Full remote</span><small>Also exposes play/pause, skip and clear on the jukebox screen.</small></div></label>
+                            </div>
+                        </div>
+                        <div class="settings-section">
+                            <h4>Score Screen</h4>
+                            <div class="settings-group sketch">
+                                <div class="setting-item">
+                                    <div class="setting-info"><label for="configScoreScreen">Show score after each song</label><small>When a song plays to the end, the player shows a fun 1–100 score before advancing. Skipped songs are not scored.</small></div>
+                                    <label class="sketch-switch"><input type="checkbox" id="configScoreScreen"><span></span></label>
+                                </div>
+                            </div>
+                            <p style="margin:16px 0 10px">How the score is calculated</p>
+                            <div class="settings-group setting-radio-group sketch-2">
+                                <label class="radio-option"><input type="radio" name="scoreMode" value="heuristic"><div class="radio-label"><span class="radio-title">Heuristic (mic-based)</span><small>Listens through the microphone and scores the actual singing (pitch, stability). Falls back to random when there's no usable mic signal.</small></div></label>
+                                <label class="radio-option"><input type="radio" name="scoreMode" value="random"><div class="radio-label"><span class="radio-title">Fully random</span><small>Ignores the microphone and just rolls a fun random score.</small></div></label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ═══ View: Languages ═══ -->
+            <section class="view-section" id="view-languages">
+                <div class="view-header">
+                    <h1 class="view-title">Languages</h1>
+                </div>
+                <div class="access-note" data-access-note="catalog"></div>
+                <div class="view-toolbar">
+                    <input type="text" class="field verify-input" id="newLangName" placeholder="Name" style="width:170px">
+                    <input type="text" class="field verify-input" id="newLangId" placeholder="ID (e.g. pt-BR)" style="width:150px">
+                    <input type="text" class="field verify-input" id="newLangAcronym" placeholder="Acronym" style="width:110px;text-transform:uppercase" maxlength="5">
+                    <button class="btn btn-primary btn-sm" onclick="addNewLanguage()"><span class="material-icons-round">add</span> Add</button>
+                </div>
+                <div class="view-body" id="languagesTableBody"></div>
+            </section>
+
+        </div>
+    </div>
+
+    <!-- ═══ Modal: Edit Song ═══ -->
+    <div class="modal-overlay" id="editModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Edit Song Metadata</h3>
+                <button class="modal-close" onclick="closeEditModal()" aria-label="Close"><span class="material-icons-round">close</span></button>
+            </div>
+            <p class="modal-lead"><span class="material-icons-round" style="font-size:17px;vertical-align:-3px">key</span> Saving changes the website's shared catalog: it needs the site's catalog password.</p>
+            <div id="editYoutubeThumb" style="display:none;margin-bottom:14px;">
+                <img id="editYoutubeImg" class="modal-thumb" src="" alt="">
+            </div>
+            <div id="editLyricsPreview" class="modal-quote" style="display:none;"></div>
+            <form onsubmit="saveSongEdit(event)">
+                <div class="form-group"><label for="editTitle">Song Title</label><input type="text" class="field" id="editTitle" required></div>
+                <div class="form-group"><label for="editArtist">Artist Name</label><input type="text" class="field" id="editArtist" required></div>
+                <div class="form-group"><label for="editLanguage">Language</label><select class="field" id="editLanguage"></select></div>
+                <div class="form-group"><label for="editVideoKind">Video type</label><select class="field" id="editVideoKind">
+                    <option value="">Not checked</option>
+                    <option value="karaoke">Karaoke</option>
+                    <option value="lyric_video">With original vocals (lyric video)</option>
+                    <option value="instrumental">No lyrics on screen (instrumental)</option>
+                    <option value="music_video">Vocals and no lyrics (music video)</option>
+                </select></div>
+                <div class="form-group"><label for="editLyricsStart">Lyrics Beginning</label><input type="text" class="field" id="editLyricsStart" placeholder="First line or phrase of lyrics..." oninput="updateLyricsPreview()"></div>
+                <input type="hidden" id="editSongId">
+                <div class="modal-actions">
+                    <a id="editYoutubeLink" href="#" target="_blank" rel="noopener" class="btn" style="display:none;margin-right:auto"><span class="material-icons-round">open_in_new</span> See on YouTube</a>
+                    <button type="button" class="btn" onclick="closeEditModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ═══ Modal: Metadata Confirmation ═══ -->
+    <div class="modal-overlay" id="metadataModal">
+        <div class="modal" style="max-width:560px;">
+            <div class="modal-header">
+                <h3 id="metadataModalTitle">Confirm Song Metadata</h3>
+                <button class="modal-close" onclick="cancelMetadataModal()" aria-label="Close"><span class="material-icons-round">close</span></button>
+            </div>
+            <p id="metadataModalDesc" class="modal-lead">Review and confirm metadata before adding the song.</p>
+            <div style="margin-bottom:16px;">
+                <div class="modal-info"><small>Video Title:</small><div id="metadataVideoTitle" style="word-break:break-word;"></div></div>
+                <div class="modal-info"><small>Channel:</small><div id="metadataVideoChannel"></div></div>
+            </div>
+            <form onsubmit="submitMetadata(event)">
+                <div class="form-group"><label for="metadataTitle">Song Title *</label><input type="text" class="field" id="metadataTitle" required placeholder="Enter the song title"></div>
+                <div class="form-group"><label for="metadataArtist">Artist Name *</label><input type="text" class="field" id="metadataArtist" required placeholder="Enter the artist name"></div>
+                <div id="metadataDuplicates" class="modal-warning"></div>
+                <div class="form-group"><label for="metadataLanguage">Language</label><select class="field" id="metadataLanguage"></select></div>
+                <div class="form-group"><label for="metadataLyricsStart">Lyrics Beginning (optional)</label><input type="text" class="field" id="metadataLyricsStart" placeholder="First line or phrase of lyrics..."></div>
+                <input type="hidden" id="metadataVideoId">
+                <div class="modal-actions">
+                    <button type="button" class="btn" onclick="cancelMetadataModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Confirm &amp; Add</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ═══ Modal: DJ PIN ═══ -->
+    <div class="modal-overlay" id="adminPinModal">
+        <div class="modal" style="max-width:380px;">
+            <div class="modal-header">
+                <h3 data-auth-i18n="pinModalTitle">DJ PIN required</h3>
+                <button class="modal-close" id="adminPinCloseBtn" aria-label="Close"><span class="material-icons-round">close</span></button>
+            </div>
+            <p class="modal-lead" data-auth-i18n="pinModalText">Enter the DJ PIN to continue.</p>
+            <div class="form-group">
+                <label for="adminPinInput" data-auth-i18n="pinLabel">DJ PIN</label>
+                <input type="password" id="adminPinInput" class="field pin-input" inputmode="numeric" pattern="[0-9]*" maxlength="12" autocomplete="current-password">
+                <div class="pin-error" id="adminPinError"></div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn" id="adminPinCancelBtn" data-auth-i18n="cancel">Cancel</button>
+                <button type="button" class="btn btn-primary" id="adminPinSubmitBtn"><span class="material-icons-round">lock_open</span> <span data-auth-i18n="unlock">Unlock</span></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ Modal: site catalog password ═══ -->
+    <div class="modal-overlay" id="catalogKeyModal">
+        <div class="modal" style="max-width:420px;">
+            <div class="modal-header">
+                <h3 data-auth-i18n="catModalTitle">Catalog password</h3>
+                <button class="modal-close" id="catalogKeyCloseBtn" aria-label="Close"><span class="material-icons-round">close</span></button>
+            </div>
+            <p class="modal-lead" data-auth-i18n="catModalText">The song catalog is shared by every party on this site, so editing songs, reviewing them, the trash and languages need the site's catalog password (not the DJ PIN).</p>
+            <div class="form-group">
+                <label for="catalogKeyInput" data-auth-i18n="catLabel">Catalog password</label>
+                <input type="password" id="catalogKeyInput" class="field" autocomplete="current-password">
+                <div class="pin-error" id="catalogKeyError"></div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn" id="catalogKeyCancelBtn" data-auth-i18n="cancel">Cancel</button>
+                <button type="button" class="btn btn-primary" id="catalogKeySubmitBtn"><span class="material-icons-round">key</span> <span data-auth-i18n="unlock">Unlock</span></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ Notice: no DJ PIN ═══ -->
+    <div class="pin-notice sticky-note hidden" id="adminPinNotice" role="status">
+        <span class="material-icons-round">shield</span>
+        <div>
+            <div data-auth-i18n="noticeText">No DJ PIN is set: anyone with the room link can open this panel, change settings or end the party.</div>
+            <div class="pin-notice-actions">
+                <button type="button" class="btn btn-primary btn-sm" id="adminPinNoticeSet" data-auth-i18n="noticeAction">Set a PIN</button>
+                <button type="button" class="btn btn-sm" id="adminPinNoticeDismiss" data-auth-i18n="dismiss">Dismiss</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ The party is over ═══ -->
+    <div class="party-over hidden" id="partyOver" role="alertdialog" aria-labelledby="partyOverTitle">
+        <div class="sketch party-over-card tape">
+            <span class="material-icons-round">celebration</span>
+            <h2 id="partyOverTitle">The party is over</h2>
+            <p>This room has ended or expired. Thanks for singing!</p>
+            <p><a class="btn btn-primary" href="/karaoke/">Start or join a party</a></p>
+        </div>
+    </div>
+
+    <div class="toast-stack" id="toastStack" aria-live="polite"></div>
+
+    <script src="/karaoke/js/room.js"></script>
+    <script src="/karaoke/js/icons.js"></script>
+    <script src="/karaoke/js/escape.js"></script>
+    <script src="/karaoke/js/videokind.js"></script>
+    <script src="/karaoke/js/qrcode.min.js"></script>
+    <script>
+        // Online version: every API path goes through KRoom (room code prefix + auth headers).
+        KRoom.require();
+
+        let ws = null;
+        let catalog = [];
+        let queue = [];
+        let nowPlaying = null;
+        let isPlaying = false;
+        let languages = [];
+        let partyOver = false;   // the room is gone: stop polling and reconnecting
+        let endingParty = false; // this panel asked to end it: go home instead of showing the card
+
+        // What this browser may do, from GET /config (refreshed after unlocking).
+        const access = {
+            loaded: false,
+            isAdmin: false,          // room DJ: host key, DJ PIN, or no PIN set
+            isHost: KRoom.isHost(),  // this browser created the party
+            pinSet: false,
+            catalogAdmin: false,     // the stored catalog password is valid
+            catalogAvailable: true,  // catalog editing is configured on this site
+            joinUrl: ''
+        };
+
+        function detectAdminLanguage() {
+            const stored = localStorage.getItem('karaoke_language');
+            if (stored) return stored;
+            const lc = (navigator.language || '').toLowerCase();
+            if (lc.startsWith('pt-br')) return 'pt-BR';
+            if (lc.startsWith('pt')) return 'pt';
+            if (lc.startsWith('es')) return 'es';
+            if (lc.startsWith('fr')) return 'fr';
+            if (lc.startsWith('it')) return 'it';
+            if (lc.startsWith('de')) return 'de';
+            if (lc.startsWith('ja')) return 'ja';
+            if (lc.startsWith('ko')) return 'ko';
+            return 'en';
+        }
+        const adminLang = (() => { try { return detectAdminLanguage(); } catch (e) { return 'en'; } })();
+
+        // ── View Switching ──
+        function switchView(name) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            const view = document.getElementById('view-' + name);
+            if (view) view.classList.add('active');
+            document.querySelectorAll('.nav-item[data-view]').forEach(el => el.classList.remove('active'));
+            const navItem = document.querySelector(`.nav-item[data-view="${name}"]`);
+            if (navItem) navItem.classList.add('active');
+            setNavOpen(false);
+            switch (name) {
+                case 'party': renderParty(); break;
+                case 'players': loadPlayers(); break;
+                case 'review': openReview(); break;
+                case 'settings': loadSettings(); break;
+                case 'languages': renderLanguagesList(); break;
+                case 'trash': loadTrash(); break;
+            }
+        }
+        function setNavOpen(open) {
+            document.getElementById('app').classList.toggle('nav-open', open);
+            document.getElementById('navToggle').setAttribute('aria-expanded', String(open));
+        }
+        document.getElementById('sideNav').addEventListener('click', (e) => {
+            const item = e.target.closest('.nav-item[data-view]');
+            if (item) switchView(item.dataset.view);
+        });
+        document.getElementById('navToggle').addEventListener('click', () => setNavOpen(!document.getElementById('app').classList.contains('nav-open')));
+        document.getElementById('navScrim').addEventListener('click', () => setNavOpen(false));
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setNavOpen(false); });
+
+        // ── Init ──
+        document.addEventListener('DOMContentLoaded', async () => {
+            initAdminPinUI();
+            initCatalogKeyUI();
+            initParty();
+            connectWebSocket();
+            loadCatalog();
+            loadQueue();
+            loadStats();
+            loadLanguages();
+            loadPlayers();
+            switchView('queue');
+            await loadAccess();
+            // Catalog-admin lists load in the background only when the password is known,
+            // so opening the panel never pops up a password prompt.
+            if (access.catalogAdmin) { loadReviewQueue(true); loadTrash(true); }
+            maybeShowPinNotice();
+        });
+
+        // Refresh the session roster periodically: active/inactive transitions
+        // (WS connect/disconnect) aren't broadcast, so poll to keep the list and
+        // badge current.
+        setInterval(() => { if (!partyOver && !document.hidden) loadPlayers(); }, 10000);
+
+        // ── WebSocket ──
+        let wsPing = null;
+        function connectWebSocket() {
+            if (partyOver) return;
+            ws = new WebSocket(KRoom.wsUrl());
+            ws.onopen = () => {
+                clearInterval(wsPing);
+                wsPing = setInterval(() => { try { if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'ping' })); } catch (e) {} }, 45000);
+            };
+            ws.onmessage = (event) => {
+                let msg;
+                try { msg = JSON.parse(event.data); } catch (e) { return; }
+                if (msg.type === 'init' || msg.type === 'queue_update') {
+                    queue = msg.payload.queue || [];
+                    nowPlaying = msg.payload.now_playing;
+                    if (msg.payload.is_playing !== undefined) isPlaying = msg.payload.is_playing;
+                    renderQueue();
+                    renderNowPlaying();
+                    updatePlayPauseButton();
+                    // A queue change may add a new jukebox singer to the roster or
+                    // (via force logout) drop one — keep the players view in sync.
+                    if (msg.type === 'queue_update') loadPlayers();
+                }
+                if (msg.type === 'config_update') {
+                    const config = msg.payload || {};
+                    // The score screen can also be switched from the player's gear menu.
+                    if (config.score_screen_enabled !== undefined) document.getElementById('configScoreScreen').checked = config.score_screen_enabled === true;
+                    if (config.admin_pin_set !== undefined && config.admin_pin_set !== access.pinSet) loadAccess();
+                }
+                if (msg.type === 'server_shutdown') showPartyOver();
+            };
+            ws.onclose = (event) => {
+                clearInterval(wsPing);
+                if (event.code === 4404) { showPartyOver(); return; }
+                if (!partyOver) setTimeout(connectWebSocket, 3000);
+            };
+        }
+
+        // ── The party is over (room ended or expired) ──
+        function showPartyOver() {
+            if (endingParty) { location.href = '/karaoke/'; return; }
+            if (partyOver) return;
+            partyOver = true;
+            clearInterval(wsPing);
+            try { if (ws) ws.close(); } catch (e) {}
+            document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
+            document.getElementById('adminPinNotice').classList.add('hidden');
+            document.getElementById('partyOver').classList.remove('hidden');
+        }
+
+        // ── Room DJ PIN + site catalog password ──
+        // The browser that created the party (host key) never needs a PIN. Other devices
+        // need the DJ PIN once one is set (kept for this tab via KRoom.setPin). Catalog
+        // edits need the site's catalog password (kept via KRoom.setCatalogKey).
+        const AUTH_I18N = {
+            en: {
+                pinModalTitle: 'DJ PIN required', pinModalText: 'Enter this party\'s DJ PIN to continue.', pinLabel: 'DJ PIN',
+                pinWrong: 'Wrong PIN. Try again.', pinLocked: 'Too many wrong attempts. Wait a minute and try again.',
+                pinFormat: 'The PIN must be 4 to 12 digits.', cancel: 'Cancel', unlock: 'Unlock',
+                secTitle: 'Security', pinSettingLabel: 'DJ PIN',
+                pinSettingHelp: 'Protects this party\'s settings, clearing and shuffling the queue and ending the party from anyone else who has the room link. The browser that created the party never needs it.',
+                pinStatusOn: 'PIN is set', pinStatusOff: 'No PIN set: anyone with the room link can change settings',
+                pinNewPlaceholder: 'New PIN (4–12 digits)', pinSet: 'Set PIN', pinChange: 'Change PIN', pinRemove: 'Remove PIN',
+                pinRemoveConfirm: 'Remove the DJ PIN? Anyone with the room link will be able to change settings, clear the queue and end the party.',
+                pinSaved: 'DJ PIN saved.', pinRemoved: 'DJ PIN removed.', pinSaveFailed: 'Could not save the PIN', pinUnlocked: 'DJ controls unlocked.',
+                noticeText: 'No DJ PIN is set: anyone with the room link can open this panel, change settings or end the party.',
+                guestReorderNote: 'Set a DJ PIN to enforce this. Without a PIN the guest app hides the buttons, but the server cannot tell guests from the DJ.',
+                noticeAction: 'Set a PIN', dismiss: 'Dismiss',
+                catModalTitle: 'Catalog password',
+                catModalText: 'The song catalog is shared by every party on this site, so editing songs, reviewing them, the trash and languages need the site\'s catalog password (not the DJ PIN).',
+                catLabel: 'Catalog password', catEmpty: 'Type the password.',
+                catWrong: 'Wrong password. Try again.', catLocked: 'Too many wrong passwords. Wait a minute and try again.',
+                catDisabled: 'Catalog editing is not configured on this site, so songs cannot be edited, reviewed or deleted here.',
+                catFailed: 'Could not check the password', catUnlocked: 'Catalog unlocked.', catForgotten: 'Catalog password forgotten on this device.'
+            }
+        };
+        const authLang = 'en'; // the panel is English-only; add tables to AUTH_I18N to translate
+        function ta(key) { return (AUTH_I18N[authLang] && AUTH_I18N[authLang][key]) || AUTH_I18N.en[key] || key; }
+
+        const PIN_NOTICE_KEY = 'karaoke_pin_notice_dismissed_' + KRoom.code;
+        const isValidPin = (pin) => /^[0-9]{4,12}$/.test(pin);
+
+        let adminPinPrompt = null; // one shared prompt for concurrent 401s
+        function promptAdminPin(wrong) {
+            if (adminPinPrompt) return adminPinPrompt;
+            adminPinPrompt = new Promise(resolve => {
+                const modal = document.getElementById('adminPinModal');
+                const input = document.getElementById('adminPinInput');
+                const err = document.getElementById('adminPinError');
+                const submitBtn = document.getElementById('adminPinSubmitBtn');
+                input.value = '';
+                err.textContent = wrong ? ta('pinWrong') : '';
+                modal.classList.add('active');
+                setTimeout(() => input.focus(), 50);
+                const finish = (ok) => {
+                    modal.classList.remove('active');
+                    submitBtn.removeEventListener('click', submit);
+                    input.removeEventListener('keydown', onKey);
+                    document.getElementById('adminPinCancelBtn').removeEventListener('click', cancel);
+                    document.getElementById('adminPinCloseBtn').removeEventListener('click', cancel);
+                    adminPinPrompt = null;
+                    resolve(ok);
+                };
+                const cancel = () => finish(false);
+                const onKey = (e) => { if (e.key === 'Enter') submit(); else if (e.key === 'Escape') cancel(); };
+                async function submit() {
+                    const pin = input.value.trim();
+                    if (!isValidPin(pin)) { err.textContent = ta('pinFormat'); return; }
+                    submitBtn.disabled = true;
+                    try {
+                        const res = await KRoom.fetch('/admin/verify', { method: 'POST', headers: { 'X-Admin-Pin': pin } });
+                        if (res.ok) { KRoom.setPin(pin); finish(true); loadAccess(); return; }
+                        err.textContent = res.status === 429 ? ta('pinLocked') : ta('pinWrong');
+                        input.select();
+                    } catch (e) {
+                        err.textContent = ta('pinSaveFailed');
+                    } finally { submitBtn.disabled = false; }
+                }
+                submitBtn.addEventListener('click', submit);
+                input.addEventListener('keydown', onKey);
+                document.getElementById('adminPinCancelBtn').addEventListener('click', cancel);
+                document.getElementById('adminPinCloseBtn').addEventListener('click', cancel);
+            });
+            return adminPinPrompt;
+        }
+
+        let catalogKeyPrompt = null; // one shared prompt for concurrent 401s
+        function promptCatalogKey(wrong) {
+            if (!access.catalogAvailable) { notifyCatalogDisabled(); return Promise.resolve(false); }
+            if (catalogKeyPrompt) return catalogKeyPrompt;
+            catalogKeyPrompt = new Promise(resolve => {
+                const modal = document.getElementById('catalogKeyModal');
+                const input = document.getElementById('catalogKeyInput');
+                const err = document.getElementById('catalogKeyError');
+                const submitBtn = document.getElementById('catalogKeySubmitBtn');
+                input.value = '';
+                err.textContent = wrong ? ta('catWrong') : '';
+                modal.classList.add('active');
+                setTimeout(() => input.focus(), 50);
+                const finish = (ok) => {
+                    modal.classList.remove('active');
+                    submitBtn.removeEventListener('click', submit);
+                    input.removeEventListener('keydown', onKey);
+                    document.getElementById('catalogKeyCancelBtn').removeEventListener('click', cancel);
+                    document.getElementById('catalogKeyCloseBtn').removeEventListener('click', cancel);
+                    catalogKeyPrompt = null;
+                    resolve(ok);
+                };
+                const cancel = () => finish(false);
+                const onKey = (e) => { if (e.key === 'Enter') submit(); else if (e.key === 'Escape') cancel(); };
+                async function submit() {
+                    const key = input.value;
+                    if (!key.trim()) { err.textContent = ta('catEmpty'); return; }
+                    submitBtn.disabled = true;
+                    try {
+                        const res = await KRoom.fetch('/admin/catalog-verify', { method: 'POST', headers: { 'X-Catalog-Key': key } });
+                        if (res.ok) {
+                            KRoom.setCatalogKey(key);
+                            access.catalogAdmin = true;
+                            renderAccess();
+                            finish(true);
+                            loadReviewQueue(true); loadTrash(true);
+                            return;
+                        }
+                        let code = '';
+                        try { const body = await res.json(); code = body && body.data && body.data.code; } catch (e) {}
+                        if (res.status === 403 && code === 'catalog_admin_disabled') {
+                            access.catalogAvailable = false;
+                            renderAccess();
+                            err.textContent = ta('catDisabled');
+                            return;
+                        }
+                        err.textContent = res.status === 429 ? ta('catLocked') : ta('catWrong');
+                        input.select();
+                    } catch (e) {
+                        err.textContent = ta('catFailed');
+                    } finally { submitBtn.disabled = false; }
+                }
+                submitBtn.addEventListener('click', submit);
+                input.addEventListener('keydown', onKey);
+                document.getElementById('catalogKeyCancelBtn').addEventListener('click', cancel);
+                document.getElementById('catalogKeyCloseBtn').addEventListener('click', cancel);
+            });
+            return catalogKeyPrompt;
+        }
+        function notifyCatalogDisabled() {
+            access.catalogAvailable = false;
+            access.catalogAdmin = false;
+            renderAccess();
+            showToast(ta('catDisabled'), 'error');
+        }
+        const isCatalogAuthCode = (code) => ['catalog_key_required', 'catalog_key_invalid', 'catalog_key_locked', 'catalog_admin_disabled'].includes(code);
+
+        // ── API ──
+        // KRoom.fetch adds the room prefix and the host key / DJ PIN / catalog password headers.
+        // On a PIN error (or a 403 for an action only the DJ may take) asks for the PIN once
+        // and retries once; on a catalog password error asks for the password the same way.
+        // options.quiet: background call, never prompt.
+        async function api(endpoint, options = {}, retried = false) {
+            const { quiet, ...opts } = options;
+            let res;
+            try { res = await KRoom.fetch(endpoint, opts); }
+            catch (e) { return { success: false, error: 'Could not reach the server' }; }
+            let data;
+            try { data = await res.json(); } catch (e) { data = { success: false, error: 'HTTP ' + res.status }; }
+            const code = data && data.data && data.data.code;
+            if (res.status === 404 && code === 'room_not_found') { showPartyOver(); return data; }
+            if (res.status === 429 && code === 'admin_pin_locked') { if (!quiet) showToast(ta('pinLocked'), 'error'); return data; }
+            if (res.status === 429 && code === 'catalog_key_locked') { if (!quiet) showToast(ta('catLocked'), 'error'); return data; }
+            if (res.status === 403 && code === 'catalog_admin_disabled') {
+                if (quiet) { access.catalogAvailable = false; access.catalogAdmin = false; renderAccess(); }
+                else notifyCatalogDisabled();
+                return data;
+            }
+            const needsPin = (res.status === 401 && (code === 'admin_pin_required' || code === 'admin_pin_invalid')) ||
+                (res.status === 403 && (code === 'not_owner' || code === 'guest_reorder_own_only'));
+            if (needsPin) {
+                if (code === 'admin_pin_invalid') KRoom.setPin(''); // stale PIN: stop sending it
+                if (!quiet && !retried && await promptAdminPin(code === 'admin_pin_invalid')) return api(endpoint, options, true);
+                return data;
+            }
+            const needsKey = res.status === 401 && (code === 'catalog_key_required' || code === 'catalog_key_invalid');
+            if (needsKey) {
+                if (code === 'catalog_key_invalid') KRoom.setCatalogKey(''); // stale password
+                if (access.catalogAdmin) { access.catalogAdmin = false; renderAccess(); }
+                if (!quiet && !retried && await promptCatalogKey(code === 'catalog_key_invalid')) return api(endpoint, options, true);
+            }
+            return data;
+        }
+
+        // ── Utilities ──
+        // Both aliases share the quote-safe helper from /karaoke/js/escape.js.
+        const escapeHtml = window.escapeHtml;
+        const escHtml = window.escapeHtml;
+        // Video-type chips (shared /karaoke/js/videokind.js); '' for plain karaoke / unchecked.
+        const vkChips = (song) => window.videoKindChips ? window.videoKindChips(song, 'en') : '';
+        const hasVkWarning = (song) => !!song && ['lyric_video', 'instrumental', 'music_video'].includes(song.video_kind);
+        const VIDEO_KIND_OPTIONS = [
+            { value: '', label: 'Not checked', short: 'Not checked' },
+            { value: 'karaoke', label: 'Karaoke', short: 'Karaoke' },
+            { value: 'lyric_video', label: 'With original vocals (lyric video)', short: 'With vocals' },
+            { value: 'instrumental', label: 'No lyrics on screen (instrumental)', short: 'No lyrics' },
+            { value: 'music_video', label: 'Vocals and no lyrics (music video)', short: 'Vocals, no lyrics' }
+        ];
+        // Sticky-note toasts. type: '' | 'success' | 'error' | 'info'
+        function showToast(msg, type = '') {
+            if (!msg) return;
+            const stack = document.getElementById('toastStack');
+            const note = document.createElement('div');
+            note.className = 'sticky-note toast' + (type ? ' ' + type : '');
+            note.setAttribute('role', type === 'error' ? 'alert' : 'status');
+            note.textContent = msg;
+            stack.appendChild(note);
+            while (stack.children.length > 4) stack.firstElementChild.remove();
+            const ms = type === 'error' ? 6000 : 3200;
+            setTimeout(() => { note.classList.add('leaving'); setTimeout(() => note.remove(), 350); }, ms);
+            note.addEventListener('click', () => note.remove());
+        }
+        const failMsg = (r, fallback = 'Unknown error') => 'Failed: ' + ((r && r.error) || fallback);
+        // Thumbnails are YouTube images now (KRoom.thumb), escaped for attributes.
+        const thumbUrl = (song) => escapeHtml(KRoom.thumb(song) || '');
+        function removeAccents(text) { return text.normalize('NFD').replace(/[̀-ͯ]/g, ''); }
+        function ngramTokens(str, n = 3) { const padded = ` ${str} `; const tokens = new Set(); for (let i = 0; i <= padded.length - n; i++) tokens.add(padded.slice(i, i + n)); return tokens; }
+        function songSearch(songs, query) {
+            const q = removeAccents(query).toLowerCase();
+            if (!q) return songs;
+            const qGrams = ngramTokens(q);
+            return songs.map(song => {
+                const title = removeAccents(song.title || '').toLowerCase();
+                const artist = removeAccents(song.artist || '').toLowerCase();
+                const combined = title + ' ' + artist;
+                let score = 0;
+                if (title.includes(q) || artist.includes(q)) score = 2;
+                else if (qGrams.size > 0) { const tGrams = ngramTokens(combined); let m = 0; for (const g of qGrams) if (tGrams.has(g)) m++; score = m / qGrams.size; }
+                return { song, score };
+            }).filter(({ score }) => score > 0.6).sort((a, b) => b.score - a.score).map(({ song }) => song);
+        }
+
+        // ── Catalog ──
+        async function loadCatalog() {
+            const result = await api('/catalog');
+            if (result.success) { catalog = result.data || []; filterCatalog(); }
+        }
+        function renderCatalog(songs) {
+            if (document.getElementById('catalogWarnOnly')?.checked) songs = (songs || []).filter(hasVkWarning);
+            const container = document.getElementById('catalogTableBody');
+            const countEl = document.getElementById('catalogCountLabel');
+            const navCount = document.getElementById('catalogNavCount');
+            if (countEl) countEl.textContent = catalog.length ? `${catalog.length} songs` : '';
+            if (navCount) navCount.textContent = catalog.length || '';
+            if (!songs || songs.length === 0) { container.innerHTML = '<div class="empty-state"><span class="material-icons-round">library_music</span><p>No songs in catalog</p></div>'; return; }
+            const keyTip = access.catalogAdmin ? '' : ' (needs the catalog password)';
+            container.innerHTML = `<table class="data-table"><thead><tr>
+                <th style="width:70px">Code</th><th>Song</th><th>Artist</th><th>Language</th><th style="width:140px">Actions</th>
+            </tr></thead><tbody>${songs.map(song => `<tr>
+                <td class="col-code"><span class="code-stamp">${song.code ? escapeHtml(String(song.code)) : '—'}</span></td>
+                <td class="col-song"><div class="table-song"><div class="table-thumb">${KRoom.thumb(song) ? `<img src="${thumbUrl(song)}" loading="lazy" alt="" onerror="this.style.display='none'">` : ''}</div><div class="table-song-info"><span class="table-song-name">${escapeHtml(song.title)}</span>${song.lyrics_start ? `<span class="table-song-verse">${escapeHtml(song.lyrics_start)}</span>` : ''}${vkChips(song)}</div></div></td>
+                <td class="col-meta table-muted">${escapeHtml(song.artist)}</td>
+                <td class="col-meta"><span class="lang-tag">${escapeHtml(song.language || '—')}</span></td>
+                <td class="col-actions"><div class="table-actions">
+                    <button class="tbl-btn success" data-catalog-action="add" data-song-id="${escapeHtml(song.id)}" title="Add to queue"><span class="material-icons-round">add</span></button>
+                    <button class="tbl-btn" data-catalog-action="edit" data-song-id="${escapeHtml(song.id)}" title="Edit${keyTip}"><span class="material-icons-round">edit</span></button>
+                    <button class="tbl-btn danger" data-catalog-action="delete" data-song-id="${escapeHtml(song.id)}" title="Move to trash${keyTip}"><span class="material-icons-round">delete</span></button>
+                </div></td>
+            </tr>`).join('')}</tbody></table>`;
+        }
+        document.getElementById('catalogTableBody').addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-catalog-action]');
+            if (!btn) return;
+            const id = btn.dataset.songId;
+            switch (btn.dataset.catalogAction) {
+                case 'add': addToQueue(id); break;
+                case 'edit': openEditModal(id); break;
+                case 'delete': deleteSong(id); break;
+            }
+        });
+        document.getElementById('catalogWarnOnly').addEventListener('change', () => filterCatalog());
+        function filterCatalog() {
+            const query = document.getElementById('catalogSearch').value.trim();
+            renderCatalog(query ? songSearch(catalog, query) : catalog);
+        }
+
+        // ── Players (session roster) ──
+        async function loadPlayers() {
+            const result = await api('/users', { quiet: true });
+            if (result && result.success) renderPlayers(result.data || []);
+        }
+        function renderPlayers(players) {
+            const container = document.getElementById('playersTableBody');
+            const countEl = document.getElementById('playersCount');
+            const navCount = document.getElementById('playersNavCount');
+            const online = players.filter(p => p.status === 'active').length;
+            if (countEl) countEl.textContent = players.length ? `${players.length} player${players.length !== 1 ? 's' : ''} · ${online} online` : 'No players';
+            if (navCount) navCount.textContent = players.length || '';
+            if (!players.length) { container.innerHTML = '<div class="empty-state"><span class="material-icons-round">groups</span><p>No players in this session</p></div>'; return; }
+            container.innerHTML = `<table class="data-table"><thead><tr>
+                <th>Player</th><th style="width:140px">Status</th><th style="width:90px">Actions</th>
+            </tr></thead><tbody>${players.map(p => {
+                const active = p.status === 'active';
+                const status = active
+                    ? '<span class="status-chip on"><i></i>Online</span>'
+                    : '<span class="status-chip"><i></i>Offline</span>';
+                return `<tr>
+                    <td class="col-song"><span class="table-song-name">${escapeHtml(p.name)}</span></td>
+                    <td class="col-meta">${status}</td>
+                    <td class="col-actions"><div class="table-actions">
+                        <button class="tbl-btn danger player-logout-btn" data-name="${escHtml(p.name)}" title="Force logout — removes them from the session and deletes their queued songs"><span class="material-icons-round">logout</span></button>
+                    </div></td>
+                </tr>`;
+            }).join('')}</tbody></table>`;
+            // Read the raw name from the data attribute so names with quotes/&/<>
+            // survive (avoids inline onclick string-escaping pitfalls).
+            container.querySelectorAll('.player-logout-btn').forEach(btn => {
+                btn.addEventListener('click', () => forceLogout(btn.dataset.name));
+            });
+        }
+        async function forceLogout(name) {
+            if (!name) return;
+            if (!confirm(`Force logout "${name}"?\n\nThis removes them from this session and deletes their queued songs.`)) return;
+            const result = await api('/users/signout', { method: 'POST', body: JSON.stringify({ user_name: name }) });
+            if (result && result.success) { loadPlayers(); showToast(`${name} was signed out`, 'success'); }
+            else if (result && result.error) showToast(result.error, 'error');
+        }
+
+        // ── Queue ──
+        async function loadQueue() {
+            const result = await api('/queue');
+            if (result.success) {
+                queue = result.data.queue || [];
+                nowPlaying = result.data.now_playing;
+                isPlaying = result.data.is_playing || false;
+                renderQueue(); renderNowPlaying(); updatePlayPauseButton();
+            }
+        }
+        function renderQueue() {
+            const container = document.getElementById('queueTableBody');
+            const countEl = document.getElementById('queueCount');
+            const badge = document.getElementById('queueBadge');
+            if (countEl) countEl.textContent = queue.length ? `${queue.length} song${queue.length !== 1 ? 's' : ''}` : 'Empty';
+            if (badge) { badge.textContent = queue.length; queue.length > 0 ? badge.classList.remove('hidden') : badge.classList.add('hidden'); }
+            if (!queue || queue.length === 0) { container.innerHTML = '<div class="empty-state"><span class="material-icons-round">queue_music</span><p>Queue is empty</p><p style="font-size:16px">Add songs from the Catalog, or let the guests pick on their phones.</p></div>'; return; }
+            container.innerHTML = `<table class="data-table"><thead><tr>
+                <th style="width:46px">#</th><th>Song</th><th>Artist</th><th>Requested By</th><th style="width:140px">Actions</th>
+            </tr></thead><tbody>${queue.map((item, i) => {
+                const song = item.song || {};
+                const playing = item.status === 'playing';
+                const id = escapeHtml(item.id);
+                return `<tr class="${playing ? 'playing' : ''}">
+                    <td class="col-code"><span class="q-pos${playing ? ' now' : ''}">${playing ? '<span class="material-icons-round" title="Playing now">play_arrow</span>' : i + 1}</span></td>
+                    <td class="col-song"><div class="table-song"><div class="table-thumb">${KRoom.thumb(song) ? `<img src="${thumbUrl(song)}" loading="lazy" alt="" onerror="this.style.display='none'">` : ''}</div><div class="table-song-info"><span class="table-song-name">${escapeHtml(song.title || 'Unknown')}</span>${vkChips(song)}</div></div></td>
+                    <td class="col-meta table-muted">${escapeHtml(song.artist || 'Unknown')}</td>
+                    <td class="col-meta table-muted"><span class="material-icons-round" style="font-size:16px;vertical-align:-2px">mic</span> ${escapeHtml(item.user_name)}</td>
+                    <td class="col-actions"><div class="table-actions">
+                        ${!playing && pendingIndexOf(item.id) > 0 ? `<button class="tbl-btn" data-queue-action="up" data-item-id="${id}" title="Move up"><span class="material-icons-round">arrow_upward</span></button>` : ''}
+                        ${!playing && pendingIndexOf(item.id) < pendingCount() - 1 ? `<button class="tbl-btn" data-queue-action="down" data-item-id="${id}" title="Move down"><span class="material-icons-round">arrow_downward</span></button>` : ''}
+                        <button class="tbl-btn danger" data-queue-action="remove" data-item-id="${id}" title="Remove"><span class="material-icons-round">close</span></button>
+                    </div></td>
+                </tr>`;
+            }).join('')}</tbody></table>`;
+        }
+        document.getElementById('queueTableBody').addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-queue-action]');
+            if (!btn) return;
+            const id = btn.dataset.itemId;
+            switch (btn.dataset.queueAction) {
+                case 'up': moveUp(id); break;
+                case 'down': moveDown(id); break;
+                case 'remove': removeFromQueue(id); break;
+            }
+        });
+
+        // ── Now Playing ──
+        const MIC_PLACEHOLDER = '<div class="placeholder"><span class="material-icons-round">mic</span></div>';
+        function renderNowPlaying() {
+            const artEl = document.getElementById('nowPlayingArt');
+            const titleEl = document.getElementById('nowPlayingTitle');
+            const artistEl = document.getElementById('nowPlayingArtist');
+            const userEl = document.getElementById('nowPlayingUser');
+            if (nowPlaying && nowPlaying.song) {
+                const song = nowPlaying.song;
+                const src = KRoom.thumb(song);
+                if (src) {
+                    const img = document.createElement('img');
+                    img.alt = '';
+                    img.src = src;
+                    img.onerror = () => { artEl.innerHTML = MIC_PLACEHOLDER; };
+                    artEl.innerHTML = '';
+                    artEl.appendChild(img);
+                } else {
+                    artEl.innerHTML = MIC_PLACEHOLDER;
+                }
+                titleEl.textContent = song.title;
+                artistEl.textContent = song.artist;
+                userEl.textContent = `Requested by ${nowPlaying.user_name}`;
+            } else {
+                artEl.innerHTML = MIC_PLACEHOLDER;
+                titleEl.textContent = 'No song playing';
+                artistEl.textContent = '-';
+                userEl.textContent = '';
+            }
+        }
+        function updatePlayPauseButton() {
+            const btn = document.getElementById('playPauseBtn');
+            // Re-render the icon element (icons.js swaps it for a drawing, so its text cannot be edited).
+            if (btn) btn.innerHTML = `<span class="material-icons-round">${isPlaying ? 'pause' : 'play_arrow'}</span>`;
+        }
+
+        // ── Actions ──
+        async function addToQueue(songId) {
+            const r = await api('/queue', { method: 'POST', body: JSON.stringify({ song_id: songId, user_name: 'Control Panel' }) });
+            if (r && r.success) { const s = catalog.find(x => x.id === songId); showToast(s ? `Queued: ${s.title}` : 'Added to the queue', 'success'); }
+            else showToast(failMsg(r), 'error');
+            return r;
+        }
+        async function removeFromQueue(itemId) {
+            const r = await api(`/queue/${encodeURIComponent(itemId)}`, { method: 'DELETE' });
+            if (r && !r.success) showToast(failMsg(r), 'error');
+        }
+        async function deleteSong(songId) {
+            const song = catalog.find(s => s.id === songId);
+            const songTitle = song ? song.title : 'this song';
+            if (!confirm(`Move "${songTitle}" to the trash?\n\nIt can be restored from Trash until you delete it forever.`)) return;
+            const result = await api(`/catalog/songs/${encodeURIComponent(songId)}`, { method: 'DELETE' });
+            if (result.success) { catalog = catalog.filter(s => s.id !== songId); filterCatalog(); loadStats(); loadTrash(true); showToast(`"${songTitle}" moved to the trash`, 'success'); }
+            else showToast(failMsg(result), 'error');
+        }
+
+        // ── Trash (soft-deleted songs) ──
+        async function loadTrash(quiet = false) {
+            if (quiet && !access.catalogAdmin) return;
+            const summary = document.getElementById('trashSummary');
+            const list = document.getElementById('trashList');
+            const r = await api('/catalog/trash', quiet ? { quiet: true } : {});
+            if (!r || !r.success) {
+                const code = r && r.data && r.data.code;
+                if (quiet) return;
+                if (isCatalogAuthCode(code)) { summary.textContent = 'Locked'; list.innerHTML = lockedCardHtml('the trash'); }
+                else { summary.textContent = 'Failed to load.'; list.innerHTML = ''; }
+                return;
+            }
+            const songs = r.data || [];
+            const badge = document.getElementById('trashBadge');
+            badge.textContent = songs.length;
+            songs.length ? badge.classList.remove('hidden') : badge.classList.add('hidden');
+            summary.textContent = songs.length ? `${songs.length} song${songs.length !== 1 ? 's' : ''} in the trash` : 'Trash is empty';
+            if (!songs.length) { list.innerHTML = '<div class="empty-state"><span class="material-icons-round">delete_outline</span><p>Nothing in the trash</p></div>'; return; }
+            list.innerHTML = `<table class="data-table"><thead><tr>
+                <th style="width:70px">Code</th><th>Title</th><th>Artist</th><th style="width:170px">Deleted</th><th style="width:300px">Actions</th>
+            </tr></thead><tbody>${songs.map(song => `<tr>
+                <td class="col-code"><span class="code-stamp">${escHtml(String(song.code))}</span></td>
+                <td class="col-song">${escHtml(song.title)}</td>
+                <td class="col-meta table-muted">${escHtml(song.artist)}</td>
+                <td class="col-meta table-muted">${song.deleted_at ? escHtml(new Date(song.deleted_at).toLocaleString()) : ''}</td>
+                <td class="col-actions"><div class="table-actions">
+                    <button class="btn btn-sm" data-trash-action="restore" data-song-id="${escHtml(song.id)}"><span class="material-icons-round">restore_from_trash</span> Restore</button>
+                    <button class="btn btn-sm btn-danger" data-trash-action="purge" data-song-id="${escHtml(song.id)}" data-song-title="${escHtml(song.title)}"><span class="material-icons-round">delete_forever</span> Delete forever</button>
+                </div></td>
+            </tr>`).join('')}</tbody></table>`;
+        }
+        document.getElementById('trashList').addEventListener('click', async (e) => {
+            const btn = e.target.closest('[data-trash-action]');
+            if (!btn) return;
+            const id = btn.dataset.songId;
+            if (btn.dataset.trashAction === 'purge') {
+                if (!confirm(`Permanently delete "${btn.dataset.songTitle}"?\n\nIt is removed from the site's catalog and cannot be undone.`)) return;
+                const r = await api(`/catalog/songs/${encodeURIComponent(id)}/purge`, { method: 'DELETE' });
+                if (!r.success) showToast(failMsg(r), 'error');
+            } else {
+                const r = await api(`/catalog/songs/${encodeURIComponent(id)}/restore`, { method: 'POST' });
+                if (!r.success) showToast(failMsg(r), 'error');
+                else { loadCatalog(); loadStats(); showToast('Song restored', 'success'); }
+            }
+            loadTrash();
+        });
+        async function playPause() {
+            if (isPlaying) { await api('/queue/pause', { method: 'POST' }); isPlaying = false; }
+            else { await api(nowPlaying ? '/queue/resume' : '/queue/play', { method: 'POST' }); isPlaying = true; }
+            updatePlayPauseButton();
+        }
+        async function skipSong() { const r = await api('/queue/skip', { method: 'POST' }); if (!r || !r.success) showToast(failMsg(r, 'could not skip'), 'error'); }
+        async function restartSong() { const r = await api('/queue/restart', { method: 'POST' }); if (!r || !r.success) showToast(failMsg(r, 'could not restart'), 'error'); }
+        async function clearQueue() {
+            if (!confirm('Clear the entire queue?')) return;
+            const r = await api('/queue', { method: 'DELETE' });
+            if (r && !r.success) showToast(failMsg(r), 'error');
+        }
+        // The server orders only pending items; `queue` also holds the playing one.
+        function pendingCount() { return queue.filter(i => i.status === 'pending').length; }
+        function pendingIndexOf(id) { return queue.filter(i => i.status === 'pending').findIndex(i => i.id === id); }
+        async function shuffleQueue() {
+            if (pendingCount() < 2) return;
+            const r = await api('/queue/shuffle', { method: 'POST' });
+            if (r && !r.success) showToast('Failed to shuffle: ' + (r.error || 'Unknown error'), 'error');
+        }
+        async function moveInQueueBy(itemId, delta) {
+            const idx = pendingIndexOf(itemId);
+            const target = idx + delta;
+            if (idx < 0 || target < 0 || target >= pendingCount()) return;
+            const r = await api(`/queue/${encodeURIComponent(itemId)}/reorder`, { method: 'PUT', body: JSON.stringify({ position: target, user_name: 'DJ', direction: delta < 0 ? 'up' : 'down' }) });
+            if (r && !r.success) showToast('Failed to move: ' + (r.error || 'Unknown error'), 'error');
+        }
+        async function moveUp(itemId) { await moveInQueueBy(itemId, -1); }
+        async function moveDown(itemId) { await moveInQueueBy(itemId, 1); }
+        // Printable catalog page (replaces the PDF generator): labels in PT-BR / es / en.
+        function printLabelLang() {
+            const l = String(adminLang).toLowerCase();
+            return l.startsWith('pt') ? 'PT-BR' : (l.startsWith('es') ? 'es' : 'en');
+        }
+        function openPrintCatalog(lang) {
+            window.open('/karaoke/print/?r=' + encodeURIComponent(KRoom.code) + '&lang=' + encodeURIComponent(lang || printLabelLang()), '_blank', 'noopener');
+        }
+        function openMobileUI() { window.open(KRoom.page('sing'), '_blank', 'noopener'); }
+        async function loadStats() {
+            const result = await api('/catalog/stats');
+            if (result.success && result.data) {
+                document.getElementById('statSongs').textContent = result.data.total_songs || 0;
+                document.getElementById('statArtists').textContent = result.data.total_artists || 0;
+                document.getElementById('statPlays').textContent = catalog.reduce((sum, s) => sum + (s.play_count || 0), 0);
+            }
+        }
+
+        // ── Edit Song Modal ──
+        async function openEditModal(songId, title = '', artist = '') {
+            // Prefer catalog cache; fall back to individual fetch
+            let song = catalog.find(s => s.id === songId);
+            if (!song) {
+                const r = await api(`/catalog/songs/${encodeURIComponent(songId)}`);
+                if (r.success) song = r.data;
+            }
+
+            document.getElementById('editSongId').value = songId;
+            document.getElementById('editTitle').value = song?.title || title;
+            document.getElementById('editArtist').value = song?.artist || artist;
+            document.getElementById('editLanguage').value = song?.language || adminLang;
+            document.getElementById('editLyricsStart').value = song?.lyrics_start || '';
+            editInitialVideoKind = song?.video_kind || '';
+            document.getElementById('editVideoKind').value = editInitialVideoKind;
+
+            // YouTube thumbnail + link
+            const thumbEl = document.getElementById('editYoutubeThumb');
+            const ytLinkBtn = document.getElementById('editYoutubeLink');
+            const youtubeId = song?.youtube_id || '';
+            if (youtubeId || song?.thumbnail_url) {
+                document.getElementById('editYoutubeImg').src = KRoom.thumb(song);
+                thumbEl.style.display = 'block';
+            } else thumbEl.style.display = 'none';
+            if (youtubeId || song?.youtube_url) {
+                ytLinkBtn.href = song?.youtube_url || `https://www.youtube.com/watch?v=${encodeURIComponent(youtubeId)}`;
+                ytLinkBtn.style.display = 'inline-flex';
+            } else ytLinkBtn.style.display = 'none';
+
+            // First verse preview
+            updateLyricsPreview();
+
+            document.getElementById('editModal').classList.add('active');
+        }
+
+        function updateLyricsPreview() {
+            const val = document.getElementById('editLyricsStart').value.trim();
+            const preview = document.getElementById('editLyricsPreview');
+            if (val) {
+                preview.textContent = `"${val}"`;
+                preview.style.display = 'block';
+            } else {
+                preview.style.display = 'none';
+            }
+        }
+        function closeEditModal() { document.getElementById('editModal').classList.remove('active'); }
+        // The kind the dialog opened with: video_kind is sent only when the DJ
+        // changed it, so saving other fields never turns an auto/hand label into "dj".
+        let editInitialVideoKind = '';
+        async function saveSongEdit(event) {
+            event.preventDefault();
+            const songId = document.getElementById('editSongId').value;
+            const title = document.getElementById('editTitle').value;
+            const artist = document.getElementById('editArtist').value;
+            const language = document.getElementById('editLanguage').value;
+            const lyricsStart = document.getElementById('editLyricsStart').value;
+            const videoKind = document.getElementById('editVideoKind').value;
+            const payload = { title, artist, language, lyrics_start: lyricsStart };
+            const kindChanged = videoKind !== editInitialVideoKind;
+            if (kindChanged) payload.video_kind = videoKind;
+            const result = await api(`/catalog/songs/${encodeURIComponent(songId)}`, { method: 'PUT', body: JSON.stringify(payload) });
+            if (result.success) {
+                const idx = catalog.findIndex(s => s.id === songId);
+                if (idx !== -1) {
+                    catalog[idx].title = title; catalog[idx].artist = artist; catalog[idx].language = language; catalog[idx].lyrics_start = lyricsStart;
+                    if (kindChanged) { catalog[idx].video_kind = videoKind; catalog[idx].video_kind_source = videoKind ? 'dj' : ''; }
+                }
+                filterCatalog(); closeEditModal();
+                showToast('Song saved', 'success');
+            } else showToast(failMsg(result), 'error');
+        }
+
+        // ── Metadata Modal ──
+        // Jobs are synchronous online: the HTTP response of /youtube/download and
+        // /youtube/submit-metadata carries the finished job (no WebSocket job broadcast).
+        function handleJobUpdate(job) {
+            if (!job) return;
+            if (job.status === 'confirm_metadata') {
+                openMetadataModal(job.data?.video_id || '', job.data?.video_title || 'Unknown', job.data?.video_channel || 'Unknown', job.data?.extracted_title || '', job.data?.extracted_artist || '', job.data?.extracted_language || adminLang, job.data?.extracted_lyrics || '');
+            } else if (job.status === 'completed') {
+                document.getElementById('metadataModal').classList.remove('active');
+                loadCatalog(); loadStats(); loadReviewQueue(true);
+                showToast('Song added to the catalog', 'success');
+            } else if (job.status === 'failed') {
+                showToast('Failed: ' + (job.error || 'Unknown error'), 'error');
+            }
+        }
+        function openMetadataModal(videoId, videoTitle, videoChannel, extractedTitle = '', extractedArtist = '', extractedLanguage = adminLang, extractedLyrics = '') {
+            document.getElementById('metadataVideoId').value = videoId;
+            document.getElementById('metadataVideoTitle').textContent = videoTitle;
+            document.getElementById('metadataVideoChannel').textContent = videoChannel;
+            document.getElementById('metadataTitle').value = extractedTitle;
+            document.getElementById('metadataArtist').value = extractedArtist;
+            document.getElementById('metadataLanguage').value = extractedLanguage || adminLang;
+            document.getElementById('metadataLyricsStart').value = extractedLyrics;
+            const modalTitle = document.getElementById('metadataModalTitle');
+            const modalDesc = document.getElementById('metadataModalDesc');
+            if (extractedTitle && extractedArtist) { modalTitle.textContent = 'Confirm Song Metadata'; modalDesc.textContent = 'Metadata detected from the video title and music catalogs. Please review and confirm.'; }
+            else { modalTitle.textContent = 'Enter Song Metadata'; modalDesc.textContent = 'Could not detect the metadata. Please provide the song information manually.'; }
+            document.getElementById('metadataModal').classList.add('active');
+            checkMetadataDuplicates();
+        }
+        // Warn when the catalog already has this song (accent/case/punctuation-insensitive).
+        let metadataDuplicates = [];
+        let metadataDupTimer = null;
+        async function checkMetadataDuplicates() {
+            const title = document.getElementById('metadataTitle').value.trim();
+            const artist = document.getElementById('metadataArtist').value.trim();
+            const box = document.getElementById('metadataDuplicates');
+            metadataDuplicates = [];
+            box.style.display = 'none';
+            if (!title || !artist) return;
+            const r = await api(`/catalog/duplicates?title=${encodeURIComponent(title)}&artist=${encodeURIComponent(artist)}`, { quiet: true });
+            if (!r.success || !r.data?.length) return;
+            // Ignore stale responses if the fields changed meanwhile.
+            if (title !== document.getElementById('metadataTitle').value.trim() || artist !== document.getElementById('metadataArtist').value.trim()) return;
+            metadataDuplicates = r.data;
+            box.innerHTML = `<strong>Already in the catalog:</strong><br>` + r.data.map(s => `#${escapeHtml(String(s.code))} ${escapeHtml(s.artist)} – ${escapeHtml(s.title)}`).join('<br>');
+            box.style.display = 'block';
+        }
+        ['metadataTitle', 'metadataArtist'].forEach(id => document.getElementById(id).addEventListener('input', () => {
+            clearTimeout(metadataDupTimer);
+            metadataDupTimer = setTimeout(checkMetadataDuplicates, 300);
+        }));
+        function cancelMetadataModal() { document.getElementById('metadataModal').classList.remove('active'); }
+        async function submitMetadata(event) {
+            event.preventDefault();
+            if (metadataDuplicates.length && !confirm('This song is already in the catalog. Add another copy anyway?')) return;
+            const videoId = document.getElementById('metadataVideoId').value;
+            const result = await api('/youtube/submit-metadata', { method: 'POST', body: JSON.stringify({ video_id: videoId, title: document.getElementById('metadataTitle').value, artist: document.getElementById('metadataArtist').value, language: document.getElementById('metadataLanguage').value || adminLang, lyrics_start: document.getElementById('metadataLyricsStart').value, user_name: 'Control Panel' }) });
+            if (result.success) { document.getElementById('metadataModal').classList.remove('active'); handleJobUpdate(result.data?.job); }
+            else showToast(failMsg(result), 'error');
+        }
+        async function handleCatalogSearchEnter() {
+            const input = document.getElementById('catalogSearch');
+            const value = input.value.trim();
+            if (!value) return;
+            const code = parseInt(value);
+            if (!isNaN(code) && code > 0 && value === String(code)) {
+                const song = catalog.find(s => s.code === code);
+                if (song) { const r = await addToQueue(song.id); if (r && r.success) { input.value = ''; filterCatalog(); } }
+                else showToast(`Song with code ${code} not found`, 'error');
+            }
+        }
+
+        // ── Languages ──
+        async function loadLanguages() { const r = await api('/languages'); if (r.success) { languages = r.data || []; updateLanguageSelects(); } }
+        function updateLanguageSelects() {
+            ['editLanguage', 'metadataLanguage'].forEach(id => {
+                const sel = document.getElementById(id);
+                if (sel) { const cur = sel.value; sel.innerHTML = languages.map(l => `<option value="${escapeHtml(l.id)}">${escapeHtml(l.name)}</option>`).join(''); if (cur && languages.find(l => l.id === cur)) sel.value = cur; }
+            });
+        }
+        function openLanguagesModal() { switchView('languages'); }
+        function closeLanguagesModal() {}
+        function renderLanguagesList() {
+            const container = document.getElementById('languagesTableBody');
+            if (!languages || languages.length === 0) { container.innerHTML = '<div class="empty-state"><span class="material-icons-round">language</span><p>No languages configured</p></div>'; return; }
+            const langCounts = {};
+            catalog.forEach(song => { const l = song.language || adminLang; langCounts[l] = (langCounts[l] || 0) + 1; });
+            container.innerHTML = `<table class="data-table"><thead><tr><th>Name</th><th>ID</th><th>Acronym</th><th>Songs</th><th style="width:100px">Actions</th></tr></thead>
+            <tbody>${languages.map(lang => {
+                const c = langCounts[lang.id] || 0;
+                return `<tr><td class="col-song">${escapeHtml(lang.name)}</td><td class="col-meta table-muted">${escapeHtml(lang.id)}</td>
+                <td class="col-meta"><span class="lang-tag">${escapeHtml(lang.acronym)}</span></td>
+                <td class="col-meta">${c > 0 ? `<span class="highlight">${c}</span>` : '0'}</td>
+                <td class="col-actions"><div class="table-actions">
+                    <button class="tbl-btn" data-lang-action="edit" data-lang-id="${escapeHtml(lang.id)}" title="Edit"><span class="material-icons-round">edit</span></button>
+                    <button class="tbl-btn danger" data-lang-action="delete" data-lang-id="${escapeHtml(lang.id)}" data-count="${c}" title="${c > 0 ? 'In use: cannot delete' : 'Delete'}" ${c > 0 ? 'disabled' : ''}><span class="material-icons-round">delete</span></button>
+                </div></td></tr>`;
+            }).join('')}</tbody></table>`;
+        }
+        document.getElementById('languagesTableBody').addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-lang-action]');
+            if (!btn) return;
+            if (btn.dataset.langAction === 'edit') editLanguage(btn.dataset.langId);
+            else deleteLanguage(btn.dataset.langId, parseInt(btn.dataset.count, 10) || 0);
+        });
+        async function addNewLanguage() {
+            const name = document.getElementById('newLangName').value.trim();
+            const id = document.getElementById('newLangId').value.trim();
+            const acronym = document.getElementById('newLangAcronym').value.trim().toUpperCase();
+            if (!name || !id || !acronym) { showToast('Please fill in all fields', 'error'); return; }
+            if (languages.find(l => l.id === id)) { showToast('Language ID already exists', 'error'); return; }
+            const r = await api('/languages', { method: 'POST', body: JSON.stringify({ id, name, acronym }) });
+            if (r.success) { document.getElementById('newLangName').value = ''; document.getElementById('newLangId').value = ''; document.getElementById('newLangAcronym').value = ''; await loadLanguages(); renderLanguagesList(); showToast('Language added', 'success'); }
+            else showToast(failMsg(r), 'error');
+        }
+        async function editLanguage(langId) {
+            const lang = languages.find(l => l.id === langId);
+            if (!lang) return;
+            const newName = prompt('Edit language name:', lang.name);
+            if (newName === null) return;
+            const newAcronym = prompt('Edit acronym:', lang.acronym);
+            if (newAcronym === null) return;
+            const r = await api(`/languages/${encodeURIComponent(langId)}`, { method: 'PUT', body: JSON.stringify({ name: newName.trim() || lang.name, acronym: (newAcronym.trim() || lang.acronym).toUpperCase() }) });
+            if (r.success) { await loadLanguages(); renderLanguagesList(); } else showToast(failMsg(r), 'error');
+        }
+        async function deleteLanguage(langId, songCount) {
+            if (songCount > 0) { showToast(`Cannot delete: ${songCount} song(s) are using it.`, 'error'); return; }
+            if (!confirm('Delete this language?')) return;
+            const r = await api(`/languages/${encodeURIComponent(langId)}`, { method: 'DELETE' });
+            if (r.success) { await loadLanguages(); renderLanguagesList(); } else showToast(failMsg(r), 'error');
+        }
+
+        // ── Settings (this party only) ──
+        function openSettingsModal() { switchView('settings'); }
+        function closeSettingsModal() {}
+        async function loadSettings() {
+            const r = await api('/config');
+            if (r.success && r.data) {
+                const config = r.data;
+                applyAccess(config);
+                const qs = config.queue_strategy || 'fifo';
+                const qsr = document.querySelector(`input[name="queueStrategy"][value="${qs === 'fair' ? 'fair' : 'fifo'}"]`); if (qsr) qsr.checked = true;
+                const gr = config.guest_reorder === 'own_only' ? 'own_only' : 'all';
+                const grr = document.querySelector(`input[name="guestReorder"][value="${gr}"]`); if (grr) grr.checked = true;
+                const jc = config.jukebox_controls === 'full' ? 'full' : 'add_only';
+                const jcr = document.querySelector(`input[name="jukeboxControls"][value="${jc}"]`); if (jcr) jcr.checked = true;
+                const scoreCb = document.getElementById('configScoreScreen'); if (scoreCb) scoreCb.checked = config.score_screen_enabled === true;
+                const sm = config.score_mode === 'random' ? 'random' : 'heuristic';
+                const smr = document.querySelector(`input[name="scoreMode"][value="${sm}"]`); if (smr) smr.checked = true;
+                renderAdminPinSetting(config.admin_pin_set === true);
+            }
+        }
+        async function saveSettings() {
+            const queueStrategy = document.querySelector('input[name="queueStrategy"]:checked')?.value || 'fifo';
+            const guestReorder = document.querySelector('input[name="guestReorder"]:checked')?.value || 'all';
+            const jukeboxControls = document.querySelector('input[name="jukeboxControls"]:checked')?.value || 'add_only';
+            const scoreMode = document.querySelector('input[name="scoreMode"]:checked')?.value || 'heuristic';
+            const settings = {
+                queue_strategy: queueStrategy,
+                guest_reorder: guestReorder,
+                jukebox_controls: jukeboxControls,
+                score_screen_enabled: document.getElementById('configScoreScreen').checked,
+                score_mode: scoreMode
+            };
+            const r = await api('/config', { method: 'PUT', body: JSON.stringify(settings) });
+            if (r && r.success) showToast('Settings saved', 'success');
+            else showToast((r && r.error) || 'Failed to save', 'error');
+        }
+
+        // ── DJ PIN settings + notice ──
+        let djPinIsSet = false;
+        function updateGuestReorderNote() {
+            const own = document.querySelector('input[name="guestReorder"]:checked')?.value === 'own_only';
+            document.getElementById('guestReorderNote').classList.toggle('hidden', !own || djPinIsSet);
+        }
+        document.querySelectorAll('input[name="guestReorder"]').forEach(r => r.addEventListener('change', updateGuestReorderNote));
+        function renderAdminPinSetting(isSet) {
+            djPinIsSet = isSet;
+            updateGuestReorderNote();
+            const status = document.getElementById('adminPinStatus');
+            status.className = 'pin-status ' + (isSet ? 'on' : 'off');
+            status.innerHTML = `<span class="material-icons-round">${isSet ? 'lock' : 'lock_open'}</span><span id="adminPinStatusText"></span>`;
+            document.getElementById('adminPinStatusText').textContent = isSet ? ta('pinStatusOn') : ta('pinStatusOff');
+            document.getElementById('adminPinSaveLabel').textContent = isSet ? ta('pinChange') : ta('pinSet');
+            document.getElementById('adminPinRemoveBtn').classList.toggle('hidden', !isSet);
+            document.getElementById('adminPinNew').value = '';
+            document.getElementById('adminPinSettingError').textContent = '';
+        }
+        async function saveAdminPin(pin) {
+            const err = document.getElementById('adminPinSettingError');
+            err.textContent = '';
+            const r = await api('/config', { method: 'PUT', body: JSON.stringify({ admin_pin: pin }) });
+            if (!r || !r.success) { err.textContent = (r && r.error) || ta('pinSaveFailed'); return; }
+            KRoom.setPin(pin); // keep this device unlocked with the new PIN
+            renderAdminPinSetting(pin !== '');
+            access.pinSet = pin !== '';
+            renderAccess();
+            document.getElementById('adminPinNotice').classList.add('hidden');
+            showToast(pin ? ta('pinSaved') : ta('pinRemoved'), 'success');
+        }
+        function initAdminPinUI() {
+            document.querySelectorAll('[data-auth-i18n]').forEach(el => { el.textContent = ta(el.dataset.authI18n); });
+            document.getElementById('adminPinNew').placeholder = ta('pinNewPlaceholder');
+            document.getElementById('adminPinSaveBtn').addEventListener('click', () => {
+                const pin = document.getElementById('adminPinNew').value.trim();
+                if (!isValidPin(pin)) { document.getElementById('adminPinSettingError').textContent = ta('pinFormat'); return; }
+                saveAdminPin(pin);
+            });
+            document.getElementById('adminPinNew').addEventListener('keydown', (e) => { if (e.key === 'Enter') document.getElementById('adminPinSaveBtn').click(); });
+            document.getElementById('adminPinRemoveBtn').addEventListener('click', () => { if (confirm(ta('pinRemoveConfirm'))) saveAdminPin(''); });
+            const notice = document.getElementById('adminPinNotice');
+            document.getElementById('adminPinNoticeDismiss').addEventListener('click', () => {
+                notice.classList.add('hidden');
+                try { localStorage.setItem(PIN_NOTICE_KEY, '1'); } catch (e) {}
+            });
+            document.getElementById('adminPinNoticeSet').addEventListener('click', () => {
+                notice.classList.add('hidden');
+                switchView('settings');
+                setTimeout(() => document.getElementById('adminPinNew').focus(), 100);
+            });
+        }
+        // Suggest a PIN while none is set: without one, anyone with the room link is the DJ.
+        function maybeShowPinNotice() {
+            let dismissed = false;
+            try { dismissed = localStorage.getItem(PIN_NOTICE_KEY) === '1'; } catch (e) {}
+            if (dismissed || partyOver || !access.loaded) return;
+            if (!access.pinSet && access.isAdmin) document.getElementById('adminPinNotice').classList.remove('hidden');
+        }
+
+        // ── Review songs ──
+        // One song at a time: the DJ picks the right name, first line and
+        // language from looked-up options instead of typing. Data:
+        // GET /catalog/review (the queue), GET /catalog/songs/:id/suggestions
+        // (the options), POST /catalog/songs/:id/verify (save). All of it needs the
+        // site's catalog password. Suggestions are computed on demand by the server.
+        const NAME_SOURCE_LABELS = { current: 'current', typed: 'you typed', youtube_title: 'from YouTube title', itunes: 'iTunes', musicbrainz: 'MusicBrainz', catalog: 'your catalog' };
+        const LINE_SOURCE_LABELS = { current: 'current', letras: 'letras.mus.br', lrclib: 'LRCLIB', lyrics_ovh: 'lyrics.ovh', youtube_description: 'YouTube description', earlier_lookup: 'earlier lookup' };
+        const LANG_REASON_LABELS = { artist: 'your catalog', lyrics: 'lyrics', script: 'title', title: 'title', default: 'default' };
+        const REASON_LABELS = { unverified: 'Needs checking', missing_first_line: 'Missing first line' };
+        const REVIEW_SECTIONS = ['name', 'line', 'lang'];
+        const review = {
+            items: [], counts: {}, filter: 'all', currentId: null,
+            sugg: {},           // songId -> suggestions view from the server
+            sel: {},            // songId -> the DJ's picks
+            rendered: { name: [], line: [], lang: [] }, // options as shown (index -> option)
+            section: 'name',    // section that keys 1–5 pick in
+            loadError: null, busy: false, pollTimer: null, polls: 0,
+            inflight: {},       // songId -> pending GET of its suggestions (shared by prefetch)
+            lastCode: ''        // error code of the last queue load (catalog password states)
+        };
+
+        // quiet: background refresh (badge), only when the catalog password is known; never prompts.
+        async function loadReviewQueue(quiet = false) {
+            if (quiet && (!access.catalogAdmin || partyOver)) return false;
+            try {
+                const r = await api('/catalog/review', quiet ? { quiet: true } : {});
+                review.lastCode = (r && !r.success && r.data && r.data.code) || '';
+                if (!r || !r.success || !r.data) return false;
+                review.items = r.data.items || [];
+                review.counts = r.data.counts || {};
+                updateReviewCounts();
+                return true;
+            } catch (e) { return false; }
+        }
+        function updateReviewCounts() {
+            const c = review.counts, total = c.total || 0;
+            const badge = document.getElementById('reviewBadge');
+            badge.textContent = total;
+            badge.classList.toggle('hidden', total === 0);
+            document.getElementById('reviewCountAll').textContent = total;
+            document.getElementById('reviewCountUnverified').textContent = c.unverified || 0;
+            document.getElementById('reviewCountMissing').textContent = c.missing_first_line || 0;
+            document.getElementById('reviewSummary').textContent = total
+                ? `${total} song${total !== 1 ? 's' : ''} to review · ${c.ready || 0} with options ready`
+                : 'All caught up';
+        }
+        function reviewVisibleItems() {
+            return review.filter === 'all' ? review.items : review.items.filter(it => (it.reasons || []).includes(review.filter));
+        }
+        function currentReviewItem() { return review.items.find(it => it.id === review.currentId) || null; }
+        function reviewViewActive() { return document.getElementById('view-review').classList.contains('active'); }
+
+        async function openReview() {
+            const card = document.getElementById('reviewCard');
+            if (!review.items.length) card.innerHTML = '<div class="empty-state"><p>Loading...</p></div>';
+            if (!await loadReviewQueue()) {
+                if (isCatalogAuthCode(review.lastCode)) {
+                    card.innerHTML = lockedCardHtml('the Review songs screen');
+                    document.getElementById('reviewList').innerHTML = '';
+                    document.getElementById('reviewSummary').textContent = 'Locked';
+                    return;
+                }
+                card.innerHTML = `<div class="empty-state"><span class="material-icons-round">cloud_off</span><p>Could not load the songs to review.</p>
+                    <p style="margin-top:12px"><button type="button" class="btn btn-secondary" data-review-action="reload"><span class="material-icons-round">refresh</span> Try again</button></p></div>`;
+                return;
+            }
+            const visible = reviewVisibleItems();
+            if (!visible.some(it => it.id === review.currentId)) review.currentId = visible.length ? visible[0].id : null;
+            renderReviewList();
+            showReviewSong(review.currentId);
+        }
+
+        function renderReviewList() {
+            const list = document.getElementById('reviewList');
+            const visible = reviewVisibleItems();
+            if (!visible.length) { list.innerHTML = ''; return; }
+            list.innerHTML = `<div class="review-list-head">Songs to review</div>` + visible.map(it => `
+                <button type="button" class="review-row${it.id === review.currentId ? ' active' : ''}" data-review-song="${escapeHtml(it.id)}">
+                    <span class="table-thumb">${KRoom.thumb(it) ? `<img src="${thumbUrl(it)}" loading="lazy" alt="" onerror="this.style.display='none'">` : ''}</span>
+                    <span class="review-row-text"><span class="review-row-title">${escapeHtml(it.title)}</span><span class="review-row-sub">${escapeHtml(it.artist)}</span></span>
+                    <span class="material-icons-round${it.suggestions_ready ? ' ready' : ''}" title="${it.suggestions_ready ? 'Options ready' : 'Options not looked up yet'}">${it.suggestions_ready ? 'task_alt' : 'hourglass_empty'}</span>
+                </button>`).join('');
+        }
+
+        function formatDuration(sec) {
+            sec = Math.max(0, Math.round(sec || 0));
+            return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+        }
+        function languageName(id) {
+            const l = (languages || []).find(x => x.id === id);
+            return l ? l.name : (id || '—');
+        }
+
+        function stopReviewPoll() { clearTimeout(review.pollTimer); review.pollTimer = null; }
+        function scheduleReviewPoll(id) {
+            stopReviewPoll();
+            if (review.polls >= 40) return; // ~2 minutes; "Look again" still works
+            review.polls++;
+            review.pollTimer = setTimeout(() => { if (review.currentId === id && reviewViewActive()) fetchReviewSuggestions(id); }, 3000);
+        }
+
+        function showReviewSong(id) {
+            stopReviewPoll();
+            review.moreLangs = false;
+            review.polls = 0;
+            review.loadError = null;
+            review.currentId = id;
+            document.querySelectorAll('#reviewList .review-row').forEach(row => row.classList.toggle('active', row.dataset.reviewSong === id));
+            const item = currentReviewItem();
+            const card = document.getElementById('reviewCard');
+            if (!item) {
+                card.innerHTML = `<div class="empty-state"><span class="material-icons-round">task_alt</span><p>All caught up</p>
+                    <p style="margin-top:6px">Songs added to the catalog show up here to be checked.</p></div>`;
+                return;
+            }
+            const reasons = (item.reasons || []).map(r => `<span class="review-reason">${escapeHtml(REASON_LABELS[r] || r)}</span>`).join('');
+            const thumb = thumbUrl(item);
+            card.innerHTML = `<div class="review-card">
+                <div class="review-evidence">
+                    <div class="review-thumb" id="reviewThumb">
+                        <img src="${thumb}" alt="" onerror="this.style.visibility='hidden'">
+                        <button type="button" class="review-play" data-review-action="preview" title="Play the video here (muted; unmute in the player)"><span class="material-icons-round">play_arrow</span></button>
+                    </div>
+                    <div class="review-evidence-text">
+                        <div class="review-label">YouTube title</div>
+                        <div class="review-yt-title">${escapeHtml(item.youtube_title || '—')}</div>
+                        <div class="review-meta">
+                            <span>${formatDuration(item.duration)}</span>
+                            <span>#${escapeHtml(String(item.code || '—'))}</span>
+                            <span>Added ${item.added_at ? escapeHtml(new Date(item.added_at).toLocaleDateString()) : '—'}</span>
+                            <span id="reviewAddedBy"></span>
+                        </div>
+                        <div class="review-reasons">${reasons}</div>
+                        <div id="reviewVkChips">${vkChips(review.sel[item.id] && review.sel[item.id].vk !== undefined ? { video_kind: review.sel[item.id].vk } : item)}</div>
+                    </div>
+                </div>
+                <div class="review-status" id="reviewStatus"></div>
+                <div id="reviewSections"></div>
+                <div class="review-actions">
+                    <button type="button" class="btn btn-primary" data-review-action="approve" id="reviewApproveBtn"><span class="material-icons-round">check</span> Looks right</button>
+                    <button type="button" class="btn" data-review-action="skip"><span class="material-icons-round">skip_next</span> Skip for now</button>
+                    <button type="button" class="btn" data-review-action="refresh" title="Look the options up again (with the names you picked or typed)"><span class="material-icons-round">refresh</span> Look again</button>
+                    <button type="button" class="btn btn-danger" data-review-action="trash"><span class="material-icons-round">delete</span> Move to trash</button>
+                </div>
+                <div class="review-keys">Keys: <kbd>1</kbd>–<kbd>5</kbd> pick · <kbd>↑</kbd> <kbd>↓</kbd> next section · <kbd>Enter</kbd> looks right · <kbd>S</kbd> skip</div>
+            </div>`;
+            document.getElementById('reviewCard').scrollTop = 0;
+            renderReviewSections();
+            // Already looked up this session (e.g. prefetched): no need to ask again.
+            if (suggestionsFinal(review.sugg[id])) { markReviewItemReady(id, review.sugg[id]); prefetchNextReview(id); }
+            else fetchReviewSuggestions(id);
+        }
+
+        // The server computes suggestions on demand: the first GET for a song can take
+        // several seconds (music catalogs, lyrics sites), later ones are instant. One GET
+        // per song at a time: a prefetch still in flight is reused when the DJ gets there.
+        const suggestionsFinal = (sg) => !!sg && sg.status !== 'pending' && !sg.in_progress;
+        function requestSuggestions(id, quiet) {
+            if (!review.inflight[id]) {
+                review.inflight[id] = api(`/catalog/songs/${encodeURIComponent(id)}/suggestions`, quiet ? { quiet: true } : {})
+                    .finally(() => { delete review.inflight[id]; });
+            }
+            return review.inflight[id];
+        }
+        // Quietly look up the next song while the DJ works on this one (one background GET).
+        function prefetchNextReview(id) {
+            const next = nextReviewId(id);
+            if (!next || suggestionsFinal(review.sugg[next]) || review.inflight[next]) return;
+            requestSuggestions(next, true).then(r => {
+                if (!r || !r.success || !r.data || !review.items.some(x => x.id === next)) return;
+                review.sugg[next] = r.data;
+                if (suggestionsFinal(r.data)) markReviewItemReady(next, r.data);
+                if (review.currentId === next) renderReviewSections();
+            }).catch(() => {});
+        }
+
+        async function fetchReviewSuggestions(id) {
+            try {
+                const r = await requestSuggestions(id, false);
+                if (review.currentId !== id) return;
+                if (r && r.success && r.data) { review.sugg[id] = r.data; review.loadError = null; }
+                else review.loadError = (r && r.error) || 'Could not load the options';
+            } catch (e) {
+                if (review.currentId !== id) return;
+                review.loadError = 'Could not reach the server';
+            }
+            renderReviewSections();
+            const sg = review.sugg[id];
+            if (sg && !suggestionsFinal(sg)) scheduleReviewPoll(id);
+            else if (sg) { markReviewItemReady(id, sg); prefetchNextReview(id); }
+        }
+        function markReviewItemReady(id, sg) {
+            const it = review.items.find(x => x.id === id);
+            if (!it) return;
+            const ready = sg.status === 'ready';
+            if (it.suggestions_ready !== ready) {
+                review.counts.ready = Math.max(0, (review.counts.ready || 0) + (ready ? 1 : -1));
+                it.suggestions_ready = ready;
+                updateReviewCounts();
+                renderReviewList();
+            }
+        }
+
+        // The DJ's picks for a song. Names/lines are kept by value so a list
+        // refreshed under them keeps the choice.
+        function reviewSel(item) {
+            if (!review.sel[item.id]) {
+                review.sel[item.id] = {
+                    name: nameKeyOf(item.artist, item.title), artist: item.artist, title: item.title,
+                    line: item.lyrics_start ? 'current' : null, lineText: item.lyrics_start || '', lineAuto: !item.lyrics_start,
+                    lang: item.language || ''
+                };
+            }
+            return review.sel[item.id];
+        }
+        function nameKeyOf(artist, title) { return (artist || '') + '\u0001' + (title || ''); }
+
+        function nameOptions(item, sg) {
+            const names = (sg && sg.names && sg.names.length) ? sg.names
+                : [{ artist: item.artist, title: item.title, source: 'current', sources: ['current'], current: true }];
+            return names.map(n => ({ ...n, key: nameKeyOf(n.artist, n.title) }));
+        }
+        function lineOptions(item, sg) {
+            const out = [];
+            const norm = (s) => removeAccents(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+            if (item.lyrics_start) out.push({ key: 'current', first_line: item.lyrics_start, excerpt: '', sources: ['current'], score: 1 });
+            for (const c of ((sg && sg.first_lines) || [])) {
+                if (out.some(o => norm(o.first_line) === norm(c.first_line))) {
+                    const ex = out.find(o => norm(o.first_line) === norm(c.first_line));
+                    ex.sources = [...new Set([...(ex.sources || []), ...(c.sources || [])])];
+                    if (!ex.excerpt) ex.excerpt = c.excerpt;
+                    continue;
+                }
+                out.push({ ...c, key: 'cand:' + c.first_line });
+            }
+            return out;
+        }
+        function langOptions(item, sg, sel) {
+            const out = [];
+            const add = (id, reason) => { if (id && !out.some(o => o.id === id)) out.push({ id, reason }); };
+            ((sg && sg.languages) || []).slice(0, 4).forEach(g => add(g.id, g.reason));
+            add(item.language, '');
+            add(sel.lang, '');
+            return out;
+        }
+        // Preselect a found first line only when it is trustworthy: several
+        // sources agree, or one source matched the song very well.
+        function maybeAutoPickLine(sel, lines, sg) {
+            if (!sel.lineAuto || sel.line !== null || !sg || sg.status === 'pending') return;
+            const top = lines.find(l => l.key !== 'current');
+            if (top && ((top.sources || []).length >= 2 || (top.score || 0) >= 0.85)) { sel.line = top.key; sel.lineText = top.first_line; }
+            sel.lineAuto = false;
+        }
+
+        function badgeHtml(labels, cls = '') { return labels.map(l => `<span class="review-badge ${cls}">${escapeHtml(l)}</span>`).join(''); }
+        function optionHtml(section, index, selected, main, more, badges, muted = false) {
+            return `<button type="button" class="review-option${selected ? ' selected' : ''}${muted ? ' muted' : ''}" data-pick="${section}" data-index="${index}" aria-pressed="${selected}">
+                <span class="review-key">${index < 9 ? index + 1 : ''}</span>
+                <span class="review-option-body"><span class="review-option-main">${main}</span>${more ? `<span class="review-option-more">${more}</span>` : ''}</span>
+                ${badges ? `<span class="review-badges">${badges}</span>` : ''}
+            </button>`;
+        }
+
+        function renderReviewStatus(item, sg) {
+            const el = document.getElementById('reviewStatus');
+            if (!el) return;
+            el.className = 'review-status';
+            if (review.loadError) {
+                el.classList.add('error');
+                el.innerHTML = `<span class="material-icons-round" style="font-size:16px">cloud_off</span> ${escapeHtml(review.loadError)}
+                    <button type="button" class="btn btn-sm" data-review-action="retry">Retry</button>`;
+                return;
+            }
+            if (!sg || sg.status === 'pending' || sg.in_progress) {
+                el.classList.add('looking');
+                el.innerHTML = `<span class="material-icons-round wiggle">edit</span><span><strong>Looking it up<span class="dots"></span></strong>
+                    Asking music catalogs and lyrics sites for names, first lines and the language. The first look can take a few seconds; the current values can be used meanwhile.</span>`;
+                return;
+            }
+            if (sg.status === 'error') {
+                el.classList.add('error');
+                el.innerHTML = `<span class="material-icons-round" style="font-size:16px">cloud_off</span> Could not reach the lookup services (offline?).
+                    <button type="button" class="btn btn-sm" data-review-action="refresh" title="${escapeHtml(sg.last_error || '')}">Retry</button>`;
+                return;
+            }
+            if (sg.status === 'none_found') {
+                el.innerHTML = '<span class="material-icons-round" style="font-size:16px">search_off</span> No suggestions found — type it or look again.';
+                return;
+            }
+            const when = sg.fetched_at ? new Date(sg.fetched_at).toLocaleString() : '';
+            const asked = (sg.query_artist && (sg.query_artist !== item.artist || sg.query_title !== item.title)) ? ` for “${escapeHtml(sg.query_artist)} — ${escapeHtml(sg.query_title)}”` : '';
+            el.innerHTML = `<span class="material-icons-round" style="font-size:18px;color:var(--green-ink)">task_alt</span> Options looked up${asked}${when ? ' · ' + escapeHtml(when) : ''}`;
+        }
+
+        function renderReviewSections(restoreFocus = false) {
+            const item = currentReviewItem();
+            const box = document.getElementById('reviewSections');
+            if (!item || !box) return;
+            const sg = review.sugg[item.id];
+            const sel = reviewSel(item);
+            renderReviewStatus(item, sg);
+            const addedBy = document.getElementById('reviewAddedBy');
+            if (addedBy) addedBy.textContent = sg && sg.added_by ? `by ${sg.added_by}` : '';
+
+            // Song (artist — title)
+            const names = nameOptions(item, sg);
+            review.rendered.name = names;
+            if (!sel.namePicked && sel.name !== 'custom' && !names.some(n => n.key === sel.name)) {
+                // The saved names, as the server shows them (e.g. in the catalog's spelling).
+                const cur = names.find(n => n.current) || names[0];
+                if (cur) { sel.name = cur.key; sel.artist = cur.artist; sel.title = cur.title; }
+            }
+            const nameCustom = sel.name === 'custom';
+            let html = `<section class="review-section" data-section-root="name" tabindex="-1">
+                <h3>Song <span class="review-hint">artist — title</span></h3><div class="review-options">`;
+            names.forEach((n, i) => {
+                const labels = [...new Set((n.sources && n.sources.length ? n.sources : [n.source]).map(s => NAME_SOURCE_LABELS[s] || s))];
+                html += optionHtml('name', i, !nameCustom && sel.name === n.key,
+                    `${escapeHtml(n.artist)} — ${escapeHtml(n.title)}`, n.note ? escapeHtml(n.note) : '', badgeHtml(labels));
+            });
+            html += optionHtml('name', names.length, nameCustom, 'Type it myself', '', '', true);
+            html += `</div>`;
+            if (nameCustom) {
+                html += `<div class="review-custom">
+                    <input type="text" id="reviewArtistInput" placeholder="Artist (several: A; B)" value="${escapeHtml(sel.artist)}" autocomplete="off">
+                    <input type="text" id="reviewTitleInput" placeholder="Title" value="${escapeHtml(sel.title)}" autocomplete="off"></div>`;
+            }
+            const dups = (sg && sg.duplicates) || [];
+            if (dups.length) {
+                html += `<div class="review-warning"><strong>You may already have this:</strong> ` +
+                    dups.map(d => `#${escapeHtml(String(d.code))} ${escapeHtml(d.artist)} — ${escapeHtml(d.title)}`).join(' · ') + `</div>`;
+            }
+            html += `</section>`;
+
+            // First line
+            const lines = lineOptions(item, sg);
+            maybeAutoPickLine(sel, lines, sg);
+            review.rendered.line = lines;
+            html += `<section class="review-section" data-section-root="line" tabindex="-1">
+                <h3>First line <span class="review-hint">shown to guests and printed in the songbook</span></h3><div class="review-options">`;
+            lines.forEach((l, i) => {
+                const srcs = l.sources || [];
+                const labels = [];
+                if (srcs.filter(s => s !== 'current').length >= 2) labels.push(`${srcs.filter(s => s !== 'current').length} sources agree`);
+                const more = (l.excerpt || '').split('\n').slice(1, 4).join('\n');
+                const badges = badgeHtml(labels, 'agree') + badgeHtml([...new Set(srcs.map(s => LINE_SOURCE_LABELS[s] || s))]) + (l.previous ? badgeHtml(['found earlier']) : '');
+                html += optionHtml('line', i, sel.line === l.key, escapeHtml(l.first_line), escapeHtml(more), badges);
+            });
+            html += optionHtml('line', lines.length, sel.line === 'custom', 'Type it myself', '', '', true);
+            html += optionHtml('line', lines.length + 1, sel.line === 'none', 'No first line for this song', 'instrumental intro, or nothing usable found', '', true);
+            html += `</div>`;
+            if (sel.line === 'custom') {
+                html += `<div class="review-custom"><input type="text" id="reviewLineInput" placeholder="First line of the lyrics" value="${escapeHtml(sel.lineText)}" autocomplete="off"></div>`;
+            } else if (sel.line === null) {
+                const ready = sg && sg.status !== 'pending' && !sg.in_progress;
+                if (ready) html += `<div class="review-note">${lines.length ? 'The sources do not agree enough to choose for you — pick one.' : 'Nothing found — type it, or choose “No first line for this song”.'}</div>`;
+            }
+            html += `</section>`;
+
+            // Language
+            const langs = langOptions(item, sg, sel);
+            review.rendered.lang = langs;
+            html += `<section class="review-section" data-section-root="lang" tabindex="-1"><h3>Language</h3><div class="review-chips">`;
+            langs.forEach((l, i) => {
+                const notes = [];
+                if (l.id === item.language) notes.push('current');
+                if (l.reason && LANG_REASON_LABELS[l.reason] && l.reason !== 'default') notes.push(LANG_REASON_LABELS[l.reason]);
+                html += `<button type="button" class="review-chip${sel.lang === l.id ? ' selected' : ''}" data-pick="lang" data-index="${i}" aria-pressed="${sel.lang === l.id}">
+                    ${escapeHtml(languageName(l.id))}${notes.length ? ` <small>${escapeHtml(notes.join(' · '))}</small>` : ''}</button>`;
+            });
+            html += `<button type="button" class="review-chip" data-review-action="more-langs" aria-expanded="${!!review.moreLangs}">More…</button></div>`;
+            if (review.moreLangs) {
+                html += `<div class="review-custom"><select id="reviewLangMore"><option value="">Choose a language…</option>` +
+                    (languages || []).map(l => `<option value="${escapeHtml(l.id)}"${l.id === sel.lang ? ' selected' : ''}>${escapeHtml(l.name)}</option>`).join('') + `</select></div>`;
+            }
+            if (sg && sg.lyrics_language && sg.lyrics_language !== item.language) {
+                html += `<div class="review-note">Lyrics look like ${escapeHtml(languageName(sg.lyrics_language))}.</div>`;
+            }
+            html += `</section>`;
+
+            // Video type: mouse/touch only (not one of the keyboard-navigable sections).
+            const vkNow = sel.vk !== undefined ? sel.vk : (item.video_kind || '');
+            html += `<div class="review-vkrow"><h3>Video type <span class="review-hint">what the video contains; changes are saved with “Looks right”</span></h3><div class="review-chips">` +
+                VIDEO_KIND_OPTIONS.map(o => `<button type="button" class="review-chip${vkNow === o.value ? ' selected' : ''}" data-review-vk="${escapeHtml(o.value)}" aria-pressed="${vkNow === o.value}" title="${escapeHtml(o.label)}">${escapeHtml(o.short)}</button>`).join('') +
+                `</div></div>`;
+
+            box.innerHTML = html;
+            highlightReviewSection(restoreFocus);
+        }
+
+        function highlightReviewSection(focus) {
+            document.querySelectorAll('#reviewSections .review-section').forEach(s => s.classList.toggle('focused', s.dataset.sectionRoot === review.section));
+            if (!focus) return;
+            const root = document.querySelector(`#reviewSections [data-section-root="${review.section}"]`);
+            if (!root) return;
+            const target = root.querySelector('input, select') || root.querySelector('.selected') || root;
+            target.focus();
+            root.scrollIntoView({ block: 'nearest' });
+        }
+        function moveReviewSection(delta) {
+            const i = REVIEW_SECTIONS.indexOf(review.section);
+            review.section = REVIEW_SECTIONS[(i + delta + REVIEW_SECTIONS.length) % REVIEW_SECTIONS.length];
+            highlightReviewSection(true);
+        }
+
+        function pickReviewOption(section, index) {
+            const item = currentReviewItem();
+            if (!item) return;
+            const sel = reviewSel(item);
+            review.section = section;
+            let focusInput = false;
+            if (section === 'name') {
+                const names = review.rendered.name;
+                if (index < names.length) { sel.name = names[index].key; sel.artist = names[index].artist; sel.title = names[index].title; }
+                else if (index === names.length) { sel.name = 'custom'; focusInput = true; }
+                else return;
+                sel.namePicked = true;
+            } else if (section === 'line') {
+                const lines = review.rendered.line;
+                if (index < lines.length) { sel.line = lines[index].key; sel.lineText = lines[index].first_line; }
+                else if (index === lines.length) { sel.line = 'custom'; focusInput = true; }
+                else if (index === lines.length + 1) sel.line = 'none';
+                else return;
+                sel.lineAuto = false;
+            } else if (section === 'lang') {
+                const langs = review.rendered.lang;
+                if (index >= langs.length) return;
+                sel.lang = langs[index].id;
+            }
+            renderReviewSections(true);
+            if (focusInput) {
+                const input = document.getElementById(section === 'name' ? 'reviewArtistInput' : 'reviewLineInput');
+                if (input) { input.focus(); input.select(); }
+            }
+        }
+
+        function selectedReviewName(item) {
+            const sel = reviewSel(item);
+            return { artist: (sel.artist || '').trim(), title: (sel.title || '').trim() };
+        }
+
+        // The song after id in the visible list (wrapping), or null when id is the only one.
+        function nextReviewId(id) {
+            const visible = reviewVisibleItems();
+            const rest = visible.filter(it => it.id !== id);
+            if (!rest.length) return null;
+            const i = visible.findIndex(it => it.id === id);
+            return (i >= 0 && i + 1 < visible.length) ? visible[i + 1].id : rest[0].id;
+        }
+        function removeReviewItem(id) {
+            const it = review.items.find(x => x.id === id);
+            if (!it) return;
+            review.items = review.items.filter(x => x.id !== id);
+            const c = review.counts;
+            c.total = Math.max(0, (c.total || 0) - 1);
+            if ((it.reasons || []).includes('unverified')) c.unverified = Math.max(0, (c.unverified || 0) - 1);
+            if ((it.reasons || []).includes('missing_first_line')) c.missing_first_line = Math.max(0, (c.missing_first_line || 0) - 1);
+            if (it.suggestions_ready) c.ready = Math.max(0, (c.ready || 0) - 1);
+            delete review.sel[id];
+            delete review.sugg[id];
+            updateReviewCounts();
+        }
+
+        async function approveReviewSong() {
+            const item = currentReviewItem();
+            if (!item || review.busy) return;
+            const sel = reviewSel(item);
+            const name = selectedReviewName(item);
+            if (!name.artist || !name.title) { review.section = 'name'; renderReviewSections(true); showToast('Type the artist and the title.', 'error'); return; }
+            const body = { artist: name.artist, title: name.title, language: sel.lang || item.language };
+            if (sel.line === null) { review.section = 'line'; renderReviewSections(true); showToast('Pick a first line, or “No first line for this song”.', 'error'); return; }
+            if (sel.vk !== undefined && sel.vk !== (item.video_kind || '')) body.video_kind = sel.vk;
+            if (sel.line === 'none') body.no_first_line = true;
+            else {
+                const text = (sel.lineText || '').trim();
+                if (!text) { review.section = 'line'; renderReviewSections(true); showToast('Type the first line, or choose “No first line for this song”.', 'error'); return; }
+                body.lyrics_start = text;
+            }
+            review.busy = true;
+            const btn = document.getElementById('reviewApproveBtn');
+            if (btn) btn.disabled = true;
+            let r = null;
+            try { r = await api(`/catalog/songs/${encodeURIComponent(item.id)}/verify`, { method: 'POST', body: JSON.stringify(body) }); } catch (e) {}
+            review.busy = false;
+            if (btn) btn.disabled = false;
+            if (!r || !r.success) { showToast('Failed to save: ' + ((r && r.error) || 'Unknown error'), 'error'); return; }
+            const next = nextReviewId(item.id);
+            removeReviewItem(item.id);
+            renderReviewList();
+            showReviewSong(next);
+            loadCatalog();
+            showToast('Saved: ' + name.artist + ' — ' + name.title, 'success');
+        }
+        function skipReviewSong() {
+            const item = currentReviewItem();
+            if (!item) return;
+            showReviewSong(nextReviewId(item.id) || item.id);
+        }
+        async function refreshReviewSong() {
+            const item = currentReviewItem();
+            if (!item) return;
+            const id = item.id;
+            const name = selectedReviewName(item);
+            const typed = name.artist && name.title && (name.artist !== item.artist || name.title !== item.title);
+            stopReviewPoll();
+            review.loadError = null;
+            review.sugg[id] = { ...(review.sugg[id] || {}), in_progress: true };
+            renderReviewSections();
+            let r = null;
+            try { r = await api(`/catalog/songs/${encodeURIComponent(id)}/suggestions/refresh`, { method: 'POST', body: JSON.stringify(typed ? name : {}) }); } catch (e) {}
+            if (r && r.success && r.data) review.sugg[id] = r.data;
+            else {
+                review.sugg[id] = { ...(review.sugg[id] || {}), in_progress: false };
+                if (review.currentId === id) review.loadError = (r && r.error) || 'Could not reach the server';
+            }
+            if (review.currentId === id) renderReviewSections();
+            if (r && r.success && r.data) markReviewItemReady(id, r.data);
+        }
+        async function trashReviewSong() {
+            const item = currentReviewItem();
+            if (!item) return;
+            if (!confirm(`Move "${item.title}" to the trash?\n\nIt can be restored from Trash until you delete it forever.`)) return;
+            let r = null;
+            try { r = await api(`/catalog/songs/${encodeURIComponent(item.id)}`, { method: 'DELETE' }); } catch (e) {}
+            if (!r || !r.success) { showToast(failMsg(r), 'error'); return; }
+            const next = nextReviewId(item.id);
+            removeReviewItem(item.id);
+            renderReviewList();
+            showReviewSong(next);
+            loadCatalog(); loadStats(); loadTrash(true);
+            showToast(`"${item.title}" moved to the trash`, 'success');
+        }
+        function previewReviewSong() {
+            const item = currentReviewItem();
+            const box = document.getElementById('reviewThumb');
+            if (!item || !box) return;
+            if (!item.youtube_id) { if (item.youtube_url) window.open(item.youtube_url, '_blank', 'noopener'); return; }
+            const frame = document.createElement('iframe');
+            frame.src = `https://www.youtube-nocookie.com/embed/${encodeURIComponent(item.youtube_id)}?autoplay=1&mute=1&playsinline=1&rel=0`;
+            frame.title = 'Video preview';
+            frame.allow = 'autoplay; encrypted-media; picture-in-picture';
+            frame.allowFullscreen = true;
+            box.innerHTML = '';
+            box.appendChild(frame);
+        }
+
+        document.getElementById('reviewFilters').addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-review-filter]');
+            if (!btn) return;
+            review.filter = btn.dataset.reviewFilter;
+            document.querySelectorAll('#reviewFilters .tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+            const visible = reviewVisibleItems();
+            if (!visible.some(it => it.id === review.currentId)) review.currentId = visible.length ? visible[0].id : null;
+            renderReviewList();
+            showReviewSong(review.currentId);
+        });
+        document.getElementById('reviewList').addEventListener('click', (e) => {
+            const row = e.target.closest('[data-review-song]');
+            if (row) showReviewSong(row.dataset.reviewSong);
+        });
+        document.getElementById('reviewCard').addEventListener('click', (e) => {
+            const vk = e.target.closest('[data-review-vk]');
+            if (vk) {
+                const it = currentReviewItem();
+                if (!it) return;
+                reviewSel(it).vk = vk.dataset.reviewVk;
+                renderReviewSections();
+                const chipsEl = document.getElementById('reviewVkChips');
+                if (chipsEl) chipsEl.innerHTML = vkChips({ video_kind: vk.dataset.reviewVk });
+                return;
+            }
+            const pick = e.target.closest('[data-pick]');
+            if (pick) { pickReviewOption(pick.dataset.pick, parseInt(pick.dataset.index, 10)); return; }
+            const act = e.target.closest('[data-review-action]');
+            if (!act) return;
+            switch (act.dataset.reviewAction) {
+                case 'approve': approveReviewSong(); break;
+                case 'skip': skipReviewSong(); break;
+                case 'refresh': refreshReviewSong(); break;
+                case 'trash': trashReviewSong(); break;
+                case 'preview': previewReviewSong(); break;
+                case 'retry': if (review.currentId) { review.loadError = null; renderReviewSections(); fetchReviewSuggestions(review.currentId); } break;
+                case 'reload': openReview(); break;
+                case 'more-langs': review.moreLangs = !review.moreLangs; review.section = 'lang'; renderReviewSections(); { const m = document.getElementById('reviewLangMore'); if (m) m.focus(); } break;
+            }
+        });
+        document.getElementById('reviewCard').addEventListener('input', (e) => {
+            const item = currentReviewItem();
+            if (!item) return;
+            const sel = reviewSel(item);
+            if (e.target.id === 'reviewArtistInput') sel.artist = e.target.value;
+            else if (e.target.id === 'reviewTitleInput') sel.title = e.target.value;
+            else if (e.target.id === 'reviewLineInput') sel.lineText = e.target.value;
+        });
+        document.getElementById('reviewCard').addEventListener('change', (e) => {
+            if (e.target.id !== 'reviewLangMore' || !e.target.value) return;
+            const item = currentReviewItem();
+            if (!item) return;
+            reviewSel(item).lang = e.target.value;
+            review.moreLangs = false;
+            review.section = 'lang';
+            renderReviewSections(true);
+        });
+        document.getElementById('reviewCard').addEventListener('focusin', (e) => {
+            const root = e.target.closest('[data-section-root]');
+            if (root && root.dataset.sectionRoot !== review.section) { review.section = root.dataset.sectionRoot; highlightReviewSection(false); }
+        });
+        document.addEventListener('keydown', (e) => {
+            if (!reviewViewActive() || document.querySelector('.modal-overlay.active')) return;
+            if (e.ctrlKey || e.metaKey || e.altKey) return;
+            const t = e.target;
+            if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
+            if (!currentReviewItem()) return;
+            // Enter on an action button (e.g. Move to trash) keeps its own meaning.
+            if (e.key === 'Enter' && t && t.closest && t.closest('[data-review-action], #reviewList, #reviewFilters')) return;
+            if (/^[1-9]$/.test(e.key)) { e.preventDefault(); pickReviewOption(review.section, parseInt(e.key, 10) - 1); }
+            else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); moveReviewSection(e.key === 'ArrowDown' ? 1 : -1); }
+            else if (e.key === 'Enter') { e.preventDefault(); approveReviewSong(); }
+            else if (e.key === 's' || e.key === 'S') { e.preventDefault(); skipReviewSong(); }
+        });
+        // Keep the badge (and the list, when open) current.
+        setInterval(async () => { if (!document.hidden && await loadReviewQueue(true) && reviewViewActive()) renderReviewList(); }, 30000);
+
+
+        // ── Access: who may do what ──
+        function applyAccess(c) {
+            if (!c) return;
+            access.loaded = true;
+            access.isAdmin = !!c.is_admin;
+            access.isHost = !!c.is_host || KRoom.isHost();
+            access.pinSet = !!c.admin_pin_set;
+            access.catalogAdmin = !!c.catalog_admin;
+            access.catalogAvailable = c.catalog_admin_available !== false;
+            if (c.join_url) access.joinUrl = c.join_url;
+            renderAccess();
+        }
+        async function loadAccess() {
+            const r = await api('/config', { quiet: true });
+            if (r && r.success && r.data) applyAccess(r.data);
+            return r;
+        }
+        function catalogState() {
+            if (!access.catalogAvailable) return 'off';
+            return access.catalogAdmin ? 'ok' : 'locked';
+        }
+        function djState() {
+            if (!access.loaded) return 'unknown';
+            if (access.isHost) return 'host';
+            if (!access.pinSet) return 'open';
+            return access.isAdmin ? 'ok' : 'locked';
+        }
+        // Sidebar card + the notes on the Catalog, Review, Trash, Languages and Settings views.
+        function renderAccess() {
+            const dj = djState();
+            const djRow = document.getElementById('accessDj');
+            const djText = {
+                unknown: 'Checking...',
+                host: 'You created this party: settings, clearing and shuffling the queue and ending the party are yours.',
+                open: 'No DJ PIN is set, so anyone with the room link can change settings or end the party.',
+                ok: 'Unlocked with the DJ PIN.',
+                locked: 'Locked: settings, clear, shuffle and End party need the DJ PIN.'
+            }[dj];
+            djRow.className = 'access-row ' + (dj === 'locked' ? 'locked' : (dj === 'open' ? 'off' : 'ok'));
+            document.getElementById('accessDjText').textContent = djText;
+            document.getElementById('accessDjBtn').classList.toggle('hidden', dj !== 'locked');
+
+            const cat = catalogState();
+            const catRow = document.getElementById('accessCatalog');
+            catRow.className = 'access-row ' + cat;
+            document.getElementById('accessCatalogText').textContent = {
+                ok: 'Unlocked: you can edit, review and delete songs and change languages.',
+                locked: 'Song edits, Review songs, Trash and Languages need the site\'s catalog password.',
+                off: 'Catalog editing is not set up on this site. Songs can still be queued.'
+            }[cat];
+            const catBtn = document.getElementById('accessCatalogBtn');
+            catBtn.classList.toggle('hidden', cat === 'off');
+            catBtn.innerHTML = cat === 'ok'
+                ? '<span class="material-icons-round">lock</span> Forget password'
+                : '<span class="material-icons-round">key</span> Enter password';
+            catBtn.dataset.mode = cat;
+
+            document.querySelectorAll('[data-access-note]').forEach(el => {
+                const kind = el.dataset.accessNote;
+                let cls = '', icon = '', text = '', btn = '';
+                if (kind === 'dj') {
+                    if (dj === 'locked') { cls = 'locked'; icon = 'headphones'; text = 'These settings belong to this party and need the room DJ PIN.'; btn = '<button type="button" class="btn btn-sm" data-unlock="dj"><span class="material-icons-round">lock_open</span> Enter DJ PIN</button>'; }
+                    else if (dj === 'open') { cls = 'off'; icon = 'headphones'; text = 'These settings belong to this party. No DJ PIN is set yet: set one below so guests with the link cannot change them.'; }
+                } else if (cat === 'off') {
+                    cls = 'off'; icon = 'block';
+                    text = kind === 'catalog-edit'
+                        ? 'Catalog editing is not configured on this site: songs can be queued, but not edited or deleted.'
+                        : 'Catalog editing is not configured on this site, so this screen is read-only or unavailable.';
+                } else if (cat === 'locked') {
+                    cls = 'locked'; icon = 'key';
+                    text = kind === 'catalog-edit'
+                        ? 'Anyone at the party can queue songs. Editing or deleting them changes the whole site\'s catalog and needs the site\'s catalog password.'
+                        : 'This screen changes the whole site\'s song catalog (shared by every party), so it needs the site\'s catalog password.';
+                    btn = '<button type="button" class="btn btn-sm btn-primary" data-unlock="catalog"><span class="material-icons-round">key</span> Enter password</button>';
+                } else if (kind === 'catalog-edit') {
+                    cls = 'ok'; icon = 'key'; text = 'Catalog password entered: edits here change the site\'s shared catalog.';
+                }
+                el.className = 'access-note' + (cls ? ' ' + cls : '');
+                el.innerHTML = text ? `<span class="material-icons-round">${icon}</span><span>${escapeHtml(text)}</span>${btn}` : '';
+            });
+        }
+        // A locked card for catalog-admin screens (Review songs, Trash).
+        function lockedCardHtml(what) {
+            if (!access.catalogAvailable) {
+                return `<div class="empty-state locked"><span class="material-icons-round">block</span>
+                    <p>Catalog editing is not configured on this site.</p>
+                    <p style="font-size:16px">${escapeHtml(what.charAt(0).toUpperCase() + what.slice(1))} needs the site's catalog password, and none is set up.</p></div>`;
+            }
+            return `<div class="empty-state locked"><span class="material-icons-round">key</span>
+                <p>${escapeHtml(what.charAt(0).toUpperCase() + what.slice(1))} needs the site's catalog password.</p>
+                <p style="font-size:16px">The catalog is shared by every party on this site, so the DJ PIN is not enough.</p>
+                <p style="margin-top:14px"><button type="button" class="btn btn-primary" data-unlock="catalog"><span class="material-icons-round">key</span> Enter password</button></p></div>`;
+        }
+        // Any "unlock" button, wherever it is rendered.
+        document.addEventListener('click', async (e) => {
+            const btn = e.target.closest('[data-unlock]');
+            if (!btn) return;
+            if (btn.dataset.unlock === 'dj') {
+                if (await promptAdminPin(false)) { showToast(ta('pinUnlocked'), 'success'); refreshActiveView(); }
+            } else if (await promptCatalogKey(false)) {
+                showToast(ta('catUnlocked'), 'success');
+                refreshActiveView();
+            }
+        });
+        function refreshActiveView() {
+            const active = document.querySelector('.view-section.active');
+            if (!active) return;
+            const name = active.id.replace('view-', '');
+            if (['review', 'trash', 'settings', 'languages'].includes(name)) switchView(name);
+            else if (name === 'catalog') filterCatalog();
+        }
+        function initCatalogKeyUI() {
+            document.getElementById('accessCatalogBtn').addEventListener('click', async (e) => {
+                if (e.currentTarget.dataset.mode === 'ok') {
+                    KRoom.setCatalogKey('');
+                    access.catalogAdmin = false;
+                    renderAccess();
+                    filterCatalog();
+                    showToast(ta('catForgotten'), 'info');
+                } else if (await promptCatalogKey(false)) {
+                    showToast(ta('catUnlocked'), 'success');
+                    refreshActiveView();
+                }
+            });
+            document.getElementById('accessDjBtn').addEventListener('click', async () => {
+                if (await promptAdminPin(false)) { showToast(ta('pinUnlocked'), 'success'); refreshActiveView(); }
+            });
+        }
+
+        // ── Party panel: code, join link + QR, screens, songbook, end party ──
+        let partyQrText = '';
+        function joinUrl() { return access.joinUrl || KRoom.joinUrl(); }
+        function initParty() {
+            document.getElementById('navRoomCode').textContent = KRoom.code;
+            document.getElementById('partyCode').textContent = KRoom.code;
+            document.getElementById('openPlayerLink').href = KRoom.page('player');
+            document.getElementById('openJukeboxLink').href = KRoom.page('jukebox');
+            document.getElementById('openGuestLink').href = KRoom.page('sing');
+            document.title = 'Karaoke DJ · ' + KRoom.code;
+            const printSel = document.getElementById('printLangSelect');
+            printSel.value = printLabelLang();
+            document.getElementById('printCatalogBtn').addEventListener('click', () => openPrintCatalog(printSel.value));
+            document.getElementById('navPrintBtn').addEventListener('click', () => { setNavOpen(false); openPrintCatalog(printSel.value); });
+            document.getElementById('navGuestBtn').addEventListener('click', () => { setNavOpen(false); openMobileUI(); });
+            document.getElementById('endPartyBtn').addEventListener('click', endParty);
+            document.getElementById('navEndPartyBtn').addEventListener('click', () => { setNavOpen(false); endParty(); });
+            document.getElementById('copyJoinBtn').addEventListener('click', copyJoinLink);
+            renderParty();
+        }
+        function renderParty() {
+            const url = joinUrl();
+            const link = document.getElementById('partyJoinLink');
+            link.href = url;
+            link.textContent = url;
+            if (url === partyQrText) return;
+            const box = document.getElementById('partyQr');
+            box.innerHTML = '';
+            partyQrText = url;
+            if (typeof QRCode === 'undefined') { box.textContent = 'QR code unavailable'; return; }
+            try {
+                new QRCode(box, { text: url, width: 176, height: 176, colorDark: '#2b2520', colorLight: '#fffdf6', correctLevel: QRCode.CorrectLevel.M });
+            } catch (e) { box.textContent = 'QR code unavailable'; }
+        }
+        async function copyJoinLink() {
+            const url = joinUrl();
+            try {
+                await navigator.clipboard.writeText(url);
+                showToast('Link copied', 'success');
+            } catch (e) {
+                window.prompt('Copy this link:', url);
+            }
+        }
+        // "End party" (was "Shutdown server"): deletes the room for everyone.
+        async function endParty() {
+            if (!confirm('End the party for everyone?\n\nThe queue, the singers and this room code are deleted, and every screen shows that the party is over. The song catalog is kept.')) return;
+            endingParty = true;
+            const r = await api('/shutdown', { method: 'POST' });
+            if (r && r.success) { location.href = '/karaoke/'; return; }
+            endingParty = false;
+            if (partyOver) { location.href = '/karaoke/'; return; }
+            showToast(failMsg(r, 'could not end the party'), 'error');
+        }
+    </script>
+</body>
+</html>
