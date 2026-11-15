@@ -16,6 +16,8 @@ worker/index.js                Its API (Cloudflare Worker + D1 database)
 wrangler.jsonc                 Cloudflare config: static assets + the Worker only on /jiujitsu/api/*
 .assetsignore                  Repo files that are not published (tests, worker source, READMEs...)
 tests/jiujitsu/                Its API, stats and browser tests
+customprojects/remotedesktop/  Remote Desktop project page; download zip in static/files/
+                               (built and copied by the remote-desktop repo's tools/release.ps1)
 static/style.css               Styles
 static/script.js               Project filter + language toggle
 static/media/, static/files/   Images and the PDF curriculum

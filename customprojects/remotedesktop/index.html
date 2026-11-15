@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Remote Desktop</title>
+    <meta name="description" content="A small, self-hosted remote desktop for Windows: control your PC from any browser on your network.">
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        .rd-download { display: inline-block; margin: 10px 0 4px; padding: 12px 22px; border-radius: 8px;
+            background: #e5484d; color: #fff !important; font-weight: bold; text-decoration: none; }
+        .rd-download:hover { filter: brightness(1.08); }
+        .rd-small { font-size: 0.85em; opacity: 0.8; word-break: break-all; }
+        .rd-box { background: #fff9d5; border: 2px solid rgb(168, 152, 98); border-radius: 8px; padding: 6px 18px; margin: 14px 0; }
+        .rd-table { border-collapse: collapse; width: 100%; margin: 8px 0; }
+        .rd-table td { border-top: 1px solid rgba(168, 152, 98, 0.5); padding: 6px 8px; vertical-align: top; text-align: left; }
+        .rd-table td:first-child { font-weight: bold; white-space: nowrap; }
+        main ol li, main ul li { margin: 4px 0; text-align: left; }
+        main code { background: rgba(0, 0, 0, 0.06); padding: 1px 5px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+<div id="wrapper">
+    <main>
+        <br>
+        <h2>Remote Desktop</h2>
+        <p><img src="/static/media/remotedesktop/card.png" style="max-height: 320px; max-width: 100%;" alt="Illustration: a laptop desktop shown on a phone"></p>
+
+        <p>I wanted something like AnyDesk to control my PC from my phone or laptop at home, but small enough to read and fully under my control. So I built one: a tiny Python program runs on the Windows PC, and you control it from <b>any browser</b> on your network, with nothing to install on the other device.</p>
+
+        <p>
+            <a class="rd-download" id="rd-download" href="/static/files/remote-desktop-v1.0.0.zip" download><i class="fas fa-download"></i> Download v1.0.0 (.zip)</a><br>
+            <span class="rd-small">Windows host · Python 3.10+ · MIT license · SHA-256: <span id="rd-sha">00a4bce45f4598e8f86a821fa721234ebb4a67341b7759ac4571cbea3b41520f</span></span>
+        </p>
+
+        <div class="rd-box">
+            <p><b>⚠ For personal use on your own network.</b> It is designed for your home LAN or a private VPN such as Tailscale. Don't expose it to the internet with port forwarding (by default it refuses internet connections anyway).</p>
+        </div>
+
+        <h3>Features</h3>
+        <ul>
+            <li>Live screen in the browser: only the parts that changed are sent, and text turns sharp when the screen is still</li>
+            <li>Full mouse and keyboard, any keyboard layout (accents and shortcuts work like a local keyboard)</li>
+            <li>Special keys menu (Windows key, Alt+Tab, Task Manager…) and fullscreen mode</li>
+            <li>Multiple monitors, quality / resolution / FPS controls</li>
+            <li>Clipboard in both directions, and send files by drag &amp; drop</li>
+            <li>Works on phones and tablets: tap, long-press for right click, two-finger scroll, on-screen keyboard</li>
+            <li>A red banner on the PC whenever someone is connected, with a Disconnect button</li>
+        </ul>
+
+        <h3>Security</h3>
+        <table class="rd-table">
+            <tr><td>Encrypted</td><td>Everything goes over HTTPS/WSS (a self-signed certificate is created on first run).</td></tr>
+            <tr><td>Password</td><td>A random 12-character password is generated on first run and stored only as a salted hash.</td></tr>
+            <tr><td>Brute force</td><td>5 wrong attempts lock that address out for 15 minutes.</td></tr>
+            <tr><td>Local only</td><td>Connections from public internet addresses are refused; only LAN, localhost and VPN (Tailscale) addresses get in.</td></tr>
+            <tr><td>Sessions</td><td>Signed, expiring, HttpOnly/Secure/SameSite=Strict cookies; Disconnect or a new password revokes them all.</td></tr>
+            <tr><td>Web hardening</td><td>Strict Content-Security-Policy, anti-clickjacking, Origin checks, safe upload filenames.</td></tr>
+        </table>
+
+        <h3>How to use</h3>
+        <ol>
+            <li>Install <a href="https://www.python.org/downloads/" target="_blank">Python</a> on the PC you want to control (tick <i>"Add python.exe to PATH"</i>).</li>
+            <li>Unzip the download and double-click <code>start.bat</code>. The first run installs what it needs, then shows an address like <code>https://192.168.x.x:8765</code> and your password (shown only once, so write it down).</li>
+            <li>Right-click <code>allow-firewall.bat</code> → <i>Run as administrator</i> to allow it on your local network.</li>
+            <li>On your phone or another computer, open that address, accept the certificate warning the first time (<i>Advanced → Continue</i>), and type the password.</li>
+        </ol>
+        <p>Away from home? Install <a href="https://tailscale.com/" target="_blank">Tailscale</a> on both devices and use the PC's Tailscale address. No port forwarding needed.</p>
+
+        <h3>How it works</h3>
+        <p>The host captures the screen, splits it into 128-pixel tiles, and only JPEG-encodes the tiles that changed. The browser draws them on a canvas and confirms each frame, so a slow network lowers the frame rate instead of building up lag. Mouse and keyboard events go back over the same WebSocket and are injected with the Windows <code>SendInput</code> API. Keys are sent as physical scan codes, so the PC's own keyboard layout interprets them.</p>
+        <p>It runs at about 20–30 fps at 1080p on a home network. It has an automated test suite: security, input, clipboard, file transfer, and an end-to-end browser test.</p>
+
+        <h3>Limitations</h3>
+        <ul>
+            <li>Windows PCs only as the host (any device can be the viewer).</li>
+            <li>No audio.</li>
+            <li>Windows doesn't let normal apps see or control the lock screen, Ctrl+Alt+Del or UAC prompts.</li>
+        </ul>
+
+        <br>
+    </main>
+    <a href="/">← Back</a>
+    <footer>
+        <p>Paloma Liz</p>
+        <p class="links">
+            <a href="/">Home</a> |
+            <a href="https://github.com/palomaspbr" target="_blank">GitHub</a> |
+            <a href="https://www.linkedin.com/in/paloma-liz-huebner-botana-2a0456252/" target="_blank">LinkedIn</a> |
+            <a href="https://www.instagram.com/palomita_liz/" target="_blank">Instagram</a>
+        </p>
+        <p></p>
+    </footer>
+</div>
+</body>
+</html>
