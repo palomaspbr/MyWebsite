@@ -124,9 +124,21 @@
     mahjong: [['hand', 'tutMj1'], ['tiles', 'tutMj2'], ['bulb', 'tutMj3']],
   };
   const modeTitle = (id) => ({ tower: L().modeTower, yarn: L().modeYarn, merge: L().modeMerge, tiles: L().modeTiles, mahjong: L().modeMahjong })[id];
-  function openTutorial(id) {
+  const TUT_ORDER = ['tower', 'yarn', 'merge', 'tiles', 'mahjong'];
+  // How-to-play panel with a tab for every game; `id` is the game shown first (the current one).
+  function openTutorial(id, switching) {
     const l = L();
+    if (!switching) openTutorial.first = id; // the game that gets marked "seen" on close
     $('tut-title').textContent = modeTitle(id);
+    const tabs = $('tut-tabs');
+    tabs.innerHTML = '';
+    TUT_ORDER.forEach((g) => {
+      const b = document.createElement('button');
+      b.className = 'btn small-btn tab' + (g === id ? ' on' : '');
+      b.textContent = l.boardTab[g];
+      b.onclick = () => openTutorial(g, true);
+      tabs.appendChild(b);
+    });
     const box = $('tut-steps');
     box.innerHTML = '';
     TUT[id].forEach(([icon, key, iconOpts], i) => {
@@ -142,12 +154,11 @@
       row.appendChild(tx);
       box.appendChild(row);
     });
-    openTutorial.id = id;
     show('tutorial', true);
     menuPaused = mode === 'play';
   }
   function closeTutorial() {
-    if (openTutorial.id) store.set('tut.' + openTutorial.id, true);
+    if (openTutorial.first) store.set('tut.' + openTutorial.first, true);
     show('tutorial', false);
     menuPaused = !$('audio').classList.contains('hidden') && mode === 'play';
   }
