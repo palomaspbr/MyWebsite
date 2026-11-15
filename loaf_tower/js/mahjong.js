@@ -11,6 +11,8 @@
   const K = LT.TileKit;
   const { TW, TH, PAD, RES } = K;
 
+  // Meow Mahjong has its own collectible cats (the tray mode keeps t1..t6)
+  const REWARDS = { 1: 'j1', 3: 'j2', 6: 'j3', 10: 'j4', 15: 'j5', 20: 'j6' };
   const BOARD = { top: 178, bottom: 1010 };
   const BTN_Y = 1118;
 
@@ -267,7 +269,7 @@
       this.state = 'won';
       this.wonAt = this.t + 0.4;
       const unlocked = [];
-      for (const [lvl, type] of Object.entries(K.REWARDS)) {
+      for (const [lvl, type] of Object.entries(REWARDS)) {
         if (this.level >= +lvl && !this.dex.has(type)) { this.dex.add(type); unlocked.push(type); this.emit('dex', type); }
       }
       this.unlocked = unlocked;
@@ -397,6 +399,6 @@
 
   MahjongGame.generate = generate;
   MahjongGame.levelSpec = levelSpec;
-  MahjongGame.REWARDS = K.REWARDS;
+  MahjongGame.REWARDS = REWARDS;
   LT.MahjongGame = MahjongGame;
 })();

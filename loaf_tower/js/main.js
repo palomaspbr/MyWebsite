@@ -73,7 +73,8 @@
       for (const [lvl, type] of Object.entries(rewards)) if (+lvl <= solvedUpTo && !dex.has(type)) { dex.add(type); added = true; }
     };
     grant(LT.YarnGame.REWARDS, yarnLevel - 1);
-    grant(LT.TileGame.REWARDS, Math.max(tileLevel, mjLevel) - 1);
+    grant(LT.TileGame.REWARDS, tileLevel - 1);
+    grant(LT.MahjongGame.REWARDS, mjLevel - 1);
     if (added) store.set('dex', Array.from(dex));
   }
 
@@ -536,9 +537,11 @@
         cv.width = 220; cv.height = 170;
         const g = cv.getContext('2d');
         const t = C.TYPES[type];
-        const sc = Math.min(1.1, 170 / t.w, 110 / t.h);
-        if (known) C.drawCat(g, { type, pal: 'orange', seed: 42, face: 'happy', x: 110, y: 96, a: 0, scale: sc }, 0, 0);
-        else C.drawSilhouette(g, type, 110, 96, sc, 0);
+        const below = t.below || 0; // e.g. the Lantern Cat's tassel
+        const sc = Math.min(1.1, 170 / t.w, 110 / (t.h + below));
+        const cy = 96 - (below * sc) / 2;
+        if (known) C.drawCat(g, { type, pal: 'orange', seed: 42, face: 'happy', x: 110, y: cy, a: 0, scale: sc }, 0, 0);
+        else C.drawSilhouette(g, type, 110, cy, sc, 0);
         const label = document.createElement('div');
         label.textContent = known ? C.catLabel(type, lang) : L().locked;
         item.title = known ? C.catDesc(type, lang) : '';

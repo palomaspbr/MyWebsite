@@ -276,3 +276,7 @@ canvas#game {
 #board-list { max-height: 34vh; overflow-y: auto; }
 #board-tabs .tab { font-size: min(2.2vh, 3.8vw); padding: 0.12em 0.45em; }
 #title .credit { background: rgba(251, 246, 234, 0.88); padding: 0 0.5em; border-radius: 10px; position: relative; z-index: 1; }
+/* credit pinned to the bottom of the title screen */
+#title .credit { position: absolute; left: 50%; bottom: 1.6vh; transform: translateX(-50%); margin: 0; z-index: 2; white-space: nowrap; }
+#dex-grid { padding-bottom: 76px; } /* room under the last row for the floating Close button */
+#title .credit { font-size: max(13px, min(2.4vh, 4.4vw)); }

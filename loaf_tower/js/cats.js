@@ -46,6 +46,13 @@
     bamboo: { fill: '#d8f5a2', stripe: '#5c940d', inner: PINK, kind: 'bamboo' },
     jade: { fill: '#63c69a', vein: 'rgba(235,255,240,0.55)', ear: '#3fa77c', inner: '#b2f2bb', kind: 'jade' },
     porcelain: { fill: '#fdfdff', blue: '#1c5bb5', inner: '#d0e2ff', kind: 'porcelain', eye: '#4dabf7' },
+    // Meow Mahjong exclusives
+    dragon: { fill: '#e03131', scale: '#ffd43b', ear: '#c92a2a', inner: '#ffc9c9', kind: 'scales', eye: '#ffd43b' },
+    lantern: { fill: '#f03e3e', band: '#fcc419', rib: '#c92a2a', inner: '#ffc9c9', kind: 'lantern' },
+    dumpling: { fill: '#fffaf0', pleat: '#d9c7a1', inner: PINK, kind: 'dumpling' },
+    matcha: { fill: '#94d82d', foam: '#f4fce3', inner: PINK, kind: 'matcha' },
+    sakura: { fill: '#ffe3ec', flower: '#f783ac', inner: '#ff8fab', kind: 'sakura' },
+    imperial: { fill: '#7048e8', gold: '#fcc419', ear: '#5f3dc4', inner: '#d0bfff', kind: 'imperial', dark: true, eye: '#ffd43b' },
   };
   const COMMON_PALS = ['orange', 'gray', 'cream', 'white', 'black', 'calico', 'tuxedo', 'siamese'];
 
@@ -127,6 +134,20 @@
       label: { en: 'Jade Cat', pt: 'Gato de Jade' }, desc: { en: 'Carved from one precious stone.', pt: 'Esculpido numa pedra preciosa.' } },
     t6: { shape: 'rr', w: 136, h: 76, r: 34, density: 1.4, face: [0, -6], fs: 1, paws: true, tail: 1, pal: 'porcelain',
       label: { en: 'Porcelain Cat', pt: 'Gato de Porcelana' }, desc: { en: 'Priceless. Please do not drop.', pt: 'Não tem preço. Por favor, não derrube.' } },
+
+    /* ---- Meow Mahjong exclusives (unlocked by clearing Mahjong levels) ---- */
+    j1: { shape: 'rr', w: 140, h: 72, r: 30, density: 1.4, face: [0, -4], fs: 1, paws: true, tail: 1, pal: 'dragon',
+      label: { en: 'Dragon Cat', pt: 'Gato Dragão' }, desc: { en: 'Breathes tiny, harmless sparkles.', pt: 'Solta faísquinhas inofensivas.' } },
+    j2: { shape: 'rr', w: 104, h: 96, r: 40, density: 1.4, face: [0, -6], fs: 1, pal: 'lantern', below: 22, // tassel hangs below the body
+      label: { en: 'Lantern Cat', pt: 'Gato Lanterna' }, desc: { en: 'Glows at every festival.', pt: 'Brilha em toda festa.' } },
+    j3: { shape: 'rr', w: 120, h: 74, r: 36, density: 1.4, face: [0, 4], fs: 0.95, paws: true, pal: 'dumpling',
+      label: { en: 'Dumpling Cat', pt: 'Gato Guioza' }, desc: { en: 'Soft, round and freshly steamed.', pt: 'Macio, redondo e fresquinho.' } },
+    j4: { shape: 'rr', w: 122, h: 72, r: 30, density: 1.4, face: [0, 2], fs: 1, paws: true, tail: 1, pal: 'matcha',
+      label: { en: 'Matcha Cat', pt: 'Gato Matchá' }, desc: { en: 'Calm, focused, a little bitter.', pt: 'Calmo, focado, meio amargo.' } },
+    j5: { shape: 'rr', w: 128, h: 70, r: 32, density: 1.4, face: [0, -4], fs: 1, paws: true, tail: -1, pal: 'sakura',
+      label: { en: 'Sakura Cat', pt: 'Gato Sakura' }, desc: { en: 'Blooms once a year. Purrs all year.', pt: 'Floresce uma vez por ano. Ronrona o ano todo.' } },
+    j6: { shape: 'rr', w: 134, h: 76, r: 30, density: 1.4, face: [0, -2], fs: 1.05, paws: true, tail: 1, pal: 'imperial',
+      label: { en: 'Imperial Cat', pt: 'Gato Imperial' }, desc: { en: 'Master of every tile.', pt: 'Mestre de todas as peças.' } },
   };
 
   // Loaf Tower cats are drawn and simulated 12% bigger than their base size (easier stacking).
@@ -168,6 +189,7 @@
     { id: 'yarn', label: { en: 'Yarn Lines', pt: 'Linhas de Lã' }, types: ['y1', 'y2', 'y3', 'y4', 'y5', 'y6', 'y7', 'y8', 'y9', 'y10', 'y11', 'y12'] },
     { id: 'merge', label: { en: 'Purr Merge', pt: 'Junta Gato' }, types: MERGE.map((_, i) => 'm' + (i + 1)) },
     { id: 'tiles', label: { en: 'Meow Match', pt: 'Combina Miau' }, types: ['t1', 't2', 't3', 't4', 't5', 't6'] },
+    { id: 'mahjong', label: { en: 'Meow Mahjong', pt: 'Miau Mahjong' }, types: ['j1', 'j2', 'j3', 'j4', 'j5', 'j6'] },
   ];
   const DEX_ORDER = DEX_SECTIONS.reduce((a, s) => a.concat(s.types), []);
   const SPECIAL = { box: 1, zoomies: 1, perfect: 1, cupcake: 1, pudim: 1, rainbow: 1, galaxy: 1 };
@@ -656,6 +678,93 @@
       g.addColorStop(0.45, 'rgba(255,255,255,0)');
       ctx.fillStyle = g;
       ctx.fillRect(-w / 2 - 6, -h / 2 - 6, w + 12, h + 12);
+    } else if (P.kind === 'scales') {
+      // dragon scales: rows of little gold arcs
+      ctx.save();
+      ctx.strokeStyle = P.scale;
+      ctx.globalAlpha = 0.75;
+      ctx.lineWidth = 2.4;
+      for (let y = -h / 2 + 10, row = 0; y < h / 2; y += 12, row++) {
+        for (let x = -w / 2 + (row % 2 ? 7 : 0); x < w / 2 + 6; x += 14) {
+          if (Math.abs(x - fx) < 34 * u && Math.abs(y - fy) < 22 * u) continue;
+          ctx.beginPath(); ctx.arc(x, y, 6, 0.1 * Math.PI, 0.9 * Math.PI); ctx.stroke();
+        }
+      }
+      ctx.restore();
+    } else if (P.kind === 'lantern') {
+      // paper lantern: curved ribs and gold bands top and bottom
+      ctx.save();
+      ctx.strokeStyle = P.rib;
+      ctx.lineWidth = 2.6;
+      for (let k = -2; k <= 2; k++) {
+        if (k === 0) continue;
+        ctx.beginPath();
+        ctx.moveTo(k * w * 0.16, -h / 2);
+        ctx.quadraticCurveTo(k * w * 0.32, 0, k * w * 0.16, h / 2);
+        ctx.stroke();
+      }
+      ctx.restore();
+      ctx.fillStyle = P.band;
+      ctx.fillRect(-w / 2 - 6, -h / 2 - 4, w + 12, 12);
+      ctx.fillRect(-w / 2 - 6, h / 2 - 9, w + 12, 14);
+    } else if (P.kind === 'dumpling') {
+      // dumpling pleats fanning out from the top
+      ctx.save();
+      ctx.strokeStyle = P.pleat;
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      for (let k = -3; k <= 3; k++) {
+        if (k === 0) continue;
+        ctx.beginPath();
+        ctx.moveTo(k * 11, -h / 2 + 1);
+        ctx.quadraticCurveTo(k * 13, -h / 2 + 9, k * 9, -h / 2 + 17);
+        ctx.stroke();
+      }
+      ctx.restore();
+    } else if (P.kind === 'matcha') {
+      // a cup of matcha: frothy foam on top, a few darker specks
+      ctx.fillStyle = P.foam;
+      ctx.beginPath();
+      ctx.moveTo(-w / 2 - 6, -h / 2 - 6);
+      ctx.lineTo(w / 2 + 6, -h / 2 - 6);
+      ctx.lineTo(w / 2 + 6, -h / 2 + 12);
+      for (let x = w / 2 + 6; x >= -w / 2 - 6; x -= 10) ctx.quadraticCurveTo(x - 5, -h / 2 + 19, x - 10, -h / 2 + 12);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = 'rgba(70,110,20,0.45)';
+      for (let k = 0; k < 7; k++) {
+        const x = rnd.range(-w / 2 + 8, w / 2 - 8), y = rnd.range(-h / 2 + 22, h / 2 - 6);
+        if (Math.abs(x - fx) < 30 * u && Math.abs(y - fy) < 20 * u) continue;
+        ctx.beginPath(); ctx.arc(x, y, 2.2, 0, Math.PI * 2); ctx.fill();
+      }
+    } else if (P.kind === 'sakura') {
+      // cherry blossoms (five round petals) around the face
+      const spots = [[-w / 2 + 20, -h / 2 + 16], [w / 2 - 20, -h / 2 + 18], [-w / 2 + 16, h / 2 - 16], [w / 2 - 18, h / 2 - 14]];
+      for (const [sx, sy] of spots) {
+        const x = sx + rnd.range(-3, 3), y = sy + rnd.range(-3, 3);
+        if (Math.abs(x - fx) < 34 * u && Math.abs(y - fy) < 20 * u) continue;
+        ctx.fillStyle = P.flower;
+        for (let p = 0; p < 5; p++) {
+          const a = (p / 5) * Math.PI * 2 - Math.PI / 2;
+          ctx.beginPath(); ctx.arc(x + Math.cos(a) * 5.5, y + Math.sin(a) * 5.5, 4.2, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.fillStyle = '#ffd43b';
+        ctx.beginPath(); ctx.arc(x, y, 2.4, 0, Math.PI * 2); ctx.fill();
+      }
+    } else if (P.kind === 'imperial') {
+      // royal robe: gold cloud swirls and a gold hem
+      ctx.save();
+      ctx.strokeStyle = P.gold;
+      ctx.lineWidth = 2.6;
+      for (const s of [-1, 1]) {
+        const cx = s * (w / 2 - 20), cy = -h / 6;
+        ctx.beginPath();
+        for (let a = 0; a < Math.PI * 3; a += 0.25) { const r = 2 + a * 2.2; const x = cx + Math.cos(a) * r * s, y = cy + Math.sin(a) * r; if (a === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
+        ctx.stroke();
+      }
+      ctx.restore();
+      ctx.fillStyle = P.gold;
+      ctx.fillRect(-w / 2 - 6, h / 2 - 10, w + 12, 12);
     } else if (P.kind === 'porcelain') {
       // blue-and-white: little flowers and a wave band near the bottom
       ctx.save();
@@ -854,7 +963,15 @@
       D.shape(ctx, D.ellipse(7 * u, 7 * u, 12, bx, by), { fill: '#ffd43b', seed: seed + 91, boil, lw: 2.4 });
       ctx.fillStyle = D.INK;
       ctx.fillRect(bx - 0.8 * u, by + 1 * u, 1.6 * u, 4 * u);
-    } else if (P.kind === 'sun') {
+    } else if (P.kind === 'lantern') {
+      // tassel hanging under the lantern
+      D.line(ctx, [[fx, h / 2 + 2], [fx, h / 2 + 9]], { seed: seed + 97, boil, lw: 3, ink: '#e8590c', passes: 1 });
+      D.shape(ctx, D.subdiv([[fx - 5, h / 2 + 8], [fx + 5, h / 2 + 8], [fx + 6, h / 2 + 20], [fx - 6, h / 2 + 20]], 2, true), { fill: '#fcc419', seed: seed + 98, boil, lw: 2.4 });
+    } else if (P.kind === 'scales') {
+      // long dragon whiskers
+      for (const s of [-1, 1]) D.line(ctx, [[fx + s * 22 * u, fy + 10 * u], [fx + s * 40 * u, fy + 4 * u], [fx + s * 52 * u, fy + 14 * u]], { seed: seed + 99 + s, boil, lw: 2.4, ink: '#ffd43b', passes: 1 });
+    }
+    if (P.kind === 'sun' || P.kind === 'imperial') {
       // little crown between the ears
       const cw = 15 * u, ch = 11 * u, cy = topFn(fx) + 3 * u;
       const crown = D.subdiv([[fx - cw, cy], [fx - cw, cy - ch], [fx - cw * 0.5, cy - ch * 0.45], [fx, cy - ch * 1.25], [fx + cw * 0.5, cy - ch * 0.45], [fx + cw, cy - ch], [fx + cw, cy]], 2, true);
@@ -862,7 +979,7 @@
       ctx.fillStyle = '#e03131';
       ctx.beginPath(); ctx.arc(fx, cy - ch * 0.45, 2.2 * u, 0, Math.PI * 2); ctx.fill();
     }
-    if (P.kind === 'bread' || P.kind === 'rainbow' || P.kind === 'gold' || P.kind === 'sun' || P.kind === 'jade' || P.kind === 'cosmicyarn') {
+    if (P.kind === 'bread' || P.kind === 'rainbow' || P.kind === 'gold' || P.kind === 'sun' || P.kind === 'jade' || P.kind === 'cosmicyarn' || P.kind === 'imperial') {
       const tw = (H(seed, 3, boil) + 1) * 0.5;
       D.sparkle(ctx, w / 2 - 4, -h / 2 - 6, 5 + tw * 4, '#ffd43b');
     }
