@@ -7,7 +7,7 @@
 
   const CX = 360;
   const GROUND_Y = 1050;
-  const PLAT_W = 330, PLAT_H = 46;
+  const PLAT_W = 400, PLAT_H = 46; // wider base = friendlier start (was 330)
   const FALL_Y = GROUND_Y + 330;
   const CM_PER_PX = 0.3;
   const DROP_SCREEN_Y = 228;
@@ -110,12 +110,13 @@
     pickType(n) {
       if (MILESTONES[n] && !this.seenThisRun.has(MILESTONES[n])) return MILESTONES[n];
       if (n < 2) return 'loaf';
-      const w = [['loaf', 30], ['curl', 14]];
-      if (n >= 3) w.push(['long', 12], ['perfect', 3]);
-      if (n >= 4) w.push(['kitten', 9]);
+      // round, rolly cats (curl, kitten, zoomies) are rarer; flat ones (loaf, long, perfect, box) more common
+      const w = [['loaf', 36], ['curl', 5]];
+      if (n >= 3) w.push(['long', 14], ['perfect', 5]);
+      if (n >= 4) w.push(['kitten', 5]);
       if (n >= 5) w.push(['chonk', 7]);
-      if (n > 5) w.push(['box', 5]);
-      if (n > 8) w.push(['zoomies', 4]);
+      if (n > 5) w.push(['box', 6]);
+      if (n > 8) w.push(['zoomies', 2]);
       if (n > 10) w.push(['cupcake', 3]);
       if (n > 13) w.push(['pudim', 3]);
       if (n > 16) w.push(['rainbow', 2.5]);

@@ -54,11 +54,12 @@
   function drawBase(ctx, boil) {
     const { CX, GROUND_Y, PLAT_W, PLAT_H } = K();
     // stack of books under the cushion
+    const bk = PLAT_W / 330; // books follow the cushion width
     const books = [
-      { w: 280, h: 48, c: '#6fa8dc', s: '#3d6f9f', title: 'CATS' },
-      { w: 256, h: 40, c: '#e9c46a', s: '#b38f2f', title: '' },
-      { w: 290, h: 54, c: '#e76f51', s: '#a8432b', title: 'PHYSICS' },
-      { w: 266, h: 46, c: '#8ac926', s: '#5b8a14', title: '' },
+      { w: 280 * bk, h: 48, c: '#6fa8dc', s: '#3d6f9f', title: 'CATS' },
+      { w: 256 * bk, h: 40, c: '#e9c46a', s: '#b38f2f', title: '' },
+      { w: 290 * bk, h: 54, c: '#e76f51', s: '#a8432b', title: 'PHYSICS' },
+      { w: 266 * bk, h: 46, c: '#8ac926', s: '#5b8a14', title: '' },
     ];
     let y = GROUND_Y + PLAT_H - 6;
     books.forEach((b, i) => {

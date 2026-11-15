@@ -129,6 +129,16 @@
       label: { en: 'Porcelain Cat', pt: 'Gato de Porcelana' }, desc: { en: 'Priceless. Please do not drop.', pt: 'Não tem preço. Por favor, não derrube.' } },
   };
 
+  // Loaf Tower cats are drawn and simulated 12% bigger than their base size (easier stacking).
+  const TOWER_K = 1.12;
+  ['loaf', 'curl', 'long', 'kitten', 'chonk', 'box', 'zoomies', 'perfect', 'cupcake', 'pudim', 'rainbow', 'galaxy'].forEach((k) => {
+    const t = TYPES[k];
+    t.w *= TOWER_K; t.h *= TOWER_K;
+    if (t.r) t.r *= TOWER_K;
+    if (t.face) t.face = [t.face[0] * TOWER_K, t.face[1] * TOWER_K];
+    t.fs = (t.fs || 1) * TOWER_K;
+  });
+
   /* ---- Purr Merge tiers: round cats that merge into the next tier ---- */
   const MERGE = [
     ['bean', 24, 'cream', 'Bean', 'Feijãozinho', 'Smallest cat. Biggest dreams.', 'Menor gato. Maiores sonhos.'],
@@ -766,8 +776,10 @@
     if (t.tail) {
       const sd = t.tail;
       const sw = Math.sin(T * 2.2 + seed) * 4;
-      const bx = sd * (w / 2 - 12), by = h / 2 - 10;
-      const tp = [[bx, by], [bx + sd * 20, by - 2], [bx + sd * 31, by - 20 + sw], [bx + sd * 25, by - 40 + sw * 1.6]];
+      // the tail curls up close along the side (it has no collider, so it must not look like part of the body's edge)
+      const bx = sd * (w / 2 - 16), by = h / 2 - 8;
+      const lift = Math.min(h * 0.62, 40);
+      const tp = [[bx, by], [bx + sd * 13, by - 3], [bx + sd * 17, by - lift * 0.5 + sw * 0.5], [bx + sd * 11, by - lift + sw]];
       D.tube(ctx, tp, { fill: P.kind === 'siamese' ? P.point : P.fill, width: 10 * Math.max(0.7, u), seed: seed + 3, boil, lw: 3 });
     }
 
