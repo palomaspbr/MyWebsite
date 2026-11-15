@@ -39,15 +39,17 @@
     });
     const rows = Array.from(byId.values());
     rows.sort((x, y) =>
+      (y.rolls > 0) - (x.rolls > 0) || // people who haven't rolled yet go last
       y.points - x.points ||
       y.wins - x.wins ||
       x.losses - y.losses ||
       BELTS.indexOf(y.player.belt) - BELTS.indexOf(x.player.belt) ||
       x.player.name.localeCompare(y.player.name, undefined, { sensitivity: 'base' }));
-    // Competition ranking: equal points, wins and losses share a rank.
+    // Competition ranking: equal points, wins and losses share a rank. No rolls yet = no rank (null).
     rows.forEach((row, i) => {
       const prev = rows[i - 1];
-      row.rank = prev && prev.points === row.points && prev.wins === row.wins && prev.losses === row.losses ? prev.rank : i + 1;
+      if (!row.rolls) row.rank = null;
+      else row.rank = prev && prev.rolls && prev.points === row.points && prev.wins === row.wins && prev.losses === row.losses ? prev.rank : i + 1;
       let fav = '', favN = 0;
       Object.keys(row.subs).forEach((k) => { if (row.subs[k] > favN) { fav = k; favN = row.subs[k]; } });
       row.favorite = fav;

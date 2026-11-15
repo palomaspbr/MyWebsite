@@ -23,7 +23,7 @@ test('empty inputs', () => {
   assert.equal(rows.length, 1);
   assert.deepEqual(
     { points: rows[0].points, wins: rows[0].wins, draws: rows[0].draws, losses: rows[0].losses, rolls: rows[0].rolls, streak: rows[0].streak, rank: rows[0].rank, favorite: rows[0].favorite },
-    { points: 0, wins: 0, draws: 0, losses: 0, rolls: 0, streak: 0, rank: 1, favorite: '' });
+    { points: 0, wins: 0, draws: 0, losses: 0, rolls: 0, streak: 0, rank: null, favorite: '' }); // no rolls = no rank
 });
 
 test('points: win 3, draw 1, loss 0', () => {
@@ -70,13 +70,13 @@ test('tie-break: fewer losses', () => {
   assert.notEqual(row(rows, 1).rank, row(rows, 2).rank);
 });
 
-test('tie-break: higher belt, then name (case-insensitive); shared competition rank', () => {
+test('players without rolls go last and get no rank; among them: higher belt, then name (case-insensitive)', () => {
   const ps = [P(1, 'bob', 'white'), P(2, 'Al', 'white'), P(3, 'Cy', 'black'), P(4, 'dee', 'blue'), P(5, 'Top', 'white')];
   const rolls = [R(5, 1, 5)]; // Top 3 pts; bob 0 pts with a loss
   const rows = S.table(ps, rolls);
-  assert.deepEqual(rows.map((r) => r.player.name), ['Top', 'Cy', 'dee', 'Al', 'bob']);
-  // Cy, dee, Al all 0/0/0 -> share rank 2; bob has a loss -> rank 5 (competition ranking)
-  assert.deepEqual(rows.map((r) => r.rank), [1, 2, 2, 2, 5]);
+  assert.deepEqual(rows.map((r) => r.player.name), ['Top', 'bob', 'Cy', 'dee', 'Al']);
+  // bob rolled (and lost) so he is ranked 2nd; Cy, dee and Al haven't rolled: listed after, unranked
+  assert.deepEqual(rows.map((r) => r.rank), [1, 2, null, null, null]);
 });
 
 test('shared rank with points tie (1,1,3)', () => {
@@ -182,4 +182,12 @@ test('headToHead agrees with table for a two-player league', () => {
 
 test('headToHead ignores a winner that is neither player (consistent with table)', () => {
   assert.deepEqual(S.headToHead([R(1, 2, 77)], 1, 2), { wins: 0, draws: 0, losses: 0 });
+});
+
+test('belt tie-break among players who rolled; shared rank needs the same points, wins and losses', () => {
+  const ps = [P(1, 'a', 'white'), P(2, 'b', 'black'), P(3, 'c', 'blue'), P(4, 'd', 'white')];
+  // a and b each drew once (1 pt, 0W 1D 0L) with c and d respectively; c and d same.
+  const rows = S.table(ps, [R(1, 3, null), R(2, 4, null)]);
+  assert.deepEqual(rows.map((r) => r.player.name), ['b', 'c', 'a', 'd']);
+  assert.deepEqual(rows.map((r) => r.rank), [1, 1, 1, 1]);
 });

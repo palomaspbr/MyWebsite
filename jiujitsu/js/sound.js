@@ -131,6 +131,14 @@
       const t = c.currentTime;
       for (let i = 0; i < 5; i++) hiss(c, t + i * 0.07, 0.06, 0.3, 'bandpass', 900 + (i % 2) * 500, 0, 1.5);
     },
+    // Camera shutter for a new photo: two quick clicks of filtered noise.
+    shutter() {
+      const c = ac(); if (!c) return;
+      const t = c.currentTime;
+      hiss(c, t, 0.03, 0.5, 'highpass', 2500, 0, 0.8);
+      tone(c, t, 1800, 'square', 0.05, 0.02);
+      hiss(c, t + 0.09, 0.05, 0.4, 'bandpass', 1500, 600, 1);
+    },
     // Referee buzz for errors.
     error() {
       const c = ac(); if (!c) return;

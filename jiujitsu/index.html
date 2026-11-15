@@ -48,7 +48,7 @@
 
     <section id="welcome" class="card sketch" hidden>
       <h2>Who's rolling?</h2>
-      <p class="muted">Pick your name, or sign up if you're new. No passwords, we're all friends here.</p>
+      <p class="muted">Pick your name and log in, or sign up if you're new.</p>
       <input id="who-search" class="field" type="search" placeholder="Search names..." autocomplete="off" aria-label="Search names">
       <div id="who-list" class="who-list"></div>
 
@@ -58,12 +58,24 @@
         <input id="signup-name" class="field" maxlength="24" placeholder="e.g. Bruno">
         <span class="lbl">Your belt</span>
         <div class="belt-picker" data-for="signup"></div>
+        <label class="lbl" for="signup-pw">Choose a password <span class="muted">(at least 4 characters)</span></label>
+        <input id="signup-pw" class="field" type="password" maxlength="72" autocomplete="new-password">
+        <label class="lbl" for="signup-pw2">Type it again</label>
+        <input id="signup-pw2" class="field" type="password" maxlength="72" autocomplete="new-password">
+        <p class="form-err" id="signup-err" role="alert"></p>
         <button class="btn primary" type="submit">Sign me up! Oss!</button>
       </form>
     </section>
 
     <section id="board-wrap" hidden>
       <button id="log-btn" class="btn primary big" type="button">+ Log a roll</button>
+
+      <section id="pending-card" class="card sketch pending-card" hidden>
+        <div class="card-head">
+          <h2>Waiting for a thumbs up</h2>
+        </div>
+        <ul id="pending" class="feed"></ul>
+      </section>
 
       <section class="card sketch">
         <div class="card-head">
@@ -140,14 +152,25 @@
     <div class="row-end"><button class="btn ghost" type="button" data-close>Close</button></div>
   </dialog>
 
-  <!-- Change belt / rename -->
+  <!-- Edit profile (self) or a player (admin) -->
   <dialog id="edit-player-dlg" class="dlg sketch">
     <form id="edit-player-form" method="dialog" class="stack" autocomplete="off">
-      <h2 id="edit-player-title">Got promoted?</h2>
+      <h2 id="edit-player-title">Edit profile</h2>
       <div id="rename-wrap" class="stack" hidden>
         <label class="lbl" for="edit-name">Name</label>
         <input id="edit-name" class="field" maxlength="24">
       </div>
+      <span class="lbl">Photo <span class="muted">(optional)</span></span>
+      <div class="photo-edit">
+        <div id="edit-photo-preview" class="polaroid small"></div>
+        <div class="stack">
+          <label class="btn small file-btn">Choose a photo<input id="edit-photo" type="file" accept="image/*"></label>
+          <button id="edit-photo-remove" class="btn small ghost" type="button">Remove photo</button>
+        </div>
+      </div>
+      <label class="lbl" for="edit-bio">Bio <span class="muted">(optional)</span></label>
+      <textarea id="edit-bio" class="field" rows="3" maxlength="280" placeholder="Favorite position, academy, how long you've been training..."></textarea>
+      <span class="muted small counter" id="edit-bio-count"></span>
       <span class="lbl">Belt</span>
       <div class="belt-picker" data-for="edit"></div>
       <p class="form-err" id="edit-player-err" role="alert"></p>
@@ -158,16 +181,41 @@
     </form>
   </dialog>
 
-  <!-- Admin password -->
-  <dialog id="admin-dlg" class="dlg sketch">
-    <form id="admin-form" method="dialog" class="stack" autocomplete="off">
-      <h2>Admin check</h2>
-      <p class="muted">Paloma is the admin profile. Enter the admin password to roll as Paloma.</p>
-      <input id="admin-pw" class="field" type="password" autocomplete="current-password" aria-label="Admin password" required>
-      <p class="form-err" id="admin-err" role="alert"></p>
+  <!-- Log in -->
+  <dialog id="login-dlg" class="dlg sketch small-dlg">
+    <form id="login-form" method="dialog" class="stack" autocomplete="off">
+      <h2 id="login-title">Hi!</h2>
+      <p id="login-hint" class="muted"></p>
+      <label class="lbl" for="login-pw" id="login-pw-label">Password</label>
+      <input id="login-pw" class="field" type="password" maxlength="72" autocomplete="current-password">
+      <div id="login-pw2-wrap" class="stack" hidden>
+        <label class="lbl" for="login-pw2">Type it again</label>
+        <input id="login-pw2" class="field" type="password" maxlength="72" autocomplete="new-password">
+      </div>
+      <p class="form-err" id="login-err" role="alert"></p>
       <div class="row-end">
         <button class="btn ghost" type="button" data-close>Cancel</button>
-        <button class="btn primary" type="submit">Unlock</button>
+        <button class="btn primary" type="submit" id="login-submit">Log in</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Change / reset password -->
+  <dialog id="pw-dlg" class="dlg sketch small-dlg">
+    <form id="pw-form" method="dialog" class="stack" autocomplete="off">
+      <h2 id="pw-title">Change password</h2>
+      <div id="pw-current-wrap" class="stack">
+        <label class="lbl" for="pw-current">Current password</label>
+        <input id="pw-current" class="field" type="password" maxlength="72" autocomplete="current-password">
+      </div>
+      <label class="lbl" for="pw-new">New password <span class="muted">(at least 4 characters)</span></label>
+      <input id="pw-new" class="field" type="password" maxlength="72" autocomplete="new-password">
+      <label class="lbl" for="pw-new2">Type it again</label>
+      <input id="pw-new2" class="field" type="password" maxlength="72" autocomplete="new-password">
+      <p class="form-err" id="pw-err" role="alert"></p>
+      <div class="row-end">
+        <button class="btn ghost" type="button" data-close>Cancel</button>
+        <button class="btn primary" type="submit">Save password</button>
       </div>
     </form>
   </dialog>
