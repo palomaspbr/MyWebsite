@@ -5,7 +5,9 @@
    scores are saved; only players who choose a name are shown on the public leaderboard.
 
    Routes (JSON, same origin):
-     POST /loaf_tower/api/sync   {device, scores: {tower, merge, yarn, tiles, mahjong}}  -> {profile}
+     POST /loaf_tower/api/sync   {device, scores: {tower, merge, yarn, tiles, mahjong}, dex: [types], merge: {box, at}}
+                                 -> {profile}   (dex = Catdex, kept as a union; merge = the Purr Merge box in
+                                 progress, the newest `at` wins; box null = cleared)
      POST /loaf_tower/api/name   {device, name}   name null = hide from the board (name stays reserved) -> {profile}
      GET  /loaf_tower/api/board?game=tower&device=<id>                                    -> {game, top, me}
      POST /loaf_tower/api/login     {device, name, password}  -> {device, profile}  (this device joins that profile;
@@ -58,7 +60,8 @@ async function ensureSchema(db) {
     db.prepare(`CREATE INDEX IF NOT EXISTS scores_board ON scores (game, score DESC)`),
   ]);
   // columns added after launch (ALTER fails harmlessly when the column already exists)
-  for (const col of ['pass_hash TEXT', 'fails INTEGER NOT NULL DEFAULT 0', 'fail_at INTEGER NOT NULL DEFAULT 0']) {
+  for (const col of ['pass_hash TEXT', 'fails INTEGER NOT NULL DEFAULT 0', 'fail_at INTEGER NOT NULL DEFAULT 0',
+    'dex TEXT', 'merge_save TEXT', 'merge_at INTEGER NOT NULL DEFAULT 0']) {
     try { await db.prepare(`ALTER TABLE players ADD COLUMN ${col}`).run(); } catch (_) { /* already there */ }
   }
   // one-shot: the default password goes only to the profile that exists right now, never to a later
@@ -153,12 +156,41 @@ function cleanName(v) {
   return { name: s, key: s.normalize('NFKC').toLowerCase() };
 }
 
+// Catdex (union with what's stored) and the Purr Merge box (only if newer than the stored one).
+const TYPE_RE = /^[a-z0-9]{1,16}$/;
+const MAX_BOX = 40000; // bytes of JSON
+async function saveCollection(db, dev, b) {
+  const row = await db.prepare('SELECT dex, merge_at FROM players WHERE device = ?').bind(dev).first();
+  if (!row) return;
+  const sets = [], args = [];
+  if (Array.isArray(b.dex)) {
+    let have = [];
+    try { have = JSON.parse(row.dex || '[]'); } catch (_) { have = []; }
+    const all = new Set(have.filter((t) => typeof t === 'string' && TYPE_RE.test(t)));
+    const before = all.size;
+    for (const t of b.dex.slice(0, 300)) if (typeof t === 'string' && TYPE_RE.test(t)) all.add(t);
+    if (all.size !== before && all.size <= 300) { sets.push('dex = ?'); args.push(JSON.stringify([...all])); }
+  }
+  const m = b.merge;
+  if (m && typeof m === 'object' && Number.isFinite(m.at) && m.at > (row.merge_at || 0) && m.at < Date.now() + 86400000) {
+    const box = m.box;
+    const ok = box === null || (box && typeof box === 'object' && box.v === 1 && Array.isArray(box.cats) && box.cats.length <= 120);
+    const text = box === null ? null : JSON.stringify(box);
+    if (ok && (text === null || text.length <= MAX_BOX)) { sets.push('merge_save = ?', 'merge_at = ?'); args.push(text, Math.floor(m.at)); }
+  }
+  if (sets.length) await db.prepare(`UPDATE players SET ${sets.join(', ')} WHERE device = ?`).bind(...args, dev).run();
+}
+
 async function profile(db, dev) {
-  const p = await db.prepare('SELECT name, public, pass_hash FROM players WHERE device = ?').bind(dev).first();
+  const p = await db.prepare('SELECT name, public, pass_hash, dex, merge_save, merge_at FROM players WHERE device = ?').bind(dev).first();
   const rows = (await db.prepare('SELECT game, score FROM scores WHERE device = ?').bind(dev).all()).results || [];
   const scores = {};
   rows.forEach((r) => { scores[r.game] = r.score; });
-  return { name: p ? p.name : null, public: !!(p && p.public), hasPassword: !!(p && p.pass_hash), scores };
+  const parse = (s, d) => { try { return s ? JSON.parse(s) : d; } catch (_) { return d; } };
+  return {
+    name: p ? p.name : null, public: !!(p && p.public), hasPassword: !!(p && p.pass_hash), scores,
+    dex: parse(p && p.dex, []), merge: { box: parse(p && p.merge_save, null), at: (p && p.merge_at) || 0 },
+  };
 }
 
 async function handle(request, env, path) {
@@ -181,6 +213,7 @@ async function handle(request, env, path) {
         WHERE excluded.score > scores.score`).bind(dev, game, v));
     }
     await db.batch(stmts);
+    await saveCollection(db, dev, b);
     return json({ profile: await profile(db, dev) });
   }
 

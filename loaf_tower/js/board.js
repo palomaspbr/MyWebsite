@@ -38,23 +38,27 @@
 
   let profile = ls.get(PKEY); // last known profile (shown while offline)
   let pending = null, timer = null, lastSent = null;
-  const keep = (p) => { profile = p; ls.set(PKEY, p); return p; };
+  // every profile that comes back from the server is handed to the game (records, Catdex, Merge box)
+  const keep = (p) => { profile = p; ls.set(PKEY, p); if (p && LT.Board.onProfile) { try { LT.Board.onProfile(p); } catch (e) { /* ignore */ } } return p; };
 
-  // scores: {tower, merge, yarn, tiles, mahjong} (bests; zero/missing ones are skipped)
-  function sync(scores) {
-    pending = scores;
+  // data: {scores: {tower, merge, yarn, tiles, mahjong}, dex: [types], merge: {box, at}}
+  function sync(data) {
+    pending = data;
     clearTimeout(timer);
     timer = setTimeout(flush, 600);
   }
   async function flush() {
     clearTimeout(timer);
     if (!pending) return profile;
-    const scores = {};
-    for (const [k, v] of Object.entries(pending)) if (Number.isInteger(v) && v > 0) scores[k] = v;
+    const data = pending;
     pending = null;
-    const sig = JSON.stringify(scores);
-    if (!Object.keys(scores).length || sig === lastSent) return profile; // nothing new to send
-    try { keep((await post('/sync', { device: deviceId(), scores })).profile); lastSent = sig; } catch (e) { /* offline: next time */ }
+    const scores = {};
+    for (const [k, v] of Object.entries(data.scores || {})) if (Number.isInteger(v) && v > 0) scores[k] = v;
+    const dex = Array.isArray(data.dex) ? data.dex : [];
+    const merge = data.merge && data.merge.at ? data.merge : null;
+    const sig = JSON.stringify([scores, dex.length, merge && merge.at]);
+    if ((!Object.keys(scores).length && !dex.length && !merge) || sig === lastSent) return profile; // nothing new to send
+    try { keep((await post('/sync', { device: deviceId(), scores, dex, merge })).profile); lastSent = sig; } catch (e) { /* offline: next time */ }
     return profile;
   }
   // name = text to go public with that name; null = hide (the name stays reserved)

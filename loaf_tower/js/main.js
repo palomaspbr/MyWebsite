@@ -202,7 +202,7 @@
   }
 
   function onGameEvent(name, data) {
-    if (name === 'dex') { store.set('dex', Array.from(dex)); updateTitle(); }
+    if (name === 'dex') { store.set('dex', Array.from(dex)); updateTitle(); LT.Board.sync(bests()); } // new cat -> account
     if (name === 'drop') show('hint', false);
     if (name === 'over' && current === 'tower') towerOver(data);
     if (name === 'over' && current === 'merge') mergeOver(data);
@@ -227,7 +227,7 @@
     else if (id === 'mahjong') game = new LT.MahjongGame(Object.assign(common(), { level: mjPlaying }));
     else {
       game = new LT.MergeGame(Object.assign(common(), { best: mergeBest, save: store.get('mergeSave', null) })); // resume the box
-      if (game.badSave) store.set('mergeSave', null); // a broken save is dropped
+      if (game.badSave) { store.set('mergeSave', null); store.set('mergeSaveAt', Date.now()); } // a broken save is dropped
     }
     const l = L();
     // Meow Match: the hint sits over the (still empty) tray instead of on the buttons or tiles
@@ -307,18 +307,20 @@
 
   // Purr Merge keeps its box when you leave (Home, closing the tab); only game over or restart clear it.
   function saveMerge() {
-    if (current === 'merge' && mode === 'play' && game && game.serialize) store.set('mergeSave', game.serialize());
+    if (current === 'merge' && mode === 'play' && game && game.serialize) { store.set('mergeSave', game.serialize()); store.set('mergeSaveAt', Date.now()); }
   }
 
   // HUD restart button (Purr Merge / Meow Match): start the same thing over, fresh.
   function restartCurrent() {
-    if (current === 'merge') { store.set('mergeSave', null); startMode('merge'); }
+    if (current === 'merge') { store.set('mergeSave', null); store.set('mergeSaveAt', Date.now()); startMode('merge'); }
     else if (current === 'tiles') startMode('tiles', tilePlaying);
     else if (current === 'mahjong') startMode('mahjong', mjPlaying);
   }
 
   function mergeOver(sum) {
     store.set('mergeSave', null);
+    store.set('mergeSaveAt', Date.now());
+    LT.Board.sync(bests());
     lastSummary = Object.assign({ mode: 'merge' }, sum);
     const newBest = sum.score > mergeBest;
     if (newBest) { mergeBest = sum.score; store.set('mergeBest', mergeBest); }
@@ -450,7 +452,11 @@
   /* ---------- catdex ---------- */
   /* ---------- leaderboard ---------- */
   // best per game for the leaderboard (levels = how many are solved)
-  const bests = () => ({ tower: best, merge: mergeBest, yarn: yarnLevel - 1, tiles: tileLevel - 1, mahjong: mjLevel - 1 });
+  const bests = () => ({
+    scores: { tower: best, merge: mergeBest, yarn: yarnLevel - 1, tiles: tileLevel - 1, mahjong: mjLevel - 1 },
+    dex: Array.from(dex),
+    merge: { box: store.get('mergeSave', null), at: store.get('mergeSaveAt', 0) },
+  });
   const BOARD_GAMES = ['tower', 'yarn', 'merge', 'tiles', 'mahjong'];
   let boardGame = 'tower';
   function fmtScore(game, n) {
@@ -566,8 +572,17 @@
     show('acc-buttons', true);
     ['acc-cur', 'acc-pass'].forEach((id) => { $(id).value = ''; }); // never leave a typed password behind
   }
-  // records saved on the server come back to this device after logging in (best of both)
+  // What the server keeps for this profile comes back to the device (after logging in and on every sync):
+  // records (best of both), Catdex (union) and the Purr Merge box (whichever was saved last).
   function applyProfileScores(p) {
+    if (Array.isArray(p && p.dex)) {
+      let added = false;
+      p.dex.forEach((t) => { if (C.TYPES[t] && !dex.has(t)) { dex.add(t); added = true; } });
+      if (added) store.set('dex', Array.from(dex));
+    }
+    const m = p && p.merge;
+    const playingMerge = mode === 'play' && current === 'merge';
+    if (m && m.at > store.get('mergeSaveAt', 0) && !playingMerge) { store.set('mergeSave', m.box); store.set('mergeSaveAt', m.at); }
     const s = (p && p.scores) || {};
     const up = (cur, v) => Math.max(cur, Number.isInteger(v) ? v : 0);
     best = up(best, s.tower); store.set('best', best);
@@ -589,6 +604,7 @@
       if (accMode === 'login') {
         const p = await LT.Board.login($('acc-name').value.trim(), $('acc-pass').value);
         applyProfileScores(p);
+        LT.Board.sync(bests()); // this device's cats / records go up to the account too
         toast(l.loggedIn(p.name || ''));
       } else {
         await LT.Board.setPassword($('acc-pass').value, accMode === 'change' ? $('acc-cur').value : undefined);
@@ -895,6 +911,7 @@
     } catch (e) { /* fonts are optional */ }
     catchUpRewards();
     placeIcons();
+    LT.Board.onProfile = applyProfileScores; // records, Catdex and Merge box from the account
     LT.Board.sync(bests()); // send any records made before the leaderboard existed
     applyLang();
     newTower(true);
