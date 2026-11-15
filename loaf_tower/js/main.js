@@ -22,13 +22,16 @@
   let yarnPlaying = yarnLevel;                // the level being played right now
   let tileLevel = lvlNum(store.get('tileLevel', 1));  // highest unlocked Meow Match level
   let tilePlaying = tileLevel;
+  let mjLevel = lvlNum(store.get('mjLevel', 1));      // highest unlocked Meow Match (Mahjong rules) level
+  let mjPlaying = mjLevel;
+  let tilesVariant = store.get('tilesVariant', 'tiles') === 'mahjong' ? 'mahjong' : 'tiles'; // last Meow Match mode
   const dex = new Set(store.get('dex', []));
   const audio = new LT.AudioEngine();
   const wasMuted = store.get('muted', false); // older versions had one mute switch
   audio.musicOn = store.get('musicOn', !wasMuted);
   audio.sfxOn = store.get('sfxOn', !wasMuted);
   const CALM = { keys: 1, bass: 1, mel: 1, drums: 0 };
-  const musicParts = (id) => (id === 'yarn' || id === 'tiles' ? CALM : null);
+  const musicParts = (id) => (id === 'yarn' || id === 'tiles' || id === 'mahjong' ? CALM : null);
 
   const stage = $('stage');
   const canvas = $('game');
@@ -70,7 +73,7 @@
       for (const [lvl, type] of Object.entries(rewards)) if (+lvl <= solvedUpTo && !dex.has(type)) { dex.add(type); added = true; }
     };
     grant(LT.YarnGame.REWARDS, yarnLevel - 1);
-    grant(LT.TileGame.REWARDS, tileLevel - 1);
+    grant(LT.TileGame.REWARDS, Math.max(tileLevel, mjLevel) - 1);
     if (added) store.set('dex', Array.from(dex));
   }
 
@@ -81,7 +84,7 @@
     $('sub-tower').textContent = best > 0 ? `${l.best} ${best} ${l.cm}` : l.subTower;
     $('sub-yarn').textContent = l.lvlShort(yarnLevel);
     $('sub-merge').textContent = mergeBest > 0 ? `${l.best} ${mergeBest}` : l.subMerge;
-    $('sub-tiles').textContent = l.lvlShort(tileLevel);
+    $('sub-tiles').textContent = tilesVariant === 'mahjong' ? `${l.modeMahjongShort} · ${l.lvlShort(mjLevel)}` : l.lvlShort(tileLevel);
     // speaker icon shows a red X only when music and sound effects are both off
     const src = LT.Icons.url('speaker', { off: !audio.musicOn && !audio.sfxOn });
     document.querySelectorAll('img.sound-ico').forEach((im) => { im.src = src; });
@@ -109,6 +112,43 @@
     };
     set('btn-music-toggle', 'music', audio.musicOn);
     set('btn-sfx-toggle', 'sfx', audio.sfxOn);
+  }
+
+  /* ---------- how-to-play panels (first time in each game, or from the audio menu) ---------- */
+  const TUT = {
+    tower: [['hand', 'tutTower1'], ['cat', 'tutTower2'], ['paw', 'tutTower3']],
+    yarn: [['hand', 'tutYarn1'], ['yarn', 'tutYarn2'], ['check', 'tutYarn3', { on: true }]],
+    merge: [['hand', 'tutMerge1'], ['ball', 'tutMerge2'], ['skull', 'tutMerge3']],
+    tiles: [['hand', 'tutTiles1'], ['tiles', 'tutTiles2'], ['skull', 'tutTiles3']],
+    mahjong: [['hand', 'tutMj1'], ['tiles', 'tutMj2'], ['bulb', 'tutMj3']],
+  };
+  const modeTitle = (id) => ({ tower: L().modeTower, yarn: L().modeYarn, merge: L().modeMerge, tiles: L().modeTiles, mahjong: L().modeMahjong })[id];
+  function openTutorial(id) {
+    const l = L();
+    $('tut-title').textContent = modeTitle(id);
+    const box = $('tut-steps');
+    box.innerHTML = '';
+    TUT[id].forEach(([icon, key, iconOpts], i) => {
+      const row = document.createElement('div');
+      row.className = 'tut-step';
+      const n = document.createElement('span');
+      n.className = 'tut-n';
+      n.textContent = i + 1;
+      row.appendChild(n);
+      row.appendChild(LT.Icons.img(icon, iconOpts || {}, 'tut-ico'));
+      const tx = document.createElement('span');
+      tx.textContent = l[key];
+      row.appendChild(tx);
+      box.appendChild(row);
+    });
+    openTutorial.id = id;
+    show('tutorial', true);
+    menuPaused = mode === 'play';
+  }
+  function closeTutorial() {
+    if (openTutorial.id) store.set('tut.' + openTutorial.id, true);
+    show('tutorial', false);
+    menuPaused = !$('audio').classList.contains('hidden') && mode === 'play';
   }
 
   function openAudio() {
@@ -155,28 +195,35 @@
     if (name === 'over' && current === 'tower') towerOver(data);
     if (name === 'over' && current === 'merge') mergeOver(data);
     if (name === 'won' && current === 'yarn') yarnWon(data);
-    if (name === 'over' && current === 'tiles') tilesOver(data);
-    if (name === 'won' && current === 'tiles') tilesWon(data);
+    if (name === 'over' && (current === 'tiles' || current === 'mahjong')) tilesOver(data);
+    if (name === 'won' && (current === 'tiles' || current === 'mahjong')) tilesWon(data);
+    if (name === 'restart') restartCurrent();
   }
 
   function startMode(id, level) {
     if (clipBusy) return;
     if (id === 'yarn') yarnPlaying = LT.clamp(level || yarnLevel, 1, yarnLevel);
     if (id === 'tiles') tilePlaying = LT.clamp(level || tileLevel, 1, tileLevel);
+    if (id === 'mahjong') mjPlaying = LT.clamp(level || mjLevel, 1, mjLevel);
+    if (id === 'tiles' || id === 'mahjong') { tilesVariant = id; store.set('tilesVariant', id); }
     mode = 'play';
     current = id;
     ensureMusic();
     if (id === 'tower') newTower(false);
     else if (id === 'yarn') game = new LT.YarnGame(Object.assign(common(), { level: yarnPlaying }));
     else if (id === 'tiles') game = new LT.TileGame(Object.assign(common(), { level: tilePlaying }));
-    else game = new LT.MergeGame(Object.assign(common(), { best: mergeBest }));
+    else if (id === 'mahjong') game = new LT.MahjongGame(Object.assign(common(), { level: mjPlaying }));
+    else {
+      game = new LT.MergeGame(Object.assign(common(), { best: mergeBest, save: store.get('mergeSave', null) })); // resume the box
+      if (game.badSave) store.set('mergeSave', null); // a broken save is dropped
+    }
     const l = L();
     // Meow Match: the hint sits over the (still empty) tray instead of on the buttons or tiles
     $('hint').style.top = id === 'tiles' ? ((Math.max(0, (viewH - LT.H) * 0.45) + 960) / viewH) * 100 + '%' : '';
     $('hint').style.bottom = id === 'tiles' ? 'auto' : '';
     startedAt = performance.now();
     clearTimeout(startMode.hintT);
-    $('hint').textContent = id === 'tower' ? l.tapToDrop : id === 'yarn' ? l.hintYarn : id === 'tiles' ? l.hintTiles : l.hintMerge;
+    $('hint').textContent = id === 'tower' ? l.tapToDrop : id === 'yarn' ? l.hintYarn : id === 'tiles' ? l.hintTiles : id === 'mahjong' ? l.hintMahjong : l.hintMerge;
     show('title', false);
     show('over', false);
     show('dex', false);
@@ -185,6 +232,8 @@
     show('hint', true);
     show('btn-pause-sound', true);
     show('btn-home', true);
+    show('tutorial', false);
+    if (!store.get('tut.' + id, false)) openTutorial(id); // first time in this game: how to play
     if (id !== 'tower') startMode.hintT = setTimeout(() => { if (current === id) show('hint', false); }, 3500);
   }
 
@@ -195,12 +244,14 @@
     if (mode === 'play' && game) {
       if (current === 'tower' && Math.round(game.bestRun || 0) > best) { best = Math.round(game.bestRun); store.set('best', best); }
       if (current === 'merge' && game.score > mergeBest) { mergeBest = game.score; store.set('mergeBest', mergeBest); }
+      saveMerge();
     }
     mode = 'title';
     current = 'tower';
     ensureMusic();
     closeAudio();
-    ['over', 'clip', 'hint', 'btn-pause-sound', 'btn-home', 'dex', 'levels'].forEach((id) => show(id, false));
+    ['over', 'clip', 'hint', 'btn-pause-sound', 'btn-home', 'dex', 'levels', 'board'].forEach((id) => show(id, false));
+    LT.Board.sync(bests());
     newTower(true);
     updateTitle();
     show('title', true);
@@ -219,7 +270,7 @@
     $('over-height').textContent = o.line3 || '';
     $('btn-again').textContent = o.again;
     show('btn-clip', !!o.clip);
-    show('btn-over-levels', current === 'yarn' || current === 'tiles');
+    show('btn-over-levels', current === 'yarn' || current === 'tiles' || current === 'mahjong');
     updateTitle();
     show('over', true);
     show('btn-pause-sound', false);
@@ -242,7 +293,20 @@
     });
   }
 
+  // Purr Merge keeps its box when you leave (Home, closing the tab); only game over or restart clear it.
+  function saveMerge() {
+    if (current === 'merge' && mode === 'play' && game && game.serialize) store.set('mergeSave', game.serialize());
+  }
+
+  // HUD restart button (Purr Merge / Meow Match): start the same thing over, fresh.
+  function restartCurrent() {
+    if (current === 'merge') { store.set('mergeSave', null); startMode('merge'); }
+    else if (current === 'tiles') startMode('tiles', tilePlaying);
+    else if (current === 'mahjong') startMode('mahjong', mjPlaying);
+  }
+
   function mergeOver(sum) {
+    store.set('mergeSave', null);
     lastSummary = Object.assign({ mode: 'merge' }, sum);
     const newBest = sum.score > mergeBest;
     if (newBest) { mergeBest = sum.score; store.set('mergeBest', mergeBest); }
@@ -272,10 +336,10 @@
   }
 
   function tilesOver(sum) {
-    lastSummary = Object.assign({ mode: 'tiles', won: false }, sum);
+    lastSummary = Object.assign({ mode: current, won: false }, sum);
     const l = L();
     openOver({
-      title: l.trayFull,
+      title: current === 'mahjong' ? l.noMoves : l.trayFull,
       line1: `${l.level} ${sum.level}`,
       line2: '',
       line3: l.tilesLeft(sum.left),
@@ -284,9 +348,9 @@
   }
 
   function tilesWon(sum) {
-    lastSummary = Object.assign({ mode: 'tiles', won: true }, sum);
-    tileLevel = Math.max(tileLevel, sum.level + 1);
-    store.set('tileLevel', tileLevel);
+    lastSummary = Object.assign({ mode: current, won: true }, sum);
+    if (current === 'mahjong') { mjLevel = Math.max(mjLevel, sum.level + 1); store.set('mjLevel', mjLevel); }
+    else { tileLevel = Math.max(tileLevel, sum.level + 1); store.set('tileLevel', tileLevel); }
     const l = L();
     openOver({
       title: l.solved,
@@ -300,21 +364,28 @@
   function again() {
     if (current === 'yarn') startMode('yarn', yarnPlaying + 1);
     else if (current === 'tiles') startMode('tiles', lastSummary && lastSummary.mode === 'tiles' && lastSummary.won ? tilePlaying + 1 : tilePlaying);
+    else if (current === 'mahjong') startMode('mahjong', lastSummary && lastSummary.mode === 'mahjong' && lastSummary.won ? mjPlaying + 1 : mjPlaying);
     else startMode(current);
   }
 
   /* ---------- level menu (Yarn Lines and Meow Match) ---------- */
   function openLevels(kind) {
-    const tiles = kind === 'tiles';
+    const mj = kind === 'mahjong';
+    const tiles = kind === 'tiles' || mj;
     const l = L();
-    const G = tiles ? LT.TileGame : LT.YarnGame;
-    const unlocked = tiles ? tileLevel : yarnLevel;
+    const G = mj ? LT.MahjongGame : tiles ? LT.TileGame : LT.YarnGame;
+    const unlocked = mj ? mjLevel : tiles ? tileLevel : yarnLevel;
+    // Meow Match: Easy (tray) / Mahjong tabs
+    show('levels-tabs', tiles);
+    $('lv-tab-easy').classList.toggle('on', !mj);
+    $('lv-tab-mj').classList.toggle('on', mj);
     const groupOf = (n) => (tiles ? G.levelSpec(n).layers : G.levelSpec(n).size); // yarn: board size, tiles: layers
     const groupName = (g, a, b) => (tiles ? l.layersGroup(g, a, b) : l.boardSize(g, a, b));
     const title = $('levels-title');
     title.innerHTML = '';
     title.appendChild(LT.Icons.img(tiles ? 'tiles' : 'yarn'));
     title.appendChild(document.createTextNode(' ' + (tiles ? l.modeTiles : l.modeYarn)));
+    $('levels-mode-desc').textContent = mj ? l.mjDesc : tiles ? l.easyDesc : '';
     $('levels').classList.toggle('tiles', tiles);
     const grid = $('levels-grid');
     grid.innerHTML = '';
@@ -350,7 +421,7 @@
           toast(l.levelLocked(unlocked));
           return;
         }
-        startMode(tiles ? 'tiles' : 'yarn', n);
+        startMode(mj ? 'mahjong' : tiles ? 'tiles' : 'yarn', n);
       };
       if (n === unlocked) currentTile = b;
       grid.appendChild(b);
@@ -365,6 +436,90 @@
   }
 
   /* ---------- catdex ---------- */
+  /* ---------- leaderboard ---------- */
+  // best per game for the leaderboard (levels = how many are solved)
+  const bests = () => ({ tower: best, merge: mergeBest, yarn: yarnLevel - 1, tiles: tileLevel - 1, mahjong: mjLevel - 1 });
+  const BOARD_GAMES = ['tower', 'yarn', 'merge', 'tiles', 'mahjong'];
+  let boardGame = 'tower';
+  function fmtScore(game, n) {
+    const l = L();
+    return game === 'tower' ? `${n} ${l.cm}` : game === 'merge' ? `${n}` : l.levelsSolved(n);
+  }
+  function boardNote() {
+    const p = LT.Board.profile, l = L();
+    const pub = p && p.public && p.name;
+    $('board-note').textContent = pub ? l.boardPublic(p.name) : l.boardPrivate;
+    show('btn-board-hide', !!pub);
+    if (p && p.name && document.activeElement !== $('board-input')) $('board-input').value = p.name; // hidden players keep their name
+  }
+  async function openBoard(game) {
+    const l = L();
+    boardGame = game || boardGame;
+    const tabs = $('board-tabs');
+    tabs.innerHTML = '';
+    BOARD_GAMES.forEach((g) => {
+      const b = document.createElement('button');
+      b.className = 'btn small-btn tab' + (g === boardGame ? ' on' : '');
+      b.textContent = l.boardTab[g];
+      b.onclick = () => openBoard(g);
+      tabs.appendChild(b);
+    });
+    $('board-input').placeholder = l.namePlaceholder;
+    show('board', true);
+    const list = $('board-list');
+    list.innerHTML = '';
+    const wait = document.createElement('li');
+    wait.className = 'muted';
+    wait.textContent = l.loading;
+    list.appendChild(wait);
+    $('board-me').textContent = '';
+    LT.Board.sync(bests());
+    await LT.Board.flush();
+    boardNote();
+    const asked = boardGame;
+    try {
+      const r = await LT.Board.board(asked);
+      if (boardGame !== asked) return; // another tab was picked meanwhile
+      list.innerHTML = '';
+      if (!r.top.length) {
+        const li = document.createElement('li');
+        li.className = 'muted';
+        li.textContent = l.boardEmpty;
+        list.appendChild(li);
+      }
+      r.top.forEach((row, i) => {
+        const li = document.createElement('li');
+        if (row.me) li.className = 'me';
+        const n = document.createElement('span'); n.className = 'b-rank'; n.textContent = i + 1;
+        const nm = document.createElement('span'); nm.className = 'b-name'; nm.textContent = row.name;
+        const sc = document.createElement('span'); sc.className = 'b-score'; sc.textContent = fmtScore(asked, row.score);
+        li.append(n, nm, sc);
+        list.appendChild(li);
+      });
+      $('board-me').textContent = r.me ? l.boardMe(fmtScore(asked, r.me.score), r.me.public ? r.me.rank : null) : l.boardNoScore;
+    } catch (e) {
+      if (boardGame !== asked) return;
+      list.innerHTML = '';
+      const li = document.createElement('li');
+      li.className = 'muted';
+      li.textContent = l.boardOffline;
+      list.appendChild(li);
+    }
+  }
+  // name: text = go public with that name; null = hide (Save with an empty box does nothing)
+  async function saveBoardName(name) {
+    const l = L();
+    if (name === '') { $('board-input').focus(); return; }
+    try {
+      await LT.Board.setName(name);
+      toast(name ? l.nameSaved : l.nameHidden);
+      openBoard(boardGame);
+    } catch (e) {
+      const byCode = { name_taken: l.nameTaken, name_short: l.nameShort, name_long: l.nameLong, bad_name: l.nameShort };
+      $('board-note').textContent = byCode[e.code] || (e.status === 409 ? l.nameTaken : l.boardOffline);
+    }
+  }
+
   function openDex() {
     const grid = $('dex-grid');
     grid.innerHTML = '';
@@ -456,7 +611,7 @@
     const l = L();
     const s = lastSummary;
     const text = s.mode === 'yarn' ? l.yarnShare(s.level)
-      : s.mode === 'tiles' ? (s.won ? l.tileShare(s.level) : l.tileStuck(s.level))
+      : s.mode === 'tiles' || s.mode === 'mahjong' ? (s.won ? l.tileShare(s.level) : l.tileStuck(s.level))
       : s.mode === 'merge' ? l.mergeShare(s.score, s.maxTier ? C.catLabel('m' + s.maxTier, lang) : 'cat')
       : l.shareText(s.cats, s.height);
     const url = 'https://palomaliz.com.br/loaf_tower/';
@@ -489,7 +644,7 @@
     try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
     const [x, y] = toLogical(e);
     game.pointer('down', x, y);
-    if (current === 'yarn' || current === 'tiles') show('hint', false);
+    if (current === 'yarn' || current === 'tiles' || current === 'mahjong') show('hint', false);
   });
   canvas.addEventListener('pointermove', (e) => {
     if (!playing() || current === 'tower') return;
@@ -510,9 +665,11 @@
   $('hint').addEventListener('pointerdown', () => { if (playing() && current === 'tower') game.drop(); });
 
   window.addEventListener('keydown', (e) => {
+    if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return; // typing a name
     if (e.code === 'Space' || e.code === 'Enter' || e.code === 'ArrowDown') {
       e.preventDefault();
-      if (['dex', 'clip', 'audio', 'levels'].some((id) => !$(id).classList.contains('hidden'))) return;
+      if (!$('tutorial').classList.contains('hidden')) { closeTutorial(); return; }
+      if (['dex', 'clip', 'audio', 'levels', 'board'].some((id) => !$(id).classList.contains('hidden'))) return;
       if (mode === 'title') { startMode('tower'); return; }
       if (!$('over').classList.contains('hidden')) { if (e.code === 'Enter' && !$('over').classList.contains('arming')) again(); return; }
       if (!playing()) return;
@@ -520,12 +677,14 @@
       else if (current === 'merge') game.drop();
     } else if (current === 'merge' && playing() && (e.code === 'ArrowLeft' || e.code === 'ArrowRight')) {
       game.aimX = LT.clamp(game.aimX + (e.code === 'ArrowLeft' ? -24 : 24), LT.MergeGame.BOX.l, LT.MergeGame.BOX.r);
-    } else if ((current === 'yarn' || current === 'tiles') && playing() && (e.code === 'KeyZ' || e.code === 'Backspace')) {
+    } else if ((current === 'yarn' || current === 'tiles' || current === 'mahjong') && playing() && (e.code === 'KeyZ' || e.code === 'Backspace')) {
       e.preventDefault();
       game.undo();
-    } else if (e.code === 'Escape' && ['dex', 'audio', 'levels'].some((id) => !$(id).classList.contains('hidden'))) {
+    } else if (e.code === 'Escape' && ['tutorial', 'dex', 'audio', 'levels', 'board'].some((id) => !$(id).classList.contains('hidden'))) {
       // Escape closes the top overlay first
-      if (!$('audio').classList.contains('hidden')) closeAudio();
+      if (!$('tutorial').classList.contains('hidden')) closeTutorial();
+      else if (!$('board').classList.contains('hidden')) show('board', false);
+      else if (!$('audio').classList.contains('hidden')) closeAudio();
       else if (!$('dex').classList.contains('hidden')) show('dex', false);
       else $('btn-levels-close').click();
     } else if (e.code === 'Escape' && mode === 'play') {
@@ -551,13 +710,23 @@
   $('btn-over-levels').onclick = () => openLevels(current);
   $('btn-levels-close').onclick = () => { if (mode === 'play') backToMenu(); else show('levels', false); };
   $('btn-merge').onclick = () => startMode('merge');
-  $('btn-tiles').onclick = () => openLevels('tiles');
+  $('btn-tiles').onclick = () => openLevels(tilesVariant);
+  $('lv-tab-easy').onclick = () => openLevels('tiles');
+  $('lv-tab-mj').onclick = () => openLevels('mahjong');
   $('btn-again').onclick = again;
   $('btn-menu').onclick = backToMenu;
   $('btn-home').onclick = (e) => { e.stopPropagation(); backToMenu(); };
   $('btn-share').onclick = shareScore;
   $('btn-clip').onclick = makeClip;
   $('btn-dex').onclick = openDex;
+  $('btn-board').onclick = () => openBoard();
+  $('btn-board-close').onclick = () => show('board', false);
+  $('btn-board-save').onclick = () => saveBoardName($('board-input').value.trim());
+  $('btn-board-hide').onclick = () => saveBoardName(null);
+  $('board-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); saveBoardName($('board-input').value.trim()); }
+    else if (e.key === 'Escape') { e.preventDefault(); $('board-input').blur(); show('board', false); }
+  });
   $('btn-over-dex').onclick = openDex;
   $('btn-dex-close').onclick = () => show('dex', false);
   $('btn-clip-close').onclick = () => { if (!clipBusy) show('clip', false); };
@@ -565,6 +734,8 @@
   $('btn-sound').onclick = openAudio;
   $('btn-pause-sound').onclick = (e) => { e.stopPropagation(); openAudio(); };
   $('btn-audio-close').onclick = closeAudio;
+  $('btn-tut-ok').onclick = closeTutorial;
+  $('btn-howto').onclick = () => { closeAudio(); openTutorial(mode === 'play' ? current : 'tower'); };
   $('btn-music-toggle').onclick = () => {
     audio.init();
     audio.setMusicOn(!audio.musicOn);
@@ -580,7 +751,9 @@
     updateTitle();
   };
 
+  window.addEventListener('pagehide', saveMerge);
   document.addEventListener('visibilitychange', () => {
+    if (document.hidden) saveMerge();
     paused = document.hidden;
     if (audio.ctx) { if (paused) audio.ctx.suspend(); else audio.ctx.resume(); }
   });
@@ -622,6 +795,7 @@
     } catch (e) { /* fonts are optional */ }
     catchUpRewards();
     placeIcons();
+    LT.Board.sync(bests()); // send any records made before the leaderboard existed
     applyLang();
     newTower(true);
     requestAnimationFrame(frame);

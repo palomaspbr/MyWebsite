@@ -15,7 +15,10 @@
   ]; // one colour per pair: levels never use more pairs than there are colours
   // Yarn-exclusive cats, unlocked when a level is solved.
   const REWARDS = { 1: 'y1', 3: 'y2', 5: 'y3', 8: 'y4', 12: 'y5', 16: 'y6', 20: 'y7', 25: 'y8', 30: 'y9', 35: 'y10', 40: 'y11', 50: 'y12' };
-  const SCALE = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24];
+  // Each step of a line plays the next note of a pentatonic scale (soft pluck), so drawing a line
+  // sounds like a little melody; each colour starts on a different note of the same scale.
+  const PENTA = [60, 62, 64, 67, 69, 72, 74, 76, 79, 81, 84, 86, 88, 91];
+  const pent = (i) => { const n = PENTA.length - 1, k = Math.max(0, i) % (2 * n); return PENTA[k > n ? 2 * n - k : k]; };
 
   function levelSpec(n) {
     if (n <= 2) return { size: 5, pairs: 4 };
@@ -219,7 +222,7 @@
           this.drag = { p: e.pair, base, pending: null, moved: true, last: [x, y] };
           this.paths[e.pair] = [c];
           this.recut();
-          this.sfx('pop', { pitch: 0.9 });
+          this.sfx('pluck', { note: PENTA[e.pair % 4], vol: 0.8 });
         } else if (this.owner[c] >= 0) {
           // grabbing the middle of a line: only cut it once the finger actually moves
           this.drag = { p: this.owner[c], base, pending: c, moved: false, last: [x, y] };
@@ -296,7 +299,7 @@
         if (idx === path.length - 1) return true;
         path.length = idx + 1;
         this.recut();
-        this.sfx('pop', { pitch: 0.75 });
+        this.sfx('pluck', { note: pent((p % 4) + path.length - 2), vol: 0.45 });
         return true;
       }
       if (this.isComplete(p)) return false;
@@ -305,9 +308,8 @@
       const cut = this.owner[next] >= 0 && this.owner[next] !== p;
       path.push(next);
       this.recut();
-      if (cut) this.sfx('scratch');
-      const k = Math.min(SCALE.length - 1, path.length - 2);
-      this.sfx('pop', { pitch: Math.pow(2, SCALE[k] / 12) * 0.9 });
+      if (cut) this.sfx('whiff');
+      this.sfx('pluck', { note: pent((p % 4) + path.length - 1), vol: 0.85 });
       if (e && e.pair === p) this.pairDone(p);
       return true;
     }
@@ -328,7 +330,10 @@
 
     pairDone(p) {
       this.doneAt[p] = this.t;
-      this.sfx('meow', { pitch: 0.85 + (p % 5) * 0.12, vol: 0.8 });
+      // pair connected: a soft rising arpeggio + a quiet happy trill
+      const root = PENTA[5 + (p % 4)];
+      this.sfx('chime', { notes: [root, root + 4, root + 7, root + 12], gap: 0.06, vol: 0.85 });
+      this.sfx('mrrp', { pitch: 1 + (p % 5) * 0.08, vol: 0.25 });
       const [x, y] = this.center(this.lv.pairs[p].b);
       this.burst(x, y, 12, COLORS[p % COLORS.length].c);
     }
@@ -344,7 +349,7 @@
       this.paths = this.undoStack.pop();
       this.rebuildOwner();
       this.undoT = this.t;
-      this.sfx('pop', { pitch: 0.6 });
+      this.sfx('pluck', { note: 60, vol: 0.5 });
       return true;
     }
 

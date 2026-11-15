@@ -86,7 +86,8 @@
 
   // Smallest base (by area) whose full stack reaches the target, then trimmed to the target size and
   // a multiple of 3. Every candidate gets its own seeded RNG (deterministic levels).
-  function build(spec, seed) {
+  function build(spec, seed, mult) {
+    mult = mult || 3; // tray mode needs triples, mahjong needs pairs
     const cands = [];
     for (let c = 3; c <= spec.cols; c++) for (let r = 3; r <= spec.rows; r++) cands.push([c, r]);
     cands.sort((a, b) => a[0] * a[1] - b[0] * b[1] || b[0] - a[0]);
@@ -101,7 +102,7 @@
     // Trim uncovered tiles, lowest layer first (floor edges), so the stack keeps its height. To keep the
     // shape mirror-symmetric, an odd count left to remove takes a centre-column tile, an even count
     // takes a tile together with its mirror twin.
-    const goal = Math.floor(Math.min(tiles.length, spec.target) / 3) * 3;
+    const goal = Math.floor(Math.min(tiles.length, spec.target) / mult) * mult;
     const xmax = Math.max(...tiles.map((t) => t.x)), ymax = Math.max(...tiles.map((t) => t.y));
     const uncovered = (a) => !tiles.some((b) => b.z > a.z && overlaps(a, b));
     const twinOf = (t) => tiles.find((o) => o !== t && o.z === t.z && o.y === t.y && o.x === xmax - t.x);
@@ -378,6 +379,7 @@
         { id: 'shuffle', x: 484, y: BTN_Y, w: 230, h: 80 },
       ];
       this.autoButton = { id: 'auto', x: 484, y: BTN_Y, w: 230, h: 80 };
+      this.restartBtn = { x: 652, y: 150, r: 28 };
       this.clears = 0;
     }
 
@@ -431,6 +433,10 @@
 
     pointer(type, x, y) {
       if (type !== 'down' || this.state !== 'play' || this.auto) return;
+      if (LT.Render.HudRestart.hit(this.restartBtn, x, y)) { // HUD is not shifted by offY
+        if (LT.Render.HudRestart.tap(this, this.restartBtn)) this.emit('restart');
+        return;
+      }
       y -= this.offY;
       for (const b of this.activeButtons()) {
         if (Math.abs(x - b.x) < b.w / 2 + 6 && Math.abs(y - b.y) < b.h / 2 + 10) { this.button(b.id); return; }
@@ -652,6 +658,7 @@
       D.text(ctx, `${L.level} ${this.level}`, 92, 74, { size: 70, align: 'left', seed: 11, boil, stroke: '#fbf6ea', strokeWidth: 10 });
       D.text(ctx, L.tilesLeft(this.boardLeft()), 96, 128, { size: 32, font: LT.FONT_TEXT, align: 'left', seed: 12, boil, color: '#5c5248' });
       D.text(ctx, L.modeTiles, 690, 80, { size: 40, align: 'right', seed: 13, boil, color: '#2b8a3e' });
+      if (this.state === 'play') LT.Render.HudRestart.draw(ctx, this, this.restartBtn, T, boil, L.tapAgain);
       this.offY = Math.max(0, (viewH - LT.H) * 0.45);
       ctx.save();
       ctx.translate(0, this.offY);
@@ -743,4 +750,6 @@
   TileGame.FACES = FACE_NAMES;
   TileGame.TRAY = TRAY;
   LT.TileGame = TileGame;
+  // shared pieces for the Mahjong mode (js/mahjong.js)
+  LT.TileKit = { build, overlaps, shuffleArr, FACE_NAMES, tileImage, rr, REWARDS, TW, TH, PAD, RES };
 })();

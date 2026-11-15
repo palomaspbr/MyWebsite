@@ -248,3 +248,31 @@ canvas#game {
 #levels.tiles .lvl.solved { background: #d3f9d8; }
 #levels.tiles #levels-grid h3 { color: #2b8a3e; }
 .toast { pointer-events: none; } /* never swallow taps meant for the game */
+/* Meow Match level menu: Easy / Mahjong tabs */
+.tabs .tab { background: #f1ede4; }
+.tabs .tab.on { background: #d3f9d8; box-shadow: 3px 4px 0 var(--ink); }
+#levels-mode-desc:empty { display: none; }
+/* ---- how-to-play panel ---- */
+#tutorial { background: rgba(251, 246, 234, 0.7); }
+#tut-steps { display: flex; flex-direction: column; gap: 1.2vh; width: 100%; text-align: left; }
+.tut-step { display: flex; align-items: center; gap: 0.6em; font-size: min(3vh, 5.2vw); line-height: 1.15; }
+.tut-step .tut-n { font-family: 'Caveat Brush', cursive; font-size: 1.3em; color: #e8590c; min-width: 0.8em; }
+.tut-step .tut-ico { width: 2.4em; height: 2.4em; flex: none; vertical-align: middle; }
+#btn-tut-ok { margin-top: 1vh; }
+/* ---- leaderboard ---- */
+#board { background: rgba(251, 246, 234, 0.7); }
+#board-tabs { gap: 6px; }
+#board-tabs .tab { font-size: min(2.4vh, 4.2vw); padding: 0.15em 0.6em; }
+#board-list { list-style: none; margin: 0; padding: 0; width: 100%; font-size: min(2.8vh, 4.9vw); }
+#board-list li { display: flex; align-items: center; gap: 0.5em; padding: 0.25em 0.4em; border-bottom: 2px dashed rgba(43, 37, 32, 0.15); }
+#board-list li.me { background: #fff3bf; border-radius: 10px; }
+#board-list .b-rank { font-family: 'Caveat Brush', cursive; min-width: 1.6em; color: #e8590c; }
+#board-list .b-name { flex: 1; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#board-list .b-score { font-family: 'Caveat Brush', cursive; }
+.name-row { display: flex; gap: 8px; width: 100%; }
+.name-row input { flex: 1; min-width: 0; font-family: 'Patrick Hand', cursive; font-size: min(3vh, 5.2vw); padding: 0.2em 0.5em;
+  border: 3px solid var(--ink); border-radius: 12px 4px 12px 4px; background: #fffdf5; color: var(--ink); user-select: text; -webkit-user-select: text; touch-action: manipulation; }
+#board-note.note { font-size: min(2.3vh, 4vw); }
+#board-list { max-height: 34vh; overflow-y: auto; }
+#board-tabs .tab { font-size: min(2.2vh, 3.8vw); padding: 0.12em 0.45em; }
+#title .credit { background: rgba(251, 246, 234, 0.88); padding: 0 0.5em; border-radius: 10px; position: relative; z-index: 1; }

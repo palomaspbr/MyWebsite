@@ -362,5 +362,28 @@
     ctx.restore();
   }
 
-  LT.Render = { draw, drawPaper, drawFish, drawBanners };
+  // Small round restart button for game HUDs, with a two-tap confirm ("tap again to restart").
+  // b = {x, y, r}; armedT = game time of the first tap (or null).
+  const HudRestart = {
+    hit: (b, x, y) => Math.hypot(x - b.x, y - b.y) <= b.r + 10,
+    // returns true when the restart is confirmed (second tap within 2.2 s)
+    tap(game, b) {
+      if (game.restartArmT != null && game.t - game.restartArmT < 2.2) { game.restartArmT = null; return true; }
+      game.restartArmT = game.t;
+      if (game.sfx) game.sfx('tap', { pitch: 0.8 });
+      return false;
+    },
+    draw(ctx, game, b, T, boil, label) {
+      const armed = game.restartArmT != null && T - game.restartArmT < 2.2;
+      ctx.save();
+      if (armed) { const k = 1 + Math.sin(T * 12) * 0.05; ctx.translate(b.x, b.y); ctx.scale(k, k); ctx.translate(-b.x, -b.y); }
+      D.shape(ctx, D.ellipse(b.r, b.r, 16, b.x, b.y), { fill: armed ? '#ffd43b' : '#fffdf5', seed: 1400, boil, lw: 3 });
+      LT.Icons.draw(ctx, 'restart', b.x, b.y + 1, b.r * 1.35, { boil });
+      ctx.restore();
+      const right = b.x > 540; // near the right edge: end the label at the button's right side
+      if (armed) D.text(ctx, label, right ? b.x + b.r + 8 : b.x, b.y + b.r + 24, { size: 26, font: LT.FONT_TEXT, color: '#e8590c', seed: 1401, boil, stroke: '#fffdf5', strokeWidth: 6, align: right ? 'right' : 'center' });
+    },
+  };
+
+  LT.Render = { draw, drawPaper, drawFish, drawBanners, HudRestart };
 })();

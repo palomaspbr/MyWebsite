@@ -54,6 +54,8 @@
       this.next = this.randTier();
       this.merges = 0;
       this.cosmics = 0;
+      this.restartBtn = { x: 452, y: 78, r: 32 };
+      if (o.save) { if (MergeGame.validSave(o.save)) this.restore(o.save); else this.badSave = true; }
     }
 
     get L() { return LT.I18N[this.lang] || LT.I18N.en; }
@@ -86,9 +88,45 @@
       return LT.clamp(x, BOX.l + r + 2, BOX.r - r - 2);
     }
 
+    /* ---------- save / resume (going Home keeps the box; only restart resets it) ---------- */
+    serialize() {
+      if (this.state !== 'play') return null;
+      return {
+        v: 1, score: this.score, maxTier: this.maxTier, merges: this.merges, cosmics: this.cosmics,
+        next: this.next, held: this.held ? this.held.tier : null, queue: this.queue.slice(),
+        cats: this.cats.filter((c) => !c.dead).map((c) => {
+          const b = c.body;
+          return { tier: c.tier, x: +b.position.x.toFixed(2), y: +b.position.y.toFixed(2), a: +b.angle.toFixed(3), vx: +b.velocity.x.toFixed(2), vy: +b.velocity.y.toFixed(2), av: +b.angularVelocity.toFixed(3) };
+        }),
+      };
+    }
+
+    restore(s) {
+      this.score = s.score || 0;
+      this.maxTier = s.maxTier || 0;
+      this.merges = s.merges || 0;
+      this.cosmics = s.cosmics || 0;
+      if (s.held) { this.next = s.held; this.queue = [s.next].concat(s.queue || []); }
+      else { this.next = s.next || this.next; this.queue = (s.queue || []).slice(); }
+      for (const k of s.cats || []) {
+        if (!(k.tier >= 1 && k.tier <= TIERS)) continue;
+        const c = this.addCat(k.tier, k.x, k.y, { vx: k.vx || 0, vy: k.vy || 0 });
+        M.Body.setAngle(c.body, k.a || 0);
+        M.Body.setAngularVelocity(c.body, k.av || 0);
+        c.born = -5; // settled cats: no fresh-drop grace, no startled face
+        c.face = 'sleep';
+      }
+      this.cooldown = 0.6;
+      this.resumed = true;
+    }
+
     /* ---------- input ---------- */
-    pointer(type, x) {
+    pointer(type, x, y) {
       if (this.state !== 'play') return;
+      if (type === 'down' && y != null && LT.Render.HudRestart.hit(this.restartBtn, x, y)) {
+        if (LT.Render.HudRestart.tap(this, this.restartBtn)) this.emit('restart');
+        return;
+      }
       x = LT.clamp(x, BOX.l, BOX.r);
       if (type === 'down') { this.aiming = true; this.aimX = x; }
       else if (type === 'move') { if (this.aiming || type === 'move') this.aimX = x; }
@@ -366,9 +404,25 @@
       D.text(ctx, `${L.best} ${Math.max(this.best, this.score)}`, 96, 128, { size: 30, font: LT.FONT_TEXT, align: 'left', seed: 12, boil, color: '#5c5248' });
       D.text(ctx, L.next, 574, 74, { size: 26, font: LT.FONT_TEXT, seed: 13, boil, color: '#5c5248', align: 'right' });
       C.drawCat(ctx, { type: 'm' + this.next, seed: 3, face: 'sleep', x: 630, y: 82, a: 0, scale: Math.min(1, 30 / this.radius(this.next)) }, T, boil);
+      if (this.state === 'play') LT.Render.HudRestart.draw(ctx, this, this.restartBtn, T, boil, L.tapAgain);
     }
   }
 
+  // A saved box is only used if every field is sane (tiers in range, finite numbers).
+  MergeGame.validSave = function (s) {
+    const num = (v) => typeof v === 'number' && isFinite(v);
+    const dropTier = (v) => Number.isInteger(v) && v >= 1 && v <= DROP_WEIGHTS.length;
+    try {
+      if (!s || s.v !== 1 || !Array.isArray(s.cats) || s.cats.length > 120) return false;
+      if (!Number.isInteger(s.score) || s.score < 0 || !dropTier(s.next)) return false;
+      if (s.held != null && !dropTier(s.held)) return false;
+      if (s.queue != null && (!Array.isArray(s.queue) || !s.queue.every(dropTier))) return false;
+      for (const k of ['maxTier', 'merges', 'cosmics']) if (s[k] != null && !(Number.isInteger(s[k]) && s[k] >= 0)) return false;
+      return s.cats.every((c) => c && Number.isInteger(c.tier) && c.tier >= 1 && c.tier <= TIERS &&
+        num(c.x) && num(c.y) && c.x > BOX.l - 50 && c.x < BOX.r + 50 && c.y > -500 && c.y < BOX.floor + 50 &&
+        [c.vx, c.vy, c.a, c.av].every((v) => v == null || num(v)));
+    } catch (e) { return false; }
+  };
   MergeGame.BOX = BOX;
   MergeGame.DROP_Y = DROP_Y;
   LT.MergeGame = MergeGame;

@@ -360,6 +360,37 @@
     }
   };
 
+  // Soft pluck (Yarn Lines steps): a rounded kalimba-ish note, short and warm. o.note = MIDI, o.vol.
+  S.pluck = function (ctx, out, t, o) {
+    o = o || {};
+    const f = midi(o.note || 72), v = o.vol == null ? 1 : o.vol;
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.setValueAtTime(3200, t);
+    lp.frequency.exponentialRampToValueAtTime(900, t + 0.18);
+    lp.connect(out);
+    for (const [mul, amp, dec] of [[1, 0.2, 0.32], [2, 0.05, 0.12], [3, 0.018, 0.05]]) {
+      const osc = ctx.createOscillator();
+      osc.type = mul === 1 ? 'triangle' : 'sine';
+      osc.frequency.value = f * mul;
+      const g = gainEnv(ctx, t, amp * v, 0.005, dec);
+      osc.connect(g).connect(lp);
+      osc.start(t); osc.stop(t + dec + 0.05);
+    }
+  };
+
+  // Soft airy whiff (a yarn line gets pushed aside) - much gentler than 'scratch'.
+  S.whiff = function (ctx, out, t, o) {
+    const n = noise(ctx, t, 0.16);
+    const f = ctx.createBiquadFilter();
+    f.type = 'bandpass';
+    f.Q.value = 0.8;
+    f.frequency.setValueAtTime(1400, t);
+    f.frequency.exponentialRampToValueAtTime(600, t + 0.14);
+    const g = gainEnv(ctx, t, 0.09 * (o && o.vol != null ? o.vol : 1), 0.02, 0.12);
+    n.connect(f).connect(g).connect(out);
+  };
+
   // Soft kalimba-like chime (rounded sine + quick octave shimmer through a lowpass).
   // o.notes: MIDI notes played as a gentle arpeggio; o.vol scales it.
   S.chime = function (ctx, out, t, o) {

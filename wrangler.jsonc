@@ -1,5 +1,5 @@
 // Cloudflare Worker for palomaliz.com.br (Workers Builds deploys this on every push to master).
-// Everything is static except /jiujitsu/api/*, which runs worker/index.js (Chacrinha Jiu-Jitsu API).
+// Everything is static except /jiujitsu/api/* (Chacrinha Jiu-Jitsu API, worker/index.js) and /loaf_tower/api/* (Loaf Tower leaderboard, worker/loaf.js).
 // Free plan only: static asset requests are free and unlimited; only API calls count as Worker requests.
 {
   "$schema": "https://unpkg.com/wrangler@4.158.0/config-schema.json",
@@ -10,11 +10,13 @@
   "assets": {
     "directory": ".",
     "binding": "ASSETS",
-    "run_worker_first": ["/jiujitsu/api/*"],
+    "run_worker_first": ["/jiujitsu/api/*", "/loaf_tower/api/*"],
     "not_found_handling": "404-page"
   },
   "d1_databases": [
     // Created in the Cloudflare dashboard (free plan). Tables are created by the Worker on first use.
-    { "binding": "JJ_DB", "database_name": "jiujitsu", "database_id": "1753f55b-9572-4caf-9e8d-14704a3a0e1e" }
+    { "binding": "JJ_DB", "database_name": "jiujitsu", "database_id": "1753f55b-9572-4caf-9e8d-14704a3a0e1e" },
+    // Loaf Tower leaderboard (worker/loaf.js); created in the dashboard, tables created on first use.
+    { "binding": "CAT_DB", "database_name": "cat_game", "database_id": "846eab41-6882-4863-85e7-a9c8e953ee83" }
   ]
 }

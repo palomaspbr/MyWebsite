@@ -131,11 +131,14 @@
     hand(ctx, o) {
       // pointing hand, fingertip at the top centre (0, -46)
       const b = o.boil, skin = '#ffe0c2';
-      D.shape(ctx, D.roundRect(54, 50, 20, 4).map((p) => [p[0] + 4, p[1] + 22]), { fill: skin, seed: 101, boil: b, lw: 5 });
-      D.shape(ctx, D.roundRect(20, 58, 10, 4).map((p) => [p[0], p[1] - 18]), { fill: skin, seed: 102, boil: b, lw: 5 });
-      for (let k = 0; k < 3; k++) D.line(ctx, [[12 + k * 9, 4], [12 + k * 9, 16]], { seed: 103 + k, boil: b, lw: 3.5, passes: 1 });
-      D.shape(ctx, D.roundRect(16, 24, 8, 3).map((p) => [p[0] - 30, p[1] + 20]), { fill: skin, seed: 107, boil: b, lw: 4.5 });
-      D.line(ctx, [[-6, -38], [6, -38]], { seed: 108, boil: b, lw: 3, passes: 1 });
+      // index finger up on the LEFT edge of the fist, three folded fingers to its right, thumb in front
+      D.shape(ctx, D.roundRect(19, 56, 9, 4).map((p) => [p[0], p[1] - 18]), { fill: skin, seed: 102, boil: b, lw: 5 });
+      D.shape(ctx, D.roundRect(56, 46, 18, 4).map((p) => [p[0] + 20, p[1] + 24]), { fill: skin, seed: 101, boil: b, lw: 5 });
+      for (let k = 0; k < 3; k++) {
+        D.shape(ctx, D.ellipse(8.5, 9, 10, 17 + k * 14, 3), { fill: skin, seed: 103 + k, boil: b, lw: 3.6 });
+      }
+      D.shape(ctx, D.roundRect(30, 15, 7, 3).map((p) => [p[0] + 14, p[1] + 26]), { fill: '#ffd3ad', seed: 107, boil: b, lw: 3.8 });
+      D.line(ctx, [[-5, -38], [5, -38]], { seed: 108, boil: b, lw: 3, passes: 1 });
     },
     shuffle(ctx, o) {
       // two crossing arrows
@@ -179,6 +182,21 @@
     },
     cat(ctx, o) {
       LT.Cats.drawCat(ctx, { type: 'loaf', pal: 'orange', seed: 9, face: 'happy', x: -6, y: 8, a: 0, scale: 0.7 }, 0, o.boil || 0);
+    },
+    trophy(ctx, o) {
+      // golden cup with a star
+      const b = o.boil;
+      for (const s of [-1, 1]) D.line(ctx, [[s * 24, -26], [s * 40, -24], [s * 38, -6], [s * 20, 4]], { seed: 160 + s, boil: b, lw: 5 });
+      D.shape(ctx, D.subdiv([[-28, -34], [28, -34], [24, -4], [10, 10], [-10, 10], [-24, -4]], 3, true), { fill: '#ffd43b', seed: 162, boil: b, lw: 5 });
+      D.shape(ctx, D.roundRect(14, 18, 3, 2).map((p) => [p[0], p[1] + 18]), { fill: '#fcc419', seed: 163, boil: b, lw: 4 });
+      D.shape(ctx, D.roundRect(46, 14, 5, 2).map((p) => [p[0], p[1] + 34]), { fill: '#c99a62', seed: 164, boil: b, lw: 4.5 });
+      D.sparkle(ctx, 0, -18, 9, '#fffdf5');
+    },
+    ball(ctx, o) {
+      // Purr Merge: a round "ball cat" (orange tier) with a tiny bit of bounce shadow
+      ctx.fillStyle = 'rgba(43,37,32,0.12)';
+      ctx.beginPath(); ctx.ellipse(0, 42, 30, 6, 0, 0, Math.PI * 2); ctx.fill();
+      LT.Cats.drawCat(ctx, { type: 'm4', seed: 9, face: 'happy', x: 0, y: 6, a: 0, scale: 0.72 }, 0, o.boil || 0);
     },
     box(ctx, o) {
       LT.Cats.drawCat(ctx, { type: 'box', pal: 'box', seed: 9, face: 'open', x: 0, y: 12, a: 0, scale: 0.5 }, 0, o.boil || 0);

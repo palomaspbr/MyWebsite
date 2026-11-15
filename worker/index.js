@@ -1,5 +1,8 @@
+import { handleLoaf, LOAF_PREFIX } from './loaf.js';
+
 /* The site's Worker (wrangler.jsonc). Static files are served straight from the assets;
-   this script only runs for /jiujitsu/api/* (assets.run_worker_first), which is the
+   this script only runs for /loaf_tower/api/* (the Loaf Tower leaderboard, worker/loaf.js) and
+   /jiujitsu/api/* (assets.run_worker_first), which is the
    Chacrinha Jiu-Jitsu API backed by a D1 database.
 
    Free-plan only. Needs:
@@ -581,6 +584,8 @@ const API_PREFIX = '/jiujitsu/api';
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    // Loaf Tower leaderboard (worker/loaf.js)
+    if (url.pathname.startsWith(LOAF_PREFIX + '/')) return handleLoaf(request, env);
     if (url.pathname !== API_PREFIX && !url.pathname.startsWith(API_PREFIX + '/')) {
       // Not the API: hand back to the static assets (normally never reached, see wrangler.jsonc).
       return env.ASSETS.fetch(request);
