@@ -44,7 +44,7 @@ The domain's DNS is already on Cloudflare, so the site is hosted on Cloudflare P
 
 ## Chacrinha Jiu-Jitsu (/jiujitsu): Cloudflare setup (free plan)
 
-The site is deployed by **Workers Builds** (Worker `paloma-website`) from `wrangler.jsonc` on every push to `master`. Static files are served directly and are free and unlimited; only `/jiujitsu/api/*` runs the Worker (free plan: 100,000 requests/day). The D1 database `chacrinha-jiujitsu` is **created automatically** on the first deploy (free plan: 5M rows read and 100k rows written per day). On the free plan, going over a limit makes requests fail for the day; it never bills you. Just don't upgrade to Workers Paid.
+The site is deployed by **Workers Builds** (Worker `paloma-website`) from `wrangler.jsonc` on every push to `master`. Static files are served directly and are free and unlimited; only `/jiujitsu/api/*` runs the Worker (free plan: 100,000 requests/day). Its data lives in the D1 database `jiujitsu` (bound as `JJ_DB` in `wrangler.jsonc`; tables are created automatically on first use) (free plan: 5M rows read and 100k rows written per day). On the free plan, going over a limit makes requests fail for the day; it never bills you. Just don't upgrade to Workers Paid.
 
 One manual step: set the admin password for the Paloma profile.
 Cloudflare dashboard → **Workers & Pages** → `paloma-website` → **Settings** → **Variables and Secrets** → **Add** → type **Secret**, name `JJ_ADMIN_PASSWORD`, value = the password → **Deploy**. Secrets survive later deploys.

@@ -55,16 +55,14 @@
   }
   function beltName(b) { return b.charAt(0).toUpperCase() + b.slice(1); }
 
-  function beltSvg(belt, stripes) {
+  function beltSvg(belt) {
     const color = BELT_COLORS[belt] || BELT_COLORS.white;
     const bar = belt === 'black' ? '#c0392b' : '#1f1b18';
-    let tape = '';
-    for (let i = 0; i < (stripes || 0); i++) tape += `<rect x="${55 + i * 4.2}" y="3.5" width="2.2" height="13" fill="#fff"/>`;
     const stitch = belt === 'white' ? '#cfc6b6' : 'rgba(255,255,255,.35)';
-    return `<svg class="belt" viewBox="0 0 80 20" role="img" aria-label="${beltName(belt)} belt${stripes ? `, ${stripes} stripe${stripes > 1 ? 's' : ''}` : ''}">` +
+    return `<svg class="belt" viewBox="0 0 80 20" role="img" aria-label="${beltName(belt)} belt">` +
       `<g filter="url(#rough)"><rect x="2" y="3" width="76" height="14" rx="2.5" fill="${color}" stroke="#2b2520" stroke-width="1.8"/>` +
       `<path d="M5 7.5 H50 M5 12.5 H50" stroke="${stitch}" stroke-width="1" stroke-dasharray="2 2"/>` +
-      `<rect x="52" y="3" width="20" height="14" fill="${bar}" stroke="#2b2520" stroke-width="1.8"/>${tape}</g></svg>`;
+      `<rect x="52" y="3" width="20" height="14" fill="${bar}" stroke="#2b2520" stroke-width="1.8"/></g></svg>`;
   }
 
   function rankBadge(rank) {
@@ -172,7 +170,7 @@
     const m = me();
     chip.hidden = !m;
     if (!m) { chip.innerHTML = ''; return; }
-    chip.innerHTML = `${beltSvg(m.belt, m.stripes)}<span class="who">${esc(m.name)}</span>` +
+    chip.innerHTML = `${beltSvg(m.belt)}<span class="who">${esc(m.name)}</span>` +
       `<button class="link-btn" type="button" data-act="switch">switch</button>`;
   }
 
@@ -183,7 +181,7 @@
       .filter((p) => !q || p.name.toLowerCase().includes(q))
       .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
     list.innerHTML = people.length
-      ? people.map((p) => `<button type="button" class="who-btn" data-id="${p.id}">${beltSvg(p.belt, p.stripes)}<span>${esc(p.name)}</span></button>`).join('')
+      ? people.map((p) => `<button type="button" class="who-btn" data-id="${p.id}">${beltSvg(p.belt)}<span>${esc(p.name)}</span></button>`).join('')
       : `<p class="muted">${q ? 'Nobody by that name yet. Sign up below!' : 'No one here yet. Be the first!'}</p>`;
   }
 
@@ -200,7 +198,7 @@
       const streak = r.streak >= 3 ? `<span class="streak">${r.streak} wins in a row!</span>` : '';
       return `<li data-id="${p.id}" class="${p.id === state.meId ? 'me' : ''} ${animate ? 'enter' : ''}" style="${animate ? `animation-delay:${Math.min(i, 12) * 35}ms` : ''}" tabindex="0" role="button" aria-label="${esc(p.name)}, rank ${r.rank}, ${r.points} points">` +
         `<div class="rank">${r.rolls ? rankBadge(r.rank) : '<span class="muted" title="No rolls yet">–</span>'}</div>` +
-        `<div class="pl"><span class="name">${esc(p.name)}</span><span class="meta">${beltSvg(p.belt, p.stripes)}<span>${r.wins}W ${r.draws}D ${r.losses}L</span>${streak}</span></div>` +
+        `<div class="pl"><span class="name">${esc(p.name)}</span><span class="meta">${beltSvg(p.belt)}<span>${r.wins}W ${r.draws}D ${r.losses}L</span>${streak}</span></div>` +
         `<div class="pts"><b>${r.points}</b><span>pts</span></div></li>`;
     }).join('');
   }
@@ -228,14 +226,12 @@
     $('#more-btn').hidden = state.rolls.length <= state.feedLimit;
   }
 
-  // ---------- belt + stripe pickers ----------
-  function setupPicker(el, kind) {
+  // ---------- belt picker ----------
+  function setupPicker(el) {
     el.setAttribute('role', 'radiogroup');
-    el.setAttribute('aria-label', kind === 'belt' ? 'Belt' : 'Stripes');
-    const opts = kind === 'belt' ? BELTS : [0, 1, 2, 3, 4];
-    el.innerHTML = opts.map((v) => kind === 'belt'
-      ? `<button type="button" class="belt-opt" role="radio" aria-checked="false" data-v="${v}">${beltSvg(v, 0)}<span>${beltName(v)}</span></button>`
-      : `<button type="button" class="stripe-opt" role="radio" aria-checked="false" data-v="${v}">${v}</button>`).join('');
+    el.setAttribute('aria-label', 'Belt');
+    el.innerHTML = BELTS.map((v) =>
+      `<button type="button" class="belt-opt" role="radio" aria-checked="false" data-v="${v}">${beltSvg(v)}<span>${beltName(v)}</span></button>`).join('');
     el.addEventListener('click', (e) => {
       const b = e.target.closest('[data-v]');
       if (!b) return;
@@ -296,7 +292,7 @@
   function fillSelect(sel, ids, placeholder, value) {
     const people = ids.map(player).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
     sel.innerHTML = (placeholder ? `<option value="">${esc(placeholder)}</option>` : '') +
-      people.map((p) => `<option value="${p.id}">${esc(p.name)} (${p.belt}${p.stripes ? ', ' + p.stripes + 's' : ''})</option>`).join('');
+      people.map((p) => `<option value="${p.id}">${esc(p.name)} (${p.belt})</option>`).join('');
     sel.value = value ? String(value) : '';
   }
   function refreshRollLabels() {
@@ -432,8 +428,8 @@
       actions.push('<button class="btn small danger" type="button" data-act="del-player">Delete player</button>');
     }
     $('#player-body').innerHTML =
-      `<div class="prof-head"><h2>${esc(p.name)}</h2>${beltSvg(p.belt, p.stripes)}</div>` +
-      `<p class="prof-line muted">${beltName(p.belt)} belt${p.stripes ? `, ${p.stripes} stripe${p.stripes > 1 ? 's' : ''}` : ''} · rank #${r.rank} of ${rows.length}${isAdminName(p.name) ? ' · admin' : ''}</p>` +
+      `<div class="prof-head"><h2>${esc(p.name)}</h2>${beltSvg(p.belt)}</div>` +
+      `<p class="prof-line muted">${beltName(p.belt)} belt · rank #${r.rank} of ${rows.length}${isAdminName(p.name) ? ' · admin' : ''}</p>` +
       `<div class="statgrid"><div class="stat"><b>${r.points}</b><span>points</span></div><div class="stat"><b>${r.wins}</b><span>wins</span></div>` +
       `<div class="stat"><b>${r.draws}</b><span>draws</span></div><div class="stat"><b>${r.losses}</b><span>losses</span></div></div>` +
       (r.rolls ? `<p class="prof-line">Win rate: <b>${rate}%</b>${r.favorite ? ` · Favorite finish: <b>${esc(r.favorite.toLowerCase())}</b>` : ''}${r.streak >= 2 ? ` · On a <b>${r.streak}</b>-win streak` : ''}</p>` : '') +
@@ -455,7 +451,6 @@
     $('#edit-name').value = p.name;
     $('#edit-player-err').textContent = '';
     setPick($('.belt-picker[data-for=edit]'), p.belt);
-    setPick($('.stripe-picker[data-for=edit]'), p.stripes);
     closeDlg($('#player-dlg'));
     openDlg($('#edit-player-dlg'));
   }
@@ -466,7 +461,6 @@
     if (!p) return;
     const body = {
       belt: pickerValue('.belt-picker[data-for=edit]'),
-      stripes: Number(pickerValue('.stripe-picker[data-for=edit]')),
     };
     if (!$('#rename-wrap').hidden) {
       const name = $('#edit-name').value.trim();
@@ -477,7 +471,7 @@
     try {
       await api('PATCH', `/players/${p.id}`, body);
       closeDlg($('#edit-player-dlg'));
-      const up = BELTS.indexOf(body.belt) > BELTS.indexOf(p.belt) || (body.belt === p.belt && body.stripes > p.stripes);
+      const up = BELTS.indexOf(body.belt) > BELTS.indexOf(p.belt);
       if (up) { Sound.play('gong'); confetti(); toast(`Promoted! Congrats, ${body.name || p.name}! Oss!`); }
       else { Sound.play('scribble'); toast('Saved.'); }
       await load();
@@ -547,12 +541,9 @@
       if (b) pickMe(player(Number(b.dataset.id)));
     });
 
-    setupPicker($('.belt-picker[data-for=signup]'), 'belt');
-    setupPicker($('.stripe-picker[data-for=signup]'), 'stripes');
-    setupPicker($('.belt-picker[data-for=edit]'), 'belt');
-    setupPicker($('.stripe-picker[data-for=edit]'), 'stripes');
+    setupPicker($('.belt-picker[data-for=signup]'));
+    setupPicker($('.belt-picker[data-for=edit]'));
     setPick($('.belt-picker[data-for=signup]'), 'white');
-    setPick($('.stripe-picker[data-for=signup]'), 0);
 
     $('#signup-form').addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -566,7 +557,6 @@
         const data = await api('POST', '/players', {
           name,
           belt: pickerValue('.belt-picker[data-for=signup]'),
-          stripes: Number(pickerValue('.stripe-picker[data-for=signup]')),
         });
         setMe(data.player.id);
         $('#signup-name').value = '';
