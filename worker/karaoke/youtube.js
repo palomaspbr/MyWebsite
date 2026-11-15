@@ -8,7 +8,8 @@
    Online the videos are played as embeds, and some channels forbid embedding (Sing King, for
    example). oEmbed answers 401 for those, so every search result is checked with oEmbed and
    blocked videos are left out. Whole search results are cached with the Cache API.
-   Subrequest budget of a fresh search (free plan limit 50): 1 cache read + 1 search + up to 20 oEmbed + 1 cache write. */
+   Subrequest budget of a fresh search (free plan limit 50): 1 cache read + up to 2 searches + up to 20 oEmbed
+   + 1 cache write; with the API: cache read + search.list + videos.list + cache write. */
 
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36';
 const PAGE_HEADERS = {
@@ -142,7 +143,12 @@ async function searchPage(query, max) {
 async function searchApi(key, query, max) {
   const q = new URLSearchParams({ part: 'snippet', type: 'video', videoEmbeddable: 'true', maxResults: String(max), q: query, key });
   const res = await fetch('https://www.googleapis.com/youtube/v3/search?' + q, { signal: AbortSignal.timeout(10000) });
-  if (!res.ok) throw new Error('YouTube API search failed (' + res.status + ')');
+  if (!res.ok) {
+    // Surface Google's reason (quotaExceeded, keyInvalid, API_KEY_HTTP_REFERRER_BLOCKED...) in the Worker logs.
+    let reason = '';
+    try { const e = (await res.json()).error || {}; reason = ((e.errors || [])[0] || {}).reason || (e.details || []).map(d => d.reason).filter(Boolean)[0] || e.message || ''; } catch (e) { /* not json */ }
+    throw new Error('YouTube API search failed (' + res.status + (reason ? ' ' + reason : '') + ')');
+  }
   const data = await res.json();
   const ids = (data.items || []).map(i => i.id && i.id.videoId).filter(isValidVideoId);
   if (!ids.length) return [];
@@ -160,18 +166,32 @@ async function searchApi(key, query, max) {
 }
 
 // Search like the Go handler: the query gets " karaoke" appended; 20 results; blocked embeds removed.
+// Returns {source: 'api' | 'page' | 'none', results}. Empty results are never cached (YouTube now and then serves
+// a results page in another layout; one bad page must not break that search for 6 hours).
 export async function search(env, query, max = 20) {
   const q = query + ' karaoke';
-  const key = 'search/' + encodeURIComponent(q.toLowerCase().trim());
-  return cached(key, SEARCH_TTL, async () => {
-    let results;
+  const key = 'search2/' + encodeURIComponent(q.toLowerCase().trim());
+  const value = await cached(key, SEARCH_TTL, async () => {
+    let results = null;
+    let source = 'page';
     if (env.YOUTUBE_API_KEY) {
-      try { results = await searchApi(env.YOUTUBE_API_KEY, q, max); } catch (e) { results = null; }
+      try {
+        results = await searchApi(env.YOUTUBE_API_KEY, q, max);
+        source = 'api';
+      } catch (e) {
+        console.warn('YouTube Data API search failed, falling back to the results page:', e.message);
+      }
     }
-    if (!results) results = await searchPage(q, max);
+    if (!results || !results.length) {
+      results = await searchPage(q, max);
+      if (!results.length) results = await searchPage(q, max); // one retry for an odd page layout
+      source = 'page';
+    }
     const checks = await Promise.all(results.map(r => (r.embeddable ? true : isEmbeddable(r.video_id))));
-    return results.filter((r, i) => checks[i] !== false).map(r => { delete r.embeddable; return r; });
+    const out = results.filter((r, i) => checks[i] !== false).map(r => { delete r.embeddable; return r; });
+    return out.length ? { source, results: out } : undefined; // undefined = don't cache
   });
+  return value || { source: 'none', results: [] };
 }
 
 /*#endregion*/

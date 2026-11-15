@@ -8,7 +8,7 @@
    Needs (wrangler.jsonc): KARAOKE_DB (D1), KARAOKE_ROOM (Durable Object namespace).
    Optional secrets: KARAOKE_ADMIN_PASSWORD (catalog admin), YOUTUBE_API_KEY (search via the Data API). */
 
-import { ApiError, ok, okMessage, message, fail, errorResponse, readBody, str, clientIp, safeEqual, sha256Hex, randomToken, uuid, nowIso } from './http.js';
+import { ApiError, json, ok, okMessage, message, fail, errorResponse, readBody, str, clientIp, safeEqual, sha256Hex, randomToken, uuid, nowIso } from './http.js';
 import * as catalog from './catalog.js';
 import * as yt from './youtube.js';
 import { extractMusicMetadata } from './meta/extract.js';
@@ -235,12 +235,13 @@ async function handleStateless(request, env, code, seg, url) {
       if (!q) return fail(400, "Query parameter 'q' is required");
       if (q.length > 200) return fail(400, 'Query too long');
       try {
-        const results = await yt.search(env, q);
+        const { results, source } = await yt.search(env, q);
         // Online extra: mark results that are already in the catalog.
         const songs = await catalog.liveSongs(db);
         const byYt = new Map(songs.map(s => [s.youtube_id, s.id]));
         for (const r of results) if (byYt.has(r.video_id)) r.in_catalog = byYt.get(r.video_id);
-        return ok(results);
+        // X-Karaoke-Search tells which source answered: api (YOUTUBE_API_KEY), page (results page) or none.
+        return json(200, { success: true, data: results }, { 'X-Karaoke-Search': source });
       } catch (e) {
         return fail(500, e.message || 'YouTube search failed');
       }
