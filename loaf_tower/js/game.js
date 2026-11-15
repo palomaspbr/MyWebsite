@@ -36,6 +36,7 @@
     get L() { return LT.I18N[this.lang] || LT.I18N.en; }
 
     reset(seed) {
+      this.meowT = -9;
       this.seed = seed == null ? (Math.random() * 1e9) | 0 : seed;
       this.rng = LT.rng(this.seed);
       this.vrng = LT.rng(this.seed ^ 0x5bd1e995);
@@ -177,7 +178,7 @@
           this.sfx('sparkle');
         }
       }
-      this.sfx('pop', { pitch: 1 + this.vrng() * 0.3 });
+      this.sfx('softpop', { pitch: 1.35 + this.vrng() * 0.25, vol: 0.7 }); // new cat on the peg
     }
 
     canDrop() {
@@ -269,7 +270,7 @@
           if (c.type === 'pudim' && rel > 0.8) {
             c.wob = Math.max(c.wob, Math.min(0.16, rel * 0.035));
             c.wobT = 0;
-            if (c.landed && rel > 2.5 && this.t - c.landedT > 0.3) this.sfx('boing', { vol: 0.5 });
+            if (c.landed && rel > 2.5 && this.t - c.landedT > 0.3 && this.t - (c.boingT || -9) > 0.9) { c.boingT = this.t; this.sfx('boing', { vol: 0.32 }); }
           }
           if (c.type === 'rainbow' && c.welds < 3 && (other === this.platform || oc)) {
             this.pendingWelds.push([c, other]);
@@ -285,11 +286,15 @@
       this.maxPlaced = Math.max(this.maxPlaced, this.placed);
       const t = C.TYPES[c.type];
       const size = (t.w * t.h) / (118 * 66) * (t.density / 1.4);
-      this.sfx(c.type === 'box' ? 'box' : 'thud', { size: Math.max(0.5, Math.min(2.4, size)), vol: Math.min(1.2, 0.5 + speed * 0.08) });
+      this.sfx(c.type === 'box' ? 'box' : 'thud', { size: Math.max(0.5, Math.min(2.4, size)), vol: Math.min(0.72, 0.3 + speed * 0.047) }); // most landings arrive near max fall speed -> ~0.72
+      // Cat voice on landing: not every time (it got repetitive). A gentle meow at most every ~2.5 s,
+      // otherwise sometimes a quiet trill, sometimes nothing. Specials, chonks and kittens always say
+      // something (a trill if the meow is still on cooldown).
       const pitch = c.type === 'kitten' ? 1.55 : c.type === 'chonk' ? 0.72 : 0.9 + ((c.seed % 100) / 100) * 0.3;
       if (c.type !== 'box') {
-        if (this.vrng() < 0.8) this.sfx('meow', { pitch, vol: 0.9 });
-        else this.sfx('mrrp', { pitch });
+        const r = this.vrng(), loud = C.SPECIAL[c.type] || c.type === 'chonk' || c.type === 'kitten';
+        if ((loud || r < 0.35) && this.t - (this.meowT || -9) > 2.5) { this.meowT = this.t; this.sfx('meow', { pitch, vol: 0.45 }); }
+        else if (loud || r < 0.7) this.sfx('mrrp', { pitch, vol: 0.32 });
       }
       this.toasts.push({ text: c.name, cat: c, t0: this.t, dur: 1.3, size: 30, color: '#2b2520', dy: -1 });
       const b = c.body;
@@ -299,7 +304,8 @@
           break;
         case 'pudim':
           c.wob = 0.17; c.wobT = 0;
-          this.sfx('boing');
+          c.boingT = this.t;
+          this.sfx('boing', { vol: 0.4 });
           break;
         case 'cupcake':
           this.burst(b.position.x, b.position.y - 30, 22, 'sprinkle');
