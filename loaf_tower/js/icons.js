@@ -145,6 +145,17 @@
       D.shape(ctx, poly([[24, -38], [46, -22], [24, -6]]), { fill: '#b197fc', seed: 133, boil: b, lw: 4.5 });
       D.shape(ctx, poly([[24, 8], [46, 24], [24, 40]]), { fill: '#ffa94d', seed: 134, boil: b, lw: 4.5 });
     },
+    wand(ctx, o) {
+      // magic wand with a star at the tip
+      const b = o.boil;
+      D.line(ctx, [[-38, 38], [10, -10]], { seed: 151, boil: b, lw: 10 });
+      D.line(ctx, [[-30, 30], [-20, 20]], { seed: 152, boil: b, lw: 5, ink: '#fffdf5', passes: 1 });
+      const star = [];
+      for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI * 2 - Math.PI / 2, r = i % 2 ? 9 : 22; star.push([20 + Math.cos(a) * r, -20 + Math.sin(a) * r]); }
+      D.shape(ctx, star, { fill: '#ffd43b', seed: 153, boil: b, lw: 4.5, amp: 0.8 });
+      D.sparkle(ctx, -14, -32, 7, '#b197fc');
+      D.sparkle(ctx, 38, 14, 6, '#74c0fc');
+    },
     tiles(ctx, o) {
       // two stacked game tiles, the front one with a paw print
       const b = o.boil;

@@ -91,16 +91,20 @@
     osc.type = 'triangle';
     osc.frequency.setValueAtTime(330 * p, t);
     osc.frequency.linearRampToValueAtTime(520 * p, t + dur);
+    // 28 Hz trill as a tremolo *after* the envelope, so it scales with `vol` and fades out with it
+    // (it used to be added straight onto the envelope: always loud, and it could click at the end)
     const am = ctx.createOscillator();
     am.frequency.value = 28;
     const amg = ctx.createGain();
-    amg.gain.value = 0.5;
-    const g = gainEnv(ctx, t, 0.55 * (o.vol || 1), 0.02, dur);
-    am.connect(amg).connect(g.gain);
+    amg.gain.value = 0.45;
+    const trem = ctx.createGain();
+    trem.gain.value = 0.55;
+    am.connect(amg).connect(trem.gain);
+    const g = gainEnv(ctx, t, 0.9 * (o.vol == null ? 1 : o.vol), 0.02, dur);
     const f = ctx.createBiquadFilter();
     f.type = 'lowpass';
     f.frequency.value = 1800;
-    osc.connect(f).connect(g).connect(out);
+    osc.connect(f).connect(g).connect(trem).connect(out);
     osc.start(t); osc.stop(t + dur + 0.1);
     am.start(t); am.stop(t + dur + 0.1);
   };
@@ -113,14 +117,15 @@
     osc.type = 'sine';
     osc.frequency.setValueAtTime(170 / Math.sqrt(s), t);
     osc.frequency.exponentialRampToValueAtTime(48 / Math.sqrt(s), t + 0.16);
-    const g = gainEnv(ctx, t, 0.9 * v, 0.004, 0.2 + s * 0.06);
+    // soft "pillow" landing: rounder attack and a much quieter, darker noise tick than before
+    const g = gainEnv(ctx, t, 0.7 * v, 0.008, 0.2 + s * 0.06);
     osc.connect(g).connect(out);
     osc.start(t); osc.stop(t + 0.5);
     const n = noise(ctx, t, 0.08);
     const nf = ctx.createBiquadFilter();
     nf.type = 'lowpass';
-    nf.frequency.value = 900;
-    const ng = gainEnv(ctx, t, 0.35 * v, 0.002, 0.07);
+    nf.frequency.value = 520;
+    const ng = gainEnv(ctx, t, 0.14 * v, 0.004, 0.06);
     n.connect(nf).connect(ng).connect(out);
   };
 
@@ -129,9 +134,9 @@
     const n = noise(ctx, t, 0.12);
     const f = ctx.createBiquadFilter();
     f.type = 'bandpass';
-    f.frequency.value = 520;
+    f.frequency.value = 480;
     f.Q.value = 2;
-    const g = gainEnv(ctx, t, 0.6, 0.003, 0.12);
+    const g = gainEnv(ctx, t, 0.3, 0.005, 0.12);
     n.connect(f).connect(g).connect(out);
   };
 
@@ -353,6 +358,102 @@
       osc.connect(g).connect(out);
       osc.start(t); osc.stop(t + 1);
     }
+  };
+
+  // Soft kalimba-like chime (rounded sine + quick octave shimmer through a lowpass).
+  // o.notes: MIDI notes played as a gentle arpeggio; o.vol scales it.
+  S.chime = function (ctx, out, t, o) {
+    o = o || {};
+    const notes = o.notes || [o.note || 76];
+    const v = o.vol == null ? 1 : o.vol;
+    const f = ctx.createBiquadFilter();
+    f.type = 'lowpass';
+    f.frequency.value = 2200;
+    f.connect(out);
+    notes.forEach((n, i) => {
+      const t0 = t + i * (o.gap || 0.07);
+      for (const [mul, amp, dec] of [[1, 0.16, 0.7], [2, 0.035, 0.25]]) {
+        const osc = ctx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.value = midi(n) * mul;
+        const g = gainEnv(ctx, t0, amp * v, 0.006, dec);
+        osc.connect(g).connect(f);
+        osc.start(t0); osc.stop(t0 + dec + 0.05);
+      }
+    });
+  };
+
+  // Soft round "bloop" (lower and gentler than pop): o.pitch ~0.5 (big) .. 1.5 (small).
+  S.softpop = function (ctx, out, t, o) {
+    o = o || {};
+    const p = o.pitch || 1, v = o.vol == null ? 1 : o.vol;
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(230 * p, t);
+    osc.frequency.exponentialRampToValueAtTime(400 * p, t + 0.09);
+    const f = ctx.createBiquadFilter();
+    f.type = 'lowpass';
+    f.frequency.value = 1400;
+    const g = gainEnv(ctx, t, 0.24 * v, 0.012, 0.16);
+    osc.connect(f).connect(g).connect(out);
+    osc.start(t); osc.stop(t + 0.25);
+  };
+
+  // Purr Merge "juicy" merge: crisp plip + bubbly bloop + marimba note (+ a warm thump for big cats,
+  // a sparkle for the rare ones). o.tier = the new cat's tier (2..12), o.combo = chain length (1 = single).
+  // Bigger cats sound lower and heavier; each step of a chain climbs one note of the pentatonic scale.
+  const MERGE_SCALE = [55, 57, 60, 62, 64, 67, 69, 72, 74, 76, 79, 81, 84, 86, 88];
+  S.merge = function (ctx, out, t, o) {
+    o = o || {};
+    const tier = LT.clamp(o.tier || 2, 2, 12), combo = Math.max(1, o.combo || 1), v = o.vol == null ? 1 : o.vol;
+    const size = (tier - 2) / 10; // 0 small .. 1 huge
+    // 1) plip: a tiny bright noise tick so the merge "snaps"
+    const n = noise(ctx, t, 0.03);
+    const nf = ctx.createBiquadFilter();
+    nf.type = 'bandpass';
+    nf.frequency.value = 3200 - size * 1400;
+    nf.Q.value = 1.4;
+    const ng = gainEnv(ctx, t, 0.07 * v, 0.001, 0.025);
+    n.connect(nf).connect(ng).connect(out);
+    // 2) bloop: round sine sweeping up (a bubble popping), with a touch of its octave for body
+    const b0 = 330 - size * 170;
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 1700;
+    lp.connect(out);
+    for (const [mul, amp] of [[1, 0.3], [2, 0.07]]) {
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(b0 * 0.62 * mul, t);
+      osc.frequency.exponentialRampToValueAtTime(b0 * 1.25 * mul, t + 0.055);
+      osc.frequency.exponentialRampToValueAtTime(b0 * 1.12 * mul, t + 0.2);
+      const g = gainEnv(ctx, t, amp * v, 0.006, 0.2 + size * 0.08);
+      osc.connect(g).connect(lp);
+      osc.start(t); osc.stop(t + 0.34);
+    }
+    // 3) marimba note right after the bloop: lower for bigger cats, higher with every chain step
+    const idx = LT.clamp(12 - tier + (combo - 1), 0, MERGE_SCALE.length - 1);
+    const fn = midi(MERGE_SCALE[idx]), tn = t + 0.035;
+    for (const [mul, amp, dec] of [[1, 0.17, 0.45 + size * 0.25], [4, 0.035, 0.05], [3, 0.02, 0.12]]) {
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = fn * mul;
+      const g = gainEnv(ctx, tn, amp * v, 0.004, dec);
+      osc.connect(g).connect(lp);
+      osc.start(tn); osc.stop(tn + dec + 0.05);
+    }
+    // 4) big cats land with weight: a soft low thump
+    if (tier >= 7) {
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(165, t); // high enough to be felt on phone speakers
+      osc.frequency.exponentialRampToValueAtTime(72, t + 0.16);
+      const g = gainEnv(ctx, t, 0.22 * ((tier - 6) / 6) * v, 0.008, 0.2);
+      osc.connect(g).connect(out);
+      osc.start(t); osc.stop(t + 0.3);
+    }
+    // 5) the rare cats get a little sparkle on top
+    if (tier >= 9 && S.sparkle && v > 0) S.sparkle(ctx, out, t + 0.06, { vol: 0.45 * v });
   };
 
   /* ---------------- music ---------------- */
