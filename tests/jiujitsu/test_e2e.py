@@ -210,12 +210,11 @@ def api_state(request):
     return r.json()
 
 
-def signup(f, name, belt="white", stripes=0):
+def signup(f, name, belt="white"):
     p = f.page
     expect(p.locator("#welcome")).to_be_visible()
     p.fill("#signup-name", name)
     p.click(f'.belt-picker[data-for=signup] [data-v="{belt}"]')
-    p.click(f'.stripe-picker[data-for=signup] [data-v="{stripes}"]')
     p.click("#signup-form button[type=submit]")
     expect(p.locator("#board-wrap")).to_be_visible()
     expect(p.locator("#me-chip .who")).to_have_text(name)
@@ -386,7 +385,7 @@ def run(pw):
 
         # ---- three friends sign up in separate contexts --------------------
         print("signups")
-        a = signup(ana, names["ana"], "blue", 2)
+        a = signup(ana, names["ana"], "blue")
         model.players[a] = names["ana"]
         created.append(a)
 
@@ -396,7 +395,7 @@ def run(pw):
         bia.shot("welcome", full=True)
         caio = friend("Caio", "desktop")
         caio.open()  # loaded before Bia exists: Caio's player list is now stale
-        b = signup(bia, names["bia"], "white", 0)
+        b = signup(bia, names["bia"], "white")
         model.players[b] = names["bia"]
         created.append(b)
         bia.check_toast_entry()
@@ -416,7 +415,7 @@ def run(pw):
             "so the name is not there to pick",
         )
         cp.fill("#signup-name", "")
-        c = signup(caio, names["caio"], "purple", 1)
+        c = signup(caio, names["caio"], "purple")
         model.players[c] = names["caio"]
         created.append(c)
 
@@ -525,14 +524,13 @@ def run(pw):
         expect(p.locator("#edit-player-dlg")).to_have_attribute("open", "")
         expect(p.locator("#rename-wrap")).to_be_hidden()
         p.click('.belt-picker[data-for=edit] [data-v="blue"]')
-        p.click('.stripe-picker[data-for=edit] [data-v="1"]')
         p.click("#edit-player-form button[type=submit]")
         expect(p.locator("#edit-player-dlg")).not_to_have_attribute("open", "")
         expect(p.locator("#toast")).to_contain_text("Promoted")
-        expect(p.locator(f'#board li[data-id="{b}"] svg.belt')).to_have_attribute("aria-label", "Blue belt, 1 stripe")
-        expect(p.locator("#me-chip svg.belt")).to_have_attribute("aria-label", "Blue belt, 1 stripe")
+        expect(p.locator(f'#board li[data-id="{b}"] svg.belt')).to_have_attribute("aria-label", "Blue belt")
+        expect(p.locator("#me-chip svg.belt")).to_have_attribute("aria-label", "Blue belt")
         st = [x for x in api_state(request)["players"] if x["id"] == b][0]
-        PROBLEMS.check((st["belt"], st["stripes"]) == ("blue", 1), f"promotion not saved: {st}")
+        PROBLEMS.check(st["belt"] == "blue", f"promotion not saved: {st}")
 
         # ---- switch user ------------------------------------------------------
         print("switch user")
@@ -555,7 +553,7 @@ def run(pw):
         print("xss")
         xss = friend("Xss", "desktop")
         xss.open()
-        x = signup(xss, names["xss"], "brown", 4)
+        x = signup(xss, names["xss"], "brown")
         model.players[x] = names["xss"]
         created.append(x)
         nx = f"e2e {RUN} \"><img src=x onerror=alert(3)>"
@@ -710,7 +708,7 @@ def run(pw):
         print("long name on phone")
         lng = friend("Long", "phone")
         lng.open()
-        ln = signup(lng, names["long"], "black", 4)
+        ln = signup(lng, names["long"], "black")
         created.append(ln)
         model.players[ln] = names["long"]
         lng.check_no_hscroll("board with a long name")

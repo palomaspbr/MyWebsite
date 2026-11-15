@@ -191,7 +191,7 @@ select.field { cursor: pointer; }
 /* ---------- belts ---------- */
 .belt { display: inline-block; width: 64px; height: 17px; flex: none; vertical-align: middle; overflow: visible; }
 .belt-picker { display: flex; flex-wrap: wrap; gap: 8px; }
-.belt-opt, .stripe-opt {
+.belt-opt {
   font: inherit; color: var(--ink);
   display: flex; flex-direction: column; align-items: center; gap: 2px;
   background: #fff;
@@ -202,13 +202,11 @@ select.field { cursor: pointer; }
   font-size: 16px;
 }
 .belt-opt .belt { width: 60px; height: 16px; }
-.belt-opt[aria-checked='true'], .stripe-opt[aria-checked='true'] {
+.belt-opt[aria-checked='true'] {
   border: 2.5px solid var(--ink);
   background: var(--hi);
   transform: rotate(-2deg);
 }
-.stripe-picker { display: flex; gap: 6px; flex-wrap: wrap; }
-.stripe-opt { min-width: 44px; padding: 6px 10px; font-size: 18px; }
 
 /* ---------- leaderboard ---------- */
 .board { list-style: none; margin: 0; padding: 0; }
