@@ -293,6 +293,15 @@ main .projects-grid:not(.cards) > p { margin: 0; flex: 1 1 260px; text-align: ce
 }
 :root[data-theme="dark"] main img { filter: brightness(0.92); }
 
+/* Notebook-style illustrations have a dark twin (card-dark.png): show the one that matches the theme. */
+.dark-img { display: none !important; }
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .light-img { display: none !important; }
+    :root:not([data-theme="light"]) .dark-img { display: revert !important; }
+}
+:root[data-theme="dark"] .light-img { display: none !important; }
+:root[data-theme="dark"] .dark-img { display: revert !important; }
+
 /*#endregion Sketch pieces*/
 
 /*#region Header*/
