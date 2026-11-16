@@ -5,7 +5,79 @@
   const H = LT.hash;
   const D = (LT.Doodle = {});
 
-  D.INK = '#2b2520';
+  /* ---------- light / dark palette ----------
+     LT.PAL holds the current colours for paper, cards and UI ink; LT.Theme switches it.
+     The choice comes from /static/theme.js (window.SiteTheme, key "loaf_theme"); without it
+     (e.g. the reels composer) the game is always light. The canvas is redrawn every frame,
+     so a switch shows up on the next frame; cached images subscribe with LT.Theme.onChange.
+     Cats, tiles, yarn heads and other "objects" keep dark ink in both themes (D.fixed). */
+  const INK_DARK = '#2b2520';
+  const LIGHT = {
+    paper: '#fbf6ea', card: '#fffdf5', ink: INK_DARK, soft: '#5c5248', inkRGB: '43,37,32',
+    rule: 'rgba(110,160,210,0.32)', margin: 'rgba(225,90,90,0.38)',
+    grain: ['rgba(120,100,70,0.05)', 'rgba(255,255,255,0.35)'],
+    surface: '#e9e4da', greenBtn: '#d3f9d8', bubble: '#ffffff', rim: 'rgba(0,0,0,0)',
+    desk: '#ead6b8', deskLine: 'rgba(150,110,70,0.25)', boxTint: 'rgba(201,154,98,0.16)',
+    sil: '#d9d2c3', silInk: '#b3a993', silText: '#9b917a',
+    text: {}, halo: {},
+  };
+  const DARK = {
+    paper: '#23201c', card: '#2d2a25', ink: '#ebe3d5', soft: '#a99e8e', inkRGB: '235,227,213',
+    rule: 'rgba(140,170,200,0.16)', margin: 'rgba(232,120,120,0.4)',
+    grain: ['rgba(0,0,0,0.14)', 'rgba(255,255,255,0.03)'],
+    surface: '#36322c', greenBtn: '#2f4733', bubble: '#36322c', rim: 'rgba(235,227,213,0.42)',
+    desk: '#2e2822', deskLine: 'rgba(0,0,0,0.3)', boxTint: 'rgba(201,154,98,0.10)',
+    sil: '#3a352e', silInk: '#5e564b', silText: '#8a7f70',
+    // text colours picked for light paper -> brighter versions that read on dark paper
+    text: {
+      '#2b2520': '#ebe3d5', '#5c5248': '#a99e8e', '#e8590c': '#ff922b', '#2b8a3e': '#69db7c',
+      '#c2255c': '#f783ac', '#e03131': '#ff7f6e', '#c92a2a': '#ff8787', '#6b4fd8': '#b197fc',
+    },
+    // light "halo" strokes behind text -> dark paper
+    halo: { '#fffdf5': '#23201c', '#fbf6ea': '#23201c', '#fff8e1': '#23201c' },
+  };
+  const PAL = (LT.PAL = Object.assign({}, LIGHT));
+  D.INK = PAL.ink;
+  D.INK_DARK = INK_DARK;
+  D.FIXED = false;
+
+  // Run fn with the light-theme ink (dark lines, no colour mapping): cats, tiles, text on yellow buttons.
+  D.fixed = function (fn) {
+    const ink = D.INK, fixed = D.FIXED;
+    D.INK = INK_DARK;
+    D.FIXED = true;
+    try { return fn(); } finally { D.INK = ink; D.FIXED = fixed; }
+  };
+
+  const themeListeners = [];
+  const Theme = (LT.Theme = {
+    dark: false,
+    set(dark) {
+      dark = !!dark;
+      const changed = dark !== Theme.dark;
+      Theme.dark = dark;
+      Object.assign(PAL, dark ? DARK : LIGHT);
+      D.INK = PAL.ink;
+      if (changed) themeListeners.forEach((fn) => { try { fn(dark); } catch (e) { /* keep the others going */ } });
+    },
+    onChange(fn) { themeListeners.push(fn); },
+    // Draw something in the light theme whatever the setting (shareable clips stay light, like the reels).
+    withLight(fn) {
+      if (!Theme.dark) return fn();
+      const saved = Object.assign({}, PAL), ink = D.INK;
+      Object.assign(PAL, LIGHT);
+      D.INK = PAL.ink;
+      Theme.dark = false;
+      try { return fn(); } finally { Object.assign(PAL, saved); D.INK = ink; Theme.dark = true; }
+    },
+  });
+  const ST = window.SiteTheme;
+  if (ST && typeof ST.isDark === 'function') {
+    Theme.set(ST.isDark());
+    if (typeof ST.onChange === 'function') ST.onChange((dark) => Theme.set(dark));
+  }
+  const textColor = (c) => (D.FIXED ? c : PAL.text[c] || c);
+  const haloColor = (c) => (D.FIXED ? c : PAL.halo[c] || c);
 
   function mid(a, b) { return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; }
 
@@ -97,7 +169,23 @@
     ctx.restore();
   };
 
+  // Dark theme only: a soft light rim drawn under an object's silhouette (before its fill), so dark
+  // cats with dark ink still stand out from the dark paper, like a sticker edge.
+  D.rim = function (ctx, pts, o) {
+    if (!Theme.dark) return;
+    ctx.save();
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = PAL.rim;
+    ctx.beginPath();
+    D.trace(ctx, D.wobble(pts, o.seed || 1, o.boil || 0, o.amp == null ? 1.3 : o.amp), o.closed !== false);
+    ctx.lineWidth = (o.lw || 3.2) + 5;
+    ctx.stroke();
+    ctx.restore();
+  };
+
   D.shape = function (ctx, pts, o, inner) {
+    if (o.rim) D.rim(ctx, pts, o);
     if (o.fill) D.fill(ctx, pts, o, inner);
     if (!o.noStroke) D.outline(ctx, pts, o);
   };
@@ -115,6 +203,11 @@
     ctx.lineCap = 'round';
     ctx.beginPath();
     D.trace(ctx, wp, false);
+    if (o.rim && Theme.dark) {
+      ctx.strokeStyle = PAL.rim;
+      ctx.lineWidth = o.width + (o.lw || 3.2) * 2 + 5;
+      ctx.stroke();
+    }
     ctx.strokeStyle = o.ink || D.INK;
     ctx.lineWidth = o.width + (o.lw || 3.2) * 2;
     ctx.stroke();
@@ -221,10 +314,10 @@
       if (o.stroke) {
         ctx.lineJoin = 'round';
         ctx.lineWidth = o.strokeWidth || size * 0.16;
-        ctx.strokeStyle = o.stroke;
+        ctx.strokeStyle = haloColor(o.stroke);
         ctx.strokeText(chars[i], -widths[i] / 2, 0);
       }
-      ctx.fillStyle = o.color || D.INK;
+      ctx.fillStyle = o.color ? textColor(o.color) : D.INK;
       ctx.fillText(chars[i], -widths[i] / 2, 0);
       ctx.restore();
       cx += widths[i] * (o.spacing || 1);

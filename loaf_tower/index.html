@@ -6,6 +6,8 @@
   <title>Loaf Tower</title>
   <meta name="description" content="Four cozy cat games in one notebook: stack the cats, connect them with yarn, merge them into bigger cats, match cat tiles. Free, in your browser. By Paloma Liz.">
   <meta name="theme-color" content="#fbf6ea">
+  <!-- light/dark: the game's own remembered choice ("loaf_theme"), default = device setting -->
+  <script src="/static/theme.js" data-key="loaf_theme" data-button="none"></script>
   <meta property="og:title" content="Loaf Tower">
   <meta property="og:description" content="Stack, connect, merge and match hand-drawn cats. 4 free games, 48 cats to collect.">
   <meta property="og:image" content="https://palomaliz.com.br/loaf_tower/cover.png">
@@ -87,6 +89,9 @@
         </button>
         <button id="btn-sfx-toggle" class="btn toggle-row">
           <i data-icon="sfx" class="t-ico"></i><span class="t-label" data-i18n="sfx"></span><span class="t-state"></span>
+        </button>
+        <button id="btn-dark-toggle" class="btn toggle-row">
+          <i data-icon="moon" class="t-ico"></i><span class="t-label" data-i18n="darkMode"></span><span class="t-state"></span>
         </button>
         <button id="btn-howto" class="btn small-btn" data-i18n="howTo"></button>
         <button id="btn-audio-close" class="btn" data-i18n="close"></button>

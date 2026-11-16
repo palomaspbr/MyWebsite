@@ -446,7 +446,7 @@
       LT.Render.drawPaper(ctx, 0, viewH);
 
       // HUD
-      D.text(ctx, `${L.level} ${this.level}`, 92, 74, { size: 70, align: 'left', seed: 11, boil, stroke: '#fbf6ea', strokeWidth: 10 });
+      D.text(ctx, `${L.level} ${this.level}`, 92, 74, { size: 70, align: 'left', seed: 11, boil, stroke: LT.PAL.paper, strokeWidth: 10 });
       const done = this.lv.pairs.filter((_, i) => this.isComplete(i)).length;
       const pct = Math.round((this.filled() / this.N) * 100);
       D.text(ctx, `${done}/${this.lv.pairs.length} ${L.pairs} · ${pct}%`, 96, 128, { size: 32, font: LT.FONT_TEXT, align: 'left', seed: 12, boil, color: '#5c5248' });
@@ -459,7 +459,7 @@
       // board card
       const pad = 14;
       const card = D.roundRect(this.boardW + pad * 2, this.boardW + pad * 2, 18, 4).map((p) => [p[0] + 360, p[1] + this.by + this.boardW / 2]);
-      D.shape(ctx, card, { fill: '#fffdf5', seed: 600, boil, lw: 3.4 });
+      D.shape(ctx, card, { fill: LT.PAL.card, seed: 600, boil, lw: 3.4 });
       // tinted cells (+ pulsing empty cells right after "fill every square!")
       const flash = this.t - this.flashEmptyT < 1.6 ? Math.abs(Math.sin((this.t - this.flashEmptyT) * 8)) : 0;
       for (let i = 0; i < this.N; i++) {
@@ -480,7 +480,7 @@
       }
       // grid
       ctx.save();
-      ctx.strokeStyle = 'rgba(43,37,32,0.18)';
+      ctx.strokeStyle = `rgba(${LT.PAL.inkRGB},${LT.Theme.dark ? 0.12 : 0.18})`;
       ctx.lineWidth = 2;
       ctx.beginPath();
       for (let k = 1; k < this.size; k++) {
@@ -491,40 +491,42 @@
       ctx.stroke();
       ctx.restore();
 
-      // yarn paths
-      this.paths.forEach((path, p) => {
-        if (path.length < 2) return;
-        const col = COLORS[p % COLORS.length];
-        const pts = path.map((c) => this.center(c));
-        const w = this.cell * 0.3;
-        ctx.save();
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        const wp = D.wobble(pts, 700 + p, boil, 1.2);
-        const stroke = (lw, color, dash) => {
-          ctx.beginPath();
-          ctx.moveTo(wp[0][0], wp[0][1]);
-          for (let i = 1; i < wp.length; i++) ctx.lineTo(wp[i][0], wp[i][1]);
-          ctx.setLineDash(dash || []);
-          ctx.lineWidth = lw;
-          ctx.strokeStyle = color;
-          ctx.stroke();
-        };
-        stroke(w + 6, D.INK);
-        stroke(w, col.c);
-        stroke(w * 0.34, col.d, [w * 0.35, w * 0.5]); // yarn twist
-        ctx.restore();
-      });
+      // yarn paths, heads and balls are objects: dark ink in both themes
+      D.fixed(() => {
+        this.paths.forEach((path, p) => {
+          if (path.length < 2) return;
+          const col = COLORS[p % COLORS.length];
+          const pts = path.map((c) => this.center(c));
+          const w = this.cell * 0.3;
+          ctx.save();
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+          const wp = D.wobble(pts, 700 + p, boil, 1.2);
+          const stroke = (lw, color, dash) => {
+            ctx.beginPath();
+            ctx.moveTo(wp[0][0], wp[0][1]);
+            for (let i = 1; i < wp.length; i++) ctx.lineTo(wp[i][0], wp[i][1]);
+            ctx.setLineDash(dash || []);
+            ctx.lineWidth = lw;
+            ctx.strokeStyle = color;
+            ctx.stroke();
+          };
+          stroke(w + 6, D.INK);
+          stroke(w, col.c);
+          stroke(w * 0.34, col.d, [w * 0.35, w * 0.5]); // yarn twist
+          ctx.restore();
+        });
 
-      // endpoints
-      this.lv.pairs.forEach((pr, p) => {
-        const col = COLORS[p % COLORS.length];
-        const complete = this.isComplete(p);
-        const bounce = this.t - this.doneAt[p] < 0.4 ? Math.sin(((this.t - this.doneAt[p]) / 0.4) * Math.PI) * 0.18 : 0;
-        const winJig = this.state === 'won' ? Math.sin(T * 10 + p) * 0.06 : 0;
-        const [ax, ay] = this.center(pr.a), [bx, by] = this.center(pr.b);
-        drawCatHead(ctx, ax, ay, this.cell * 0.4 * (1 + bounce + winJig), col, complete ? 'happy' : this.drawing === p ? 'open' : 'sleep', 800 + p, boil, T);
-        drawYarnBall(ctx, bx, by, this.cell * 0.34 * (1 + bounce + winJig), col, 900 + p, boil);
+        // endpoints
+        this.lv.pairs.forEach((pr, p) => {
+          const col = COLORS[p % COLORS.length];
+          const complete = this.isComplete(p);
+          const bounce = this.t - this.doneAt[p] < 0.4 ? Math.sin(((this.t - this.doneAt[p]) / 0.4) * Math.PI) * 0.18 : 0;
+          const winJig = this.state === 'won' ? Math.sin(T * 10 + p) * 0.06 : 0;
+          const [ax, ay] = this.center(pr.a), [bx, by] = this.center(pr.b);
+          drawCatHead(ctx, ax, ay, this.cell * 0.4 * (1 + bounce + winJig), col, complete ? 'happy' : this.drawing === p ? 'open' : 'sleep', 800 + p, boil, T);
+          drawYarnBall(ctx, bx, by, this.cell * 0.34 * (1 + bounce + winJig), col, 900 + p, boil);
+        });
       });
 
       // buttons
@@ -535,7 +537,8 @@
         if (off) ctx.globalAlpha = 0.45;
         ctx.translate(pressed ? 2 : 0, pressed ? 3 : 0);
         const pts = D.roundRect(b.w, b.h, 16, 3).map((q) => [q[0] + b.x, q[1] + b.y]);
-        D.shape(ctx, pts, { fill: b.id === 'hint' ? '#ffd43b' : '#fffdf5', seed: 950 + b.x, boil, lw: 3 });
+        const yellow = b.id === 'hint';
+        D.shape(ctx, pts, { fill: yellow ? '#ffd43b' : LT.PAL.card, seed: 950 + b.x, boil, lw: 3 });
         // hand-drawn icon + label, centred together (label shrinks to fit longer translations)
         const label = L[b.id];
         const iw = 40, gap = 6;
@@ -544,8 +547,11 @@
         ctx.font = `${size}px ${LT.FONT_TITLE}`;
         const tw = ctx.measureText(label).width;
         const x0 = b.x - (iw + gap + tw) / 2;
-        LT.Icons.draw(ctx, b.id === 'hint' ? 'bulb' : b.id, x0 + iw / 2, b.y + 1, iw, { boil });
-        D.text(ctx, label, x0 + iw + gap, b.y + 2, { size, seed: 960 + b.x, boil, align: 'left' });
+        const content = () => {
+          LT.Icons.draw(ctx, b.id === 'hint' ? 'bulb' : b.id, x0 + iw / 2, b.y + 1, iw, { boil });
+          D.text(ctx, label, x0 + iw + gap, b.y + 2, { size, seed: 960 + b.x, boil, align: 'left' });
+        };
+        if (yellow) D.fixed(content); else content(); // dark text on yellow in both themes
         ctx.restore();
       }
 

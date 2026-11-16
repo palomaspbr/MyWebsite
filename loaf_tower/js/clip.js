@@ -96,8 +96,11 @@
     const draw = (f) => {
       while (si < hist.length - 1 && hist[si + 1].t <= f.t) si++;
       const snap = hist[si];
-      LT.Render.draw(ctx, snap, { scale: 1, viewH: LT.H, hud: true, hideHeld: true, noUnlock: true });
-      overlay(ctx, f, o.info, L, Math.floor((f.hold != null ? snap.t + f.hold * 1.5 : snap.t) * 8) % 4);
+      // shared clips are always on light paper (like the reels), whatever the game's theme
+      LT.Theme.withLight(() => {
+        LT.Render.draw(ctx, snap, { scale: 1, viewH: LT.H, hud: true, hideHeld: true, noUnlock: true });
+        overlay(ctx, f, o.info, L, Math.floor((f.hold != null ? snap.t + f.hold * 1.5 : snap.t) * 8) % 4);
+      });
     };
     draw(frames[0]);
     rec.start(200);

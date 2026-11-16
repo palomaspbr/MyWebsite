@@ -102,10 +102,10 @@
 
   function updateAudioMenu() {
     const l = L();
-    const set = (id, icon, on) => {
+    const set = (id, icon, on, iconOpts) => {
       const b = $(id);
       b.classList.toggle('is-off', !on);
-      b.querySelector('.t-ico').src = LT.Icons.url(icon, { off: !on });
+      b.querySelector('.t-ico').src = LT.Icons.url(icon, iconOpts || { off: !on });
       const st = b.querySelector('.t-state');
       st.innerHTML = '';
       st.appendChild(LT.Icons.img('check', { on }, 't-check'));
@@ -113,7 +113,26 @@
     };
     set('btn-music-toggle', 'music', audio.musicOn);
     set('btn-sfx-toggle', 'sfx', audio.sfxOn);
+    // dark mode row: only when /static/theme.js is there to switch (and remember) the page theme
+    show('btn-dark-toggle', !!window.SiteTheme);
+    set('btn-dark-toggle', LT.Theme.dark ? 'moon' : 'sun', LT.Theme.dark, {});
   }
+
+  /* ---------- light / dark theme ---------- */
+  // LT.Theme (js/doodle.js) follows window.SiteTheme; the canvas redraws every frame, so only
+  // HTML bits with baked colours need a refresh: icons (PNG data URLs), the Catdex canvases, theme-color.
+  function applyTheme() {
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', LT.PAL.paper);
+    LT.Icons.refresh();
+    updateTitle();
+    if (!$('dex').classList.contains('hidden')) {
+      const card = $('dex').querySelector('.card'), top = card.scrollTop;
+      openDex();
+      card.scrollTop = top;
+    }
+  }
+  LT.Theme.onChange(applyTheme);
 
   /* ---------- how-to-play panels (first time in each game, or from the audio menu) ---------- */
   const TUT = {
@@ -859,6 +878,7 @@
     if (audio.musicOn) ensureMusic();
     updateTitle();
   };
+  $('btn-dark-toggle').onclick = () => { if (window.SiteTheme) window.SiteTheme.toggle(); };
   $('btn-sfx-toggle').onclick = () => {
     audio.init();
     audio.setSfxOn(!audio.sfxOn);
@@ -914,6 +934,7 @@
     LT.Board.onProfile = applyProfileScores; // records, Catdex and Merge box from the account
     LT.Board.sync(bests()); // send any records made before the leaderboard existed
     applyLang();
+    applyTheme();
     newTower(true);
     requestAnimationFrame(frame);
   }

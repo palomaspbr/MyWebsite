@@ -14,7 +14,7 @@
   };
   const poly = (pts, k) => D.subdiv(pts, k || 3, true);
   const strike = (ctx, b) => {
-    D.line(ctx, [[-40, 40], [40, -40]], { seed: 91, boil: b, lw: 9, ink: '#fffdf5', passes: 1 });
+    D.line(ctx, [[-40, 40], [40, -40]], { seed: 91, boil: b, lw: 9, ink: LT.PAL.card, passes: 1 });
     D.line(ctx, [[-40, 40], [40, -40]], { seed: 92, boil: b, lw: 6, ink: RED });
   };
 
@@ -116,8 +116,8 @@
     },
     check(ctx, o) {
       const b = o.boil;
-      D.shape(ctx, D.roundRect(70, 70, 12, 3), { fill: o.on ? '#d3f9d8' : '#fffdf5', seed: 81, boil: b, lw: 5 });
-      if (o.on) D.line(ctx, [[-22, 0], [-6, 18], [26, -26]], { seed: 82, boil: b, lw: 9, ink: '#2b8a3e' });
+      D.shape(ctx, D.roundRect(70, 70, 12, 3), { fill: o.on ? LT.PAL.greenBtn : LT.PAL.card, seed: 81, boil: b, lw: 5 });
+      if (o.on) D.line(ctx, [[-22, 0], [-6, 18], [26, -26]], { seed: 82, boil: b, lw: 9, ink: LT.Theme.dark ? '#69db7c' : '#2b8a3e' });
     },
     yarn(ctx, o) {
       const b = o.boil;
@@ -194,9 +194,40 @@
     },
     ball(ctx, o) {
       // Purr Merge: a round "ball cat" (orange tier) with a tiny bit of bounce shadow
-      ctx.fillStyle = 'rgba(43,37,32,0.12)';
+      ctx.fillStyle = `rgba(${LT.PAL.inkRGB},0.12)`;
       ctx.beginPath(); ctx.ellipse(0, 42, 30, 6, 0, 0, Math.PI * 2); ctx.fill();
       LT.Cats.drawCat(ctx, { type: 'm4', seed: 9, face: 'happy', x: 0, y: 6, a: 0, scale: 0.72 }, 0, o.boil || 0);
+    },
+    moon(ctx, o) {
+      // crescent moon + two little stars (dark mode on)
+      const b = o.boil;
+      const R = 36, cx2 = 15, cy2 = -13, r2 = 29;
+      const inC2 = (x, y) => Math.hypot(x - cx2, y - cy2) < r2;
+      // outer rim: the part of the big circle that the "bite" circle doesn't cover
+      const rim = [];
+      for (let i = 0; i < 48; i++) { const a = (i / 48) * Math.PI * 2; const x = Math.cos(a) * R, y = Math.sin(a) * R; rim.push([x, y, inC2(x, y)]); }
+      const start = rim.findIndex((p, i) => p[2] && !rim[(i + 1) % rim.length][2]);
+      const pts = [];
+      for (let k = 1; k <= rim.length; k++) { const p = rim[(start + k) % rim.length]; if (p[2]) break; pts.push([p[0], p[1]]); }
+      // inner edge: walk the bite circle back from the rim's end to its start, through the inside of the moon
+      const last = pts[pts.length - 1], first = pts[0];
+      const a0 = Math.atan2(last[1] - cy2, last[0] - cx2);
+      let a1 = Math.atan2(first[1] - cy2, first[0] - cx2);
+      const mid = (a0 + a1) / 2;
+      if (Math.hypot(cx2 + Math.cos(mid) * r2, cy2 + Math.sin(mid) * r2) > R) a1 += a1 < a0 ? Math.PI * 2 : -Math.PI * 2;
+      for (let i = 1; i < 12; i++) { const a = a0 + ((a1 - a0) * i) / 12; pts.push([cx2 + Math.cos(a) * r2, cy2 + Math.sin(a) * r2]); }
+      D.shape(ctx, pts.map((p) => [p[0] - 4, p[1] + 4]), { fill: '#fff2a8', seed: 171, boil: b, lw: 5 });
+      D.sparkle(ctx, 30, -30, 9, '#ffd43b');
+      D.sparkle(ctx, 40, 4, 6, '#ffd43b');
+      if (o.off) strike(ctx, b);
+    },
+    sun(ctx, o) {
+      const b = o.boil;
+      for (let k = 0; k < 8; k++) {
+        const a = (k / 8) * Math.PI * 2;
+        D.line(ctx, [[Math.cos(a) * 32, Math.sin(a) * 32], [Math.cos(a) * 44, Math.sin(a) * 44]], { seed: 180 + k, boil: b, lw: 5, passes: 1 });
+      }
+      D.shape(ctx, D.ellipse(22, 22, 16), { fill: '#ffd43b', seed: 189, boil: b, lw: 5 });
     },
     box(ctx, o) {
       LT.Cats.drawCat(ctx, { type: 'box', pal: 'box', seed: 9, face: 'open', x: 0, y: 12, a: 0, scale: 0.5 }, 0, o.boil || 0);
@@ -213,16 +244,26 @@
     ctx.restore();
   }
 
+  // HTML icons are PNG data URLs, cached per theme (their lines follow the light / dark ink).
   const cache = {};
+  const made = new Map(); // data URL -> [name, opts], so refresh() can redraw any <img> for the other theme
   function url(name, o) {
-    const key = name + JSON.stringify(o || {});
+    const key = (LT.Theme.dark ? 'd:' : 'l:') + name + JSON.stringify(o || {});
     if (!cache[key]) {
       const cv = document.createElement('canvas');
       cv.width = cv.height = 128;
       draw(cv.getContext('2d'), name, 64, 64, 112, o);
       cache[key] = cv.toDataURL('image/png');
+      made.set(cache[key], [name, o]);
     }
     return cache[key];
+  }
+  // After a theme switch: redraw every hand-drawn icon already on the page.
+  function refresh(root) {
+    (root || document).querySelectorAll('img.ico').forEach((im) => {
+      const m = made.get(im.getAttribute('src'));
+      if (m) im.src = url(m[0], m[1]);
+    });
   }
   function img(name, o, cls) {
     const im = new Image();
@@ -233,5 +274,5 @@
     return im;
   }
 
-  LT.Icons = { draw, url, img, names: Object.keys(ICONS) };
+  LT.Icons = { draw, url, img, refresh, names: Object.keys(ICONS) };
 })();

@@ -314,7 +314,7 @@
       ctx.translate(0, Math.max(0, (viewH - LT.H) * 0.45));
 
       // box interior
-      ctx.fillStyle = 'rgba(201,154,98,0.16)';
+      ctx.fillStyle = LT.PAL.boxTint;
       ctx.fillRect(BOX.l, BOX.top, BOX.r - BOX.l, BOX.floor - BOX.top);
       // danger line
       const warn = this.dangerT > 0.05;
@@ -335,7 +335,7 @@
         const s = LT.ease.outBack(LT.clamp((this.t - this.held.popT) / 0.25, 0, 1));
         ctx.save();
         ctx.setLineDash([6, 14]);
-        ctx.strokeStyle = 'rgba(43,37,32,0.22)';
+        ctx.strokeStyle = `rgba(${LT.PAL.inkRGB},0.22)`;
         ctx.lineWidth = 3;
         ctx.beginPath();
         ctx.moveTo(x, DROP_Y + r + 8);
@@ -400,7 +400,7 @@
     }
 
     drawHUD(ctx, L, T, boil) {
-      D.text(ctx, `${this.score}`, 92, 74, { size: 74, align: 'left', seed: 11, boil, stroke: '#fbf6ea', strokeWidth: 10 });
+      D.text(ctx, `${this.score}`, 92, 74, { size: 74, align: 'left', seed: 11, boil, stroke: LT.PAL.paper, strokeWidth: 10 });
       D.text(ctx, `${L.best} ${Math.max(this.best, this.score)}`, 96, 128, { size: 30, font: LT.FONT_TEXT, align: 'left', seed: 12, boil, color: '#5c5248' });
       D.text(ctx, L.next, 574, 74, { size: 26, font: LT.FONT_TEXT, seed: 13, boil, color: '#5c5248', align: 'right' });
       C.drawCat(ctx, { type: 'm' + this.next, seed: 3, face: 'sleep', x: 630, y: 82, a: 0, scale: Math.min(1, 30 / this.radius(this.next)) }, T, boil);

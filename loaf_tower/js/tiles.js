@@ -323,12 +323,14 @@
     g.scale(RES, RES);
     g.translate(PAD + TW / 2, PAD + TH / 2);
     const seed = FACE_NAMES.indexOf(type) * 17 + 300;
-    D.shape(g, D.roundRect(TW, TH, 14, 3).map((p) => [p[0] + 5, p[1] + 6]), { fill: SIDE, seed: seed + 1, boil, lw: 3 });
-    D.shape(g, D.roundRect(TW, TH, 14, 3), { fill: FACE, seed, boil, lw: 3.2 });
-    g.save();
-    g.scale(0.66, 0.66);
-    FACES[type](g, boil);
-    g.restore();
+    D.fixed(() => { // tiles are objects: cream face, dark ink in both themes (so the cache never changes)
+      D.shape(g, D.roundRect(TW, TH, 14, 3).map((p) => [p[0] + 5, p[1] + 6]), { fill: SIDE, seed: seed + 1, boil, lw: 3 });
+      D.shape(g, D.roundRect(TW, TH, 14, 3), { fill: FACE, seed, boil, lw: 3.2 });
+      g.save();
+      g.scale(0.66, 0.66);
+      FACES[type](g, boil);
+      g.restore();
+    });
     tileCache[k] = cv;
     return cv;
   }
@@ -655,7 +657,7 @@
       LT.Render.drawPaper(ctx, 0, viewH);
 
       // HUD
-      D.text(ctx, `${L.level} ${this.level}`, 92, 74, { size: 70, align: 'left', seed: 11, boil, stroke: '#fbf6ea', strokeWidth: 10 });
+      D.text(ctx, `${L.level} ${this.level}`, 92, 74, { size: 70, align: 'left', seed: 11, boil, stroke: LT.PAL.paper, strokeWidth: 10 });
       D.text(ctx, L.tilesLeft(this.boardLeft()), 96, 128, { size: 32, font: LT.FONT_TEXT, align: 'left', seed: 12, boil, color: '#5c5248' });
       D.text(ctx, L.modeTiles, 690, 80, { size: 40, align: 'right', seed: 13, boil, color: '#2b8a3e' });
       if (this.state === 'play') LT.Render.HudRestart.draw(ctx, this, this.restartBtn, T, boil, L.tapAgain);
@@ -710,7 +712,7 @@
         if (off) ctx.globalAlpha = 0.45;
         ctx.translate(pressed ? 2 : 0, pressed ? 3 : 0);
         if (isAuto) { const k = 1 + Math.sin(T * 5) * 0.03; ctx.translate(b.x, b.y); ctx.scale(k, k); ctx.translate(-b.x, -b.y); } // gentle pulse
-        D.shape(ctx, D.roundRect(b.w, b.h, 16, 3).map((q) => [q[0] + b.x, q[1] + b.y]), { fill: isAuto ? '#ffd43b' : b.id === 'shuffle' ? '#d3f9d8' : '#fffdf5', seed: 1300 + b.x, boil, lw: 3 });
+        D.shape(ctx, D.roundRect(b.w, b.h, 16, 3).map((q) => [q[0] + b.x, q[1] + b.y]), { fill: isAuto ? '#ffd43b' : b.id === 'shuffle' ? LT.PAL.greenBtn : LT.PAL.card, seed: 1300 + b.x, boil, lw: 3 });
         const label = L[b.id];
         const iw = 42, gap = 6;
         const left0 = b.x - b.w / 2 + 12, right0 = b.x + b.w / 2 - (isAuto ? 12 : 54); // badge sits right of right0
@@ -718,12 +720,16 @@
         const size = Math.min(34, (34 * (right0 - left0 - iw - gap)) / ctx.measureText(label).width);
         ctx.font = `${size}px ${LT.FONT_TITLE}`;
         const x0 = (left0 + right0) / 2 - (iw + gap + ctx.measureText(label).width) / 2;
-        LT.Icons.draw(ctx, isAuto ? 'wand' : b.id, x0 + iw / 2, b.y + 1, iw, { boil });
-        D.text(ctx, label, x0 + iw + gap, b.y + 2, { size, seed: 1310 + b.x, boil, align: 'left' });
+        const content = () => {
+          LT.Icons.draw(ctx, isAuto ? 'wand' : b.id, x0 + iw / 2, b.y + 1, iw, { boil });
+          D.text(ctx, label, x0 + iw + gap, b.y + 2, { size, seed: 1310 + b.x, boil, align: 'left' });
+        };
+        if (isAuto) D.fixed(content); else content(); // dark text on yellow in both themes
         if (isAuto) { ctx.restore(); continue; }
         const bx = b.x + b.w / 2 - 30;
-        D.shape(ctx, D.ellipse(19, 19, 14, bx, b.y), { fill: left > 0 ? '#ffd43b' : '#e9e4da', seed: 1320 + b.x, boil, lw: 2.6 });
-        D.text(ctx, `${left}`, bx, b.y + 2, { size: 28, seed: 1330 + b.x, boil });
+        D.shape(ctx, D.ellipse(19, 19, 14, bx, b.y), { fill: left > 0 ? '#ffd43b' : LT.PAL.surface, seed: 1320 + b.x, boil, lw: 2.6 });
+        const badge = () => D.text(ctx, `${left}`, bx, b.y + 2, { size: 28, seed: 1330 + b.x, boil });
+        if (left > 0) D.fixed(badge); else badge();
         ctx.restore();
       }
 

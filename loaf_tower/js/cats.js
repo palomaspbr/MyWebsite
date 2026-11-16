@@ -277,7 +277,7 @@
       const by = topFn(ex) + es * 0.34;
       const tip = [ex + s * es * 0.2, by - es * 1.02];
       const pts = D.subdiv([[ex - es * 0.56, by], tip, [ex + es * 0.56, by]], 4, true);
-      D.shape(ctx, pts, { fill: outer, seed: seed + s * 13, boil, amp: 0.9, lw: 3 });
+      D.shape(ctx, pts, { fill: outer, seed: seed + s * 13, boil, amp: 0.9, lw: 3, rim: true });
       const ip = D.subdiv([[ex - es * 0.3, by - es * 0.1], [ex + s * es * 0.13, by - es * 0.74], [ex + es * 0.3, by - es * 0.1]], 3, true);
       D.fill(ctx, ip, { fill: inner, seed: seed + s * 29, boil, amp: 0.6, off: [0, 0] });
     }
@@ -868,7 +868,7 @@
 
     if (c.zoom) {
       ctx.save();
-      ctx.strokeStyle = 'rgba(43,37,32,0.55)';
+      ctx.strokeStyle = `rgba(${LT.PAL.inkRGB},0.55)`; // speed lines sit on the paper
       ctx.lineWidth = 3;
       ctx.lineCap = 'round';
       ctx.beginPath();
@@ -882,6 +882,7 @@
       ctx.restore();
     }
 
+    D.rim(ctx, pts, { seed, boil }); // dark theme: light sticker edge under the body (ears and tail get theirs too)
     if (t.tail) {
       const sd = t.tail;
       const sw = Math.sin(T * 2.2 + seed) * 4;
@@ -889,7 +890,7 @@
       const bx = sd * (w / 2 - 16), by = h / 2 - 8;
       const lift = Math.min(h * 0.62, 40);
       const tp = [[bx, by], [bx + sd * 13, by - 3], [bx + sd * 17, by - lift * 0.5 + sw * 0.5], [bx + sd * 11, by - lift + sw]];
-      D.tube(ctx, tp, { fill: P.kind === 'siamese' ? P.point : P.fill, width: 10 * Math.max(0.7, u), seed: seed + 3, boil, lw: 3 });
+      D.tube(ctx, tp, { fill: P.kind === 'siamese' ? P.point : P.fill, width: 10 * Math.max(0.7, u), seed: seed + 3, boil, lw: 3, rim: true });
     }
 
     const es = (t.ear || 22) * u;
@@ -990,6 +991,7 @@
     const pts = getPts('pudim');
     const wt = w * 0.72;
     const topFn = (x) => -h / 2 + Math.max(0, Math.abs(x) - wt / 2 + 15) * 0.6;
+    D.rim(ctx, pts, { seed, boil });
     drawEars(ctx, t.face[0] + 0, topFn, 20, 26, P.ear, P.inner, seed, boil);
     D.fill(ctx, pts, { fill: P.fill, seed, boil }, () => {
       ctx.fillStyle = P.caramel;
@@ -1020,6 +1022,7 @@
     const rim = -h / 2 + dh;
     const pts = getPts('cupcake');
     const domeY = (x) => rim - dh * Math.sqrt(Math.max(0, 1 - Math.pow(x / (w / 2), 2)));
+    D.rim(ctx, pts, { seed, boil });
     drawEars(ctx, 0, domeY, 20, 30, P.ear, P.inner, seed, boil);
     D.fill(ctx, pts, { fill: P.fill, seed, boil }, () => {
       // wrapper
@@ -1069,6 +1072,7 @@
   function drawBox(ctx, c, t, P, T, boil) {
     const w = t.w, h = t.h, seed = c.seed;
     const pts = getPts('box');
+    D.rim(ctx, pts, { seed, boil });
     // ear tips poking out between the flaps
     for (const s of [-1, 1]) {
       const tri = D.subdiv([[s * 12 - 9, -h / 2 + 4], [s * 17, -h / 2 - 15], [s * 12 + 9, -h / 2 + 4]], 3, true);
@@ -1133,6 +1137,9 @@
 
   // c: {type, pal, seed, face, x, y, a, off, wob, wobT, zoom, scale, alpha}
   function drawCat(ctx, c, T, boil) {
+    D.fixed(() => drawCatInk(ctx, c, T, boil)); // cats keep their dark ink lines in the dark theme too
+  }
+  function drawCatInk(ctx, c, T, boil) {
     const t = TYPES[c.type];
     const P = PALS[t.pal || c.pal] || PALS.orange;
     ctx.save();
@@ -1159,8 +1166,8 @@
     ctx.save();
     ctx.translate(x, y);
     ctx.scale(scale, scale);
-    D.shape(ctx, pts, { fill: '#d9d2c3', seed: 5, boil, ink: '#b3a993' });
-    D.text(ctx, '?', 0, 0, { size: 40, color: '#9b917a', seed: 3, boil });
+    D.shape(ctx, pts, { fill: LT.PAL.sil, seed: 5, boil, ink: LT.PAL.silInk });
+    D.text(ctx, '?', 0, 0, { size: 40, color: LT.PAL.silText, seed: 3, boil });
     ctx.restore();
   }
 

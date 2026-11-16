@@ -7,22 +7,25 @@
   const K = () => LT.Game.CONST;
   const H = LT.hash;
 
+  const PAL = LT.PAL;
+  // paper texture per canvas and paper colour (light / dark theme)
   const paperCache = new WeakMap();
   function paperPattern(ctx) {
-    let p = paperCache.get(ctx);
+    let byColor = paperCache.get(ctx);
+    if (!byColor) paperCache.set(ctx, (byColor = {}));
+    let p = byColor[PAL.paper];
     if (p) return p;
     const c = document.createElement('canvas');
     c.width = c.height = 256;
     const g = c.getContext('2d');
-    g.fillStyle = '#fbf6ea';
+    g.fillStyle = PAL.paper;
     g.fillRect(0, 0, 256, 256);
     const r = LT.rng(99);
     for (let i = 0; i < 1400; i++) {
-      g.fillStyle = r() < 0.5 ? 'rgba(120,100,70,0.05)' : 'rgba(255,255,255,0.35)';
+      g.fillStyle = r() < 0.5 ? PAL.grain[0] : PAL.grain[1];
       g.fillRect(r() * 256, r() * 256, 1 + r() * 1.5, 1 + r() * 1.5);
     }
-    p = ctx.createPattern(c, 'repeat');
-    paperCache.set(ctx, p);
+    p = byColor[PAL.paper] = ctx.createPattern(c, 'repeat');
     return p;
   }
 
@@ -35,7 +38,7 @@
     const gap = 48;
     const start = -(((camY % gap) + gap) % gap);
     ctx.save();
-    ctx.strokeStyle = 'rgba(110,160,210,0.32)';
+    ctx.strokeStyle = PAL.rule;
     ctx.lineWidth = 2;
     ctx.beginPath();
     for (let y = start; y < viewH; y += gap) {
@@ -43,7 +46,7 @@
       ctx.lineTo(LT.W, y + 0.5);
     }
     ctx.stroke();
-    ctx.strokeStyle = 'rgba(225,90,90,0.38)';
+    ctx.strokeStyle = PAL.margin;
     ctx.beginPath();
     ctx.moveTo(64, 0);
     ctx.lineTo(64, viewH);
@@ -74,9 +77,9 @@
       y += b.h - 2;
     });
     // desk line
-    ctx.fillStyle = '#ead6b8';
+    ctx.fillStyle = PAL.desk;
     ctx.fillRect(0, y + 4, LT.W, 900);
-    ctx.strokeStyle = 'rgba(150,110,70,0.25)';
+    ctx.strokeStyle = PAL.deskLine;
     ctx.lineWidth = 2;
     ctx.beginPath();
     for (let k = 0; k < 6; k++) { const gy = y + 34 + k * 46; ctx.moveTo(0, gy + H(k, 1, 0) * 4); ctx.bezierCurveTo(240, gy - 8, 480, gy + 10, LT.W, gy + H(k, 2, 0) * 4); }
@@ -137,7 +140,7 @@
     // aiming guide
     ctx.save();
     ctx.setLineDash([6, 14]);
-    ctx.strokeStyle = 'rgba(43,37,32,0.22)';
+    ctx.strokeStyle = `rgba(${PAL.inkRGB},0.22)`;
     ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.moveTo(h.x, catBot + 10);
@@ -207,16 +210,19 @@
     const bx = LT.clamp(x + 44, 20, LT.W - w - 20), by = y - h - 30;
     const pts = D.roundRect(w, h, 20, 4).map((p) => [p[0] + bx + w / 2, p[1] + by + h / 2]);
     const tail = [[bx + 20, by + h - 3], [x + 6, y - 6], [bx + 40, by + h - 3]];
-    D.fill(ctx, tail, { fill: '#ffffff', seed, boil, off: [0, 0] });
-    D.shape(ctx, pts, { fill: '#ffffff', seed: seed + 1, boil, lw: 2.8 });
+    D.fill(ctx, tail, { fill: PAL.bubble, seed, boil, off: [0, 0] });
+    D.shape(ctx, pts, { fill: PAL.bubble, seed: seed + 1, boil, lw: 2.8 });
     D.line(ctx, tail, { seed: seed + 2, boil, lw: 2.6, passes: 1 });
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = PAL.bubble;
     ctx.fillRect(bx + 22, by + h - 7, 16, 6);
     D.text(ctx, text, bx + w / 2, by + h / 2 + 1, { size: 30, font: LT.FONT_TEXT, seed, boil });
     ctx.restore();
   }
 
   function drawFish(ctx, x, y, alive, seed, boil) {
+    D.fixed(() => fishShape(ctx, x, y, alive, seed, boil)); // a little object: dark ink in both themes
+  }
+  function fishShape(ctx, x, y, alive, seed, boil) {
     const body = D.ellipse(20, 12, 14, x, y);
     const tail = D.subdiv([[x + 16, y], [x + 32, y - 12], [x + 32, y + 12]], 3, true);
     const col = alive ? '#ff922b' : '#d6cfc0';
@@ -233,7 +239,7 @@
 
   function drawHUD(ctx, snap, T, boil) {
     const L = LT.I18N[snap.lang] || LT.I18N.en;
-    D.text(ctx, `${Math.round(snap.height)} ${L.cm}`, 92, 74, { size: 74, align: 'left', seed: 11, boil, stroke: '#fbf6ea', strokeWidth: 10 });
+    D.text(ctx, `${Math.round(snap.height)} ${L.cm}`, 92, 74, { size: 74, align: 'left', seed: 11, boil, stroke: PAL.paper, strokeWidth: 10 });
     D.text(ctx, `${snap.placed} ${snap.placed === 1 ? L.cat : L.cats}`, 96, 128, { size: 32, font: LT.FONT_TEXT, align: 'left', seed: 12, boil, color: '#5c5248' });
     for (let i = 0; i < snap.maxLives; i++) drawFish(ctx, 520 + i * 62, 62, i < snap.lives, 500 + i * 7, boil);
     if (snap.next && snap.state === 'play') {
@@ -271,7 +277,7 @@
         ctx.rotate(-0.025);
         if (view.unlockScale) ctx.scale(view.unlockScale, view.unlockScale);
         const card = D.roundRect(470, 150, 16, 4);
-        D.shape(ctx, card, { fill: '#fffdf5', seed: 31, boil, lw: 3 });
+        D.shape(ctx, card, { fill: PAL.card, seed: 31, boil, lw: 3 });
         // tape
         ctx.save();
         ctx.rotate(0.06);
@@ -377,8 +383,9 @@
       const armed = game.restartArmT != null && T - game.restartArmT < 2.2;
       ctx.save();
       if (armed) { const k = 1 + Math.sin(T * 12) * 0.05; ctx.translate(b.x, b.y); ctx.scale(k, k); ctx.translate(-b.x, -b.y); }
-      D.shape(ctx, D.ellipse(b.r, b.r, 16, b.x, b.y), { fill: armed ? '#ffd43b' : '#fffdf5', seed: 1400, boil, lw: 3 });
-      LT.Icons.draw(ctx, 'restart', b.x, b.y + 1, b.r * 1.35, { boil });
+      D.shape(ctx, D.ellipse(b.r, b.r, 16, b.x, b.y), { fill: armed ? '#ffd43b' : PAL.card, seed: 1400, boil, lw: 3 });
+      const icon = () => LT.Icons.draw(ctx, 'restart', b.x, b.y + 1, b.r * 1.35, { boil });
+      if (armed) D.fixed(icon); else icon(); // dark lines on the yellow button
       ctx.restore();
       const right = b.x > 540; // near the right edge: end the label at the button's right side
       if (armed) D.text(ctx, label, right ? b.x + b.r + 8 : b.x, b.y + b.r + 24, { size: 26, font: LT.FONT_TEXT, color: '#e8590c', seed: 1401, boil, stroke: '#fffdf5', strokeWidth: 6, align: right ? 'right' : 'center' });
