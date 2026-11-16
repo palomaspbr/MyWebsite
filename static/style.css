@@ -463,6 +463,23 @@ main .projects-grid:not(.cards) > p { margin: 0; flex: 1 1 260px; text-align: ce
 .comp p { margin: 4px 0; }
 .comp .result { font-family: var(--brush); font-size: 23px; }
 
+/* Tiny hand-drawn Brazilian flag (the flag emoji shows as "BR" on Windows). */
+.flag-br { display: inline-block; width: 1.45em; height: 1em; vertical-align: -0.15em; transform: rotate(-4deg); }
+
+/* A competition that hasn't happened yet: dashed card + a highlighted tag. */
+.comp.upcoming { border-style: dashed; box-shadow: none; }
+.upcoming-tag {
+    display: inline-block;
+    padding: 0 10px;
+    font-family: var(--brush);
+    font-size: 20px;
+    color: var(--on-accent);
+    background: var(--yellow);
+    border: 2px solid var(--ink);
+    border-radius: var(--wobble-2);
+    transform: rotate(-2deg);
+}
+
 .year {
     position: absolute;
     top: -14px;
