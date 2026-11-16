@@ -53,6 +53,8 @@
         .links .btn { justify-content: flex-start; }
         .links small { color: var(--ink-soft); }
         .links .btn.primary small { color: #6d6259; } /* on yellow: keep the light soft ink in dark mode */
+        .links .end-party { margin-top: 6px; }
+        .end-msg { min-height: 1.4em; margin: 6px 0 0; }
 
         h2.section { font-size: 34px; margin: 40px 0 12px; display: table; padding: 0 8px; background: linear-gradient(100deg, transparent 2%, var(--hi) 4%, var(--hi) 94%, transparent 97%) var(--marker-pos, 0 62% / 100% 52%) no-repeat; transform: rotate(-1deg); }
         .steps { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
@@ -117,7 +119,9 @@
                         <a class="btn" id="lnkControl" target="_blank" rel="noopener"><span class="material-icons-round">tune</span> DJ control panel</a>
                         <a class="btn" id="lnkSing"><span class="material-icons-round">smartphone</span> Pick songs on this device</a>
                         <a class="btn" id="lnkJukebox" target="_blank" rel="noopener"><span class="material-icons-round">qr_code_2</span> Jukebox screen <small>(second screen)</small></a>
+                        <button class="btn danger end-party" id="endBtn" type="button"><span class="material-icons-round">power_settings_new</span> <span id="endLabel">End party</span></button>
                     </div>
+                    <p class="err end-msg" id="endErr" role="alert"></p>
                 </div>
             </div>
             <p class="muted">This browser is the party's host: it can change settings and end the party. Want other phones to need a code for that? Set a DJ PIN in the control panel.</p>
@@ -129,6 +133,7 @@
                 <p>Get a party code, put the player on the TV and let your friends scan the QR code.</p>
                 <button class="btn primary" id="createBtn" type="button">Start a party!</button>
                 <p class="err" id="createErr" role="alert"></p>
+                <p class="muted" id="endedMsg" role="status" hidden></p>
             </section>
             <section class="card sketch-2">
                 <h2>Join a party</h2>
@@ -168,7 +173,12 @@
         const joinInput = $('joinCode');
         if (params.get('join')) setTimeout(() => joinInput.focus(), 50);
 
+        let currentCode = '';
+
         function showCreated(code) {
+            currentCode = code;
+            resetEnd();
+            $('endedMsg').hidden = true;
             const base = (name) => '/karaoke/' + name + '/?r=' + code;
             $('createdCode').textContent = code;
             $('lnkPlayer').href = base('player');
@@ -197,6 +207,58 @@
                 btn.textContent = 'Start a party!';
             } finally {
                 btn.disabled = false;
+            }
+        });
+
+        // End party: two taps (no browser pop-up), sent with this browser's host key.
+        let endArmed = null;
+        function resetEnd() {
+            clearTimeout(endArmed);
+            endArmed = null;
+            $('endLabel').textContent = 'End party';
+            $('endBtn').disabled = false;
+            $('endErr').textContent = '';
+        }
+        function forgetParty(code) {
+            try {
+                localStorage.removeItem('karaoke_host_' + code);
+                if (localStorage.getItem('karaoke_last_party') === code) localStorage.removeItem('karaoke_last_party');
+            } catch (e) { /* private mode */ }
+        }
+        function partyEnded(code) {
+            forgetParty(code);
+            $('created').hidden = true;
+            $('createBtn').textContent = 'Start a party!';
+            currentCode = '';
+            $('endedMsg').textContent = 'Party ' + code + ' ended. Thanks for singing!';
+            $('endedMsg').hidden = false;
+        }
+        $('endBtn').addEventListener('click', async () => {
+            const code = currentCode;
+            if (!code) return;
+            if (!endArmed) {
+                $('endLabel').textContent = 'Tap again to end the party';
+                endArmed = setTimeout(resetEnd, 4000);
+                return;
+            }
+            clearTimeout(endArmed);
+            $('endBtn').disabled = true;
+            $('endLabel').textContent = 'Ending...';
+            let hostKey = null;
+            try { hostKey = localStorage.getItem('karaoke_host_' + code); } catch (e) { /* private mode */ }
+            try {
+                const res = await fetch('/karaoke/api/r/' + code + '/shutdown', {
+                    method: 'POST',
+                    headers: Object.assign({ 'Content-Type': 'application/json' }, hostKey ? { 'X-Host-Key': hostKey } : {}),
+                    body: '{}'
+                });
+                const json = await res.json().catch(() => ({}));
+                if (res.ok || (json.data && json.data.code === 'room_not_found')) { partyEnded(code); return; }
+                resetEnd();
+                $('endErr').textContent = json.error || 'Could not end the party.';
+            } catch (e) {
+                resetEnd();
+                $('endErr').textContent = 'Could not reach the server. Check your connection.';
             }
         });
 
