@@ -86,8 +86,8 @@
     $('sub-yarn').textContent = l.lvlShort(yarnLevel);
     $('sub-merge').textContent = mergeBest > 0 ? `${l.best} ${mergeBest}` : l.subMerge;
     $('sub-tiles').textContent = tilesVariant === 'mahjong' ? `${l.modeMahjongShort} · ${l.lvlShort(mjLevel)}` : l.lvlShort(tileLevel);
-    // speaker icon shows a red X only when music and sound effects are both off
-    const src = LT.Icons.url('speaker', { off: !audio.musicOn && !audio.sfxOn });
+    // settings gear gets a small red X only when music and sound effects are both off
+    const src = LT.Icons.url('gear', { off: !audio.musicOn && !audio.sfxOn });
     document.querySelectorAll('img.sound-ico').forEach((im) => { im.src = src; });
     updateAudioMenu();
   }
@@ -632,7 +632,7 @@
       closeAccForm();
       openBoard(boardGame);
     } catch (e) {
-      const byCode = { wrong_login: l.wrongLogin, wrong_password: l.wrongPassword, no_password: l.noPassword, locked: l.locked,
+      const byCode = { wrong_login: l.wrongLogin, wrong_password: l.wrongPassword, no_password: l.noPassword, locked: l.loginLocked,
         pass_short: l.passShort, pass_long: l.passShort, need_name: l.needName };
       msg.textContent = byCode[e.code] || l.boardOffline;
     } finally {

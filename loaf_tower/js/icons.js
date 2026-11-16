@@ -31,6 +31,23 @@
         D.line(ctx, arc(8, 0, 36, -0.85, 0.85, 10), { seed: 16, boil: b, lw: 5 });
       }
     },
+    gear(ctx, o) {
+      // settings: an 8-tooth cog with a hole; o.off adds a small red X (everything muted)
+      const b = o.boil;
+      const teeth = 8, rOut = 42, rIn = 31, pts = [];
+      for (let k = 0; k < teeth; k++) {
+        const a = (k / teeth) * Math.PI * 2;
+        [[rIn, -0.3], [rOut, -0.17], [rOut, 0.17], [rIn, 0.3]].forEach(([r, d]) => pts.push([Math.cos(a + d) * r, Math.sin(a + d) * r]));
+      }
+      D.shape(ctx, pts, { fill: '#ffd43b', seed: 191, boil: b, lw: 5, amp: 0.8 });
+      D.shape(ctx, D.ellipse(13, 13, 14), { fill: LT.PAL.card, seed: 192, boil: b, lw: 5 });
+      if (o.off) {
+        D.line(ctx, [[22, 22], [44, 44]], { seed: 193, boil: b, lw: 9, ink: LT.PAL.card, passes: 1 });
+        D.line(ctx, [[44, 22], [22, 44]], { seed: 194, boil: b, lw: 9, ink: LT.PAL.card, passes: 1 });
+        D.line(ctx, [[22, 22], [44, 44]], { seed: 195, boil: b, lw: 6, ink: RED });
+        D.line(ctx, [[44, 22], [22, 44]], { seed: 196, boil: b, lw: 6, ink: RED });
+      }
+    },
     music(ctx, o) {
       const b = o.boil;
       D.line(ctx, [[-16, 24], [-16, -30], [30, -40], [30, 14]], { seed: 21, boil: b, lw: 5 });
