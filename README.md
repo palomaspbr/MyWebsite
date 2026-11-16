@@ -25,9 +25,9 @@ customprojects/remotedesktop/  Remote Desktop project page; download zip in stat
 static/style.css               Styles (hand-drawn notebook look, same as Loaf Tower / Jiu-Jitsu)
 static/fonts/                  Caveat Brush + Patrick Hand (OFL)
 static/script.js               Project filter + language toggle
-static/theme.js                Light/dark mode (follows the device; a sun/moon toggle overrides it). Portfolio pages and
-                               Jiu-Jitsu share the key `theme`; Karaoke (`karaoke_theme`) and Loaf Tower (`loaf_theme`)
-                               keep their own choice via `data-key`. See the header comment for the API (window.SiteTheme).
+static/theme.js                Light/dark mode (follows the device; a sun/moon toggle overrides it). Portfolio pages,
+                               Jiu-Jitsu and Karaoke share the key `theme` (switching on one switches all); only Loaf
+                               Tower keeps its own choice (`data-key="loaf_theme"`). See the header comment for the API (window.SiteTheme).
 static/media/, static/files/   Images and the PDF curriculum
 ```
 

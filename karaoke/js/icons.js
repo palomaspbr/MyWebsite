@@ -195,8 +195,8 @@
     renderThemeToggles();
   }
 
-  // Dark mode toggles. /static/theme.js (loaded in <head> with data-key="karaoke_theme") owns the
-  // choice; here every <button data-theme-toggle> gets its hand-drawn sun/moon and flips the theme, and
+  // Dark mode toggles. /static/theme.js (loaded in <head>, key "theme" shared with the whole site) owns
+  // the choice; here every <button data-theme-toggle> gets its hand-drawn sun/moon and flips the theme, and
   // every <input type="checkbox" data-theme-switch> shows / sets "dark". Pages with translations set
   // KIcons.themeLabel = (dark) => '...' and call KIcons.renderThemeToggles() when the language changes.
   const PAPER = { light: '#fbf6e9', dark: '#23201c' };

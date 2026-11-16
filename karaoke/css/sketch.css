@@ -69,8 +69,8 @@
     --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 C 3 3.5, 4.5 5.5, 6 6.5 C 7.5 5, 9 3.2, 11 1.2' fill='none' stroke='%232b2520' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E");
 }
 
-/* Dark mode: follows the device unless the karaoke's own sun/moon toggle picked a theme
-   (/static/theme.js with data-key="karaoke_theme" sets <html data-theme>). Same palette as the
+/* Dark mode: follows the device unless a sun/moon toggle (here or anywhere on the site: the key
+   "theme" is shared) picked a theme (/static/theme.js sets <html data-theme>). Same palette as the
    portfolio's dark mode. Tokens only defined here (--stamp-bg, --hover-yellow, --match-bg, --red-soft-hi,
    --vk-vocals-ink, --title-shadow, --marker-pos) are read as var(--x, <light value>), so the light look
    stays exactly the same. QR codes keep a white card in both themes (they must stay dark-on-light).
