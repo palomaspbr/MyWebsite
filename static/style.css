@@ -58,55 +58,59 @@
 @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
         color-scheme: dark;
-        --paper: #23201c;
-        --paper-2: #2d2a25;
-        --ink: #ebe3d5;
-        --ink-soft: #a99e8e;
-        --title: #ffd98a;
-        --logo-shadow: #b8432f;
-        --marker: rgba(255, 212, 59, 0.2);
+        --paper: #0d1117;
+        --paper-2: #161d2b;
+        --ink: #f0f6fc;
+        --ink-soft: #a3adc2;
+        --title: #d4c4ff;
+        --logo-shadow: #7c4dff;
+        --marker: rgba(150, 110, 255, 0.42);
         --marker-pos: 0 92% / 100% 30%;
-        --line: rgba(140, 170, 200, 0.16);
-        --margin: rgba(232, 120, 120, 0.4);
-        --red: #ff7f6e;
-        --hi: rgba(255, 212, 59, 0.28);
-        --card: #36322c;
-        --note: #3b3523;
-        --dash: #4b453d;
-        --shadow: #0b0a09;
-        --tape-yellow: rgba(255, 212, 59, 0.45);
-        --tape-pink: rgba(255, 170, 200, 0.45);
-        --tape-green: rgba(150, 230, 165, 0.4);
-        --tape-blue: rgba(150, 200, 240, 0.45);
-        --tape-edge: rgba(0, 0, 0, 0.35);
-        --pen-line: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 14' preserveAspectRatio='none'%3E%3Cpath d='M3 9 C 60 3, 120 12, 180 6 S 270 4, 297 8' fill='none' stroke='%23ff7f6e' stroke-width='4' stroke-linecap='round' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E");
+        --line: rgba(200, 210, 240, 0.08);
+        --margin: rgba(255, 122, 168, 0.38);
+        --red: #ff7aa8;
+        --hi: rgba(150, 110, 255, 0.42);
+        --card: #1d2537;
+        --note: #1e1a36;
+        --dash: #323b52;
+        --shadow: #010409;
+        --tape-yellow: rgba(150, 110, 255, 0.55);
+        --tape-pink: rgba(255, 122, 168, 0.5);
+        --tape-green: rgba(126, 231, 135, 0.35);
+        --tape-blue: rgba(110, 200, 255, 0.5);
+        --tape-edge: rgba(0, 0, 0, 0.4);
+        --pen-line: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 14' preserveAspectRatio='none'%3E%3Cpath d='M3 9 C 60 3, 120 12, 180 6 S 270 4, 297 8' fill='none' stroke='%23ff7aa8' stroke-width='4' stroke-linecap='round' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E");
+        --yellow: #7c4dff;
+        --on-accent: #ffffff;
     }
 }
 
 :root[data-theme="dark"] {
     color-scheme: dark;
-    --paper: #23201c;
-    --paper-2: #2d2a25;
-    --ink: #ebe3d5;
-    --ink-soft: #a99e8e;
-    --title: #ffd98a;
-    --logo-shadow: #b8432f;
-    --marker: rgba(255, 212, 59, 0.2);
+    --paper: #0d1117;
+    --paper-2: #161d2b;
+    --ink: #f0f6fc;
+    --ink-soft: #a3adc2;
+    --title: #d4c4ff;
+    --logo-shadow: #7c4dff;
+    --marker: rgba(150, 110, 255, 0.42);
     --marker-pos: 0 92% / 100% 30%;
-    --line: rgba(140, 170, 200, 0.16);
-    --margin: rgba(232, 120, 120, 0.4);
-    --red: #ff7f6e;
-    --hi: rgba(255, 212, 59, 0.28);
-    --card: #36322c;
-    --note: #3b3523;
-    --dash: #4b453d;
-    --shadow: #0b0a09;
-    --tape-yellow: rgba(255, 212, 59, 0.45);
-    --tape-pink: rgba(255, 170, 200, 0.45);
-    --tape-green: rgba(150, 230, 165, 0.4);
-    --tape-blue: rgba(150, 200, 240, 0.45);
-    --tape-edge: rgba(0, 0, 0, 0.35);
-    --pen-line: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 14' preserveAspectRatio='none'%3E%3Cpath d='M3 9 C 60 3, 120 12, 180 6 S 270 4, 297 8' fill='none' stroke='%23ff7f6e' stroke-width='4' stroke-linecap='round' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E");
+    --line: rgba(200, 210, 240, 0.08);
+    --margin: rgba(255, 122, 168, 0.38);
+    --red: #ff7aa8;
+    --hi: rgba(150, 110, 255, 0.42);
+    --card: #1d2537;
+    --note: #1e1a36;
+    --dash: #323b52;
+    --shadow: #010409;
+    --tape-yellow: rgba(150, 110, 255, 0.55);
+    --tape-pink: rgba(255, 122, 168, 0.5);
+    --tape-green: rgba(126, 231, 135, 0.35);
+    --tape-blue: rgba(110, 200, 255, 0.5);
+    --tape-edge: rgba(0, 0, 0, 0.4);
+    --pen-line: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 14' preserveAspectRatio='none'%3E%3Cpath d='M3 9 C 60 3, 120 12, 180 6 S 270 4, 297 8' fill='none' stroke='%23ff7aa8' stroke-width='4' stroke-linecap='round' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E");
+    --yellow: #7c4dff;
+    --on-accent: #ffffff;
 }
 
 * { box-sizing: border-box; }
@@ -371,30 +375,6 @@ main .projects-grid:not(.cards) > p { margin: 0; flex: 1 1 260px; text-align: ce
 /*#endregion Header*/
 
 /*#region Cards*/
-
-.filter-buttons {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin: 4px 0 26px;
-}
-.filter-buttons button {
-    font: inherit;
-    font-size: 19px;
-    color: var(--ink);
-    background: var(--card);
-    border: 2px dashed var(--ink-soft);
-    border-radius: var(--wobble-2);
-    padding: 3px 14px;
-    cursor: pointer;
-}
-.filter-buttons button:hover { background: var(--hi); transform: rotate(-2deg); }
-.filter-buttons button.selected {
-    background: var(--yellow);
-    color: var(--on-accent);
-    border: 2.5px solid var(--ink);
-    transform: rotate(-2deg);
-}
 
 .projects-grid.cards {
     display: grid;

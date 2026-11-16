@@ -78,90 +78,94 @@
 @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
         color-scheme: dark;
-        --paper: #23201c;
-        --paper-2: #2d2a25;
-        --paper-3: #1c1916;
-        --ink: #ebe3d5;
-        --ink-soft: #a99e8e;
-        --ink-faint: #7d7366;
-        --line: rgba(140, 170, 200, 0.16);
-        --margin: rgba(232, 120, 120, 0.4);
-        --red: #ff7f6e;
-        --red-soft: #5a2f29;
-        --hi: rgba(255, 212, 59, 0.28);
-        --pink: #4d2f3c;
-        --blue: #233a50;
-        --blue-ink: #8cb6ff;
-        --green: #26432e;
-        --green-ink: #6fd49a;
-        --orange: #4f3a20;
-        --purple: #3a3057;
-        --card: #36322c;
-        --card-hi: #3d3831;
-        --note: #453c22;
-        --frame: #4b453d;
-        --title: #ffd98a;
-        --on-red: #2b2520;
-        --shadow-ink: #0b0a09;
-        --tape: rgba(255, 212, 59, 0.42);
-        --tape-pink: rgba(255, 170, 200, 0.42);
-        --tape-edge: rgba(0, 0, 0, 0.35);
-        --stamp-bg: rgba(0, 0, 0, 0.18);
-        --hover-yellow: #3d3727;
-        --match-bg: #2a3a2d;
-        --red-soft-hi: #6b3830;
+        --paper: #0d1117;
+        --paper-2: #161d2b;
+        --paper-3: #0a0e14;
+        --ink: #f0f6fc;
+        --ink-soft: #a3adc2;
+        --ink-faint: #6e7891;
+        --line: rgba(200, 210, 240, 0.08);
+        --margin: rgba(255, 122, 168, 0.38);
+        --red: #ff7aa8;
+        --red-soft: #4a1d30;
+        --hi: rgba(150, 110, 255, 0.42);
+        --pink: #3d1f33;
+        --blue: #16294a;
+        --blue-ink: #79c0ff;
+        --green: #12301f;
+        --green-ink: #7ee787;
+        --orange: #3d2a14;
+        --purple: #2a2150;
+        --card: #1d2537;
+        --card-hi: #232c42;
+        --note: #2a2350;
+        --frame: #323b52;
+        --title: #d4c4ff;
+        --on-red: #0d1117;
+        --shadow-ink: #010409;
+        --tape: rgba(150, 110, 255, 0.5);
+        --tape-pink: rgba(255, 122, 168, 0.45);
+        --tape-edge: rgba(0, 0, 0, 0.4);
+        --stamp-bg: rgba(0, 0, 0, 0.25);
+        --hover-yellow: #261f45;
+        --match-bg: #133024;
+        --red-soft-hi: #5c2440;
         --vk-vocals-ink: #f0b85a;
-        --title-shadow: #b8432f;
+        --title-shadow: #7c4dff;
         --marker-pos: 0 92% / 100% 32%;
-        --pen-line: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 14' preserveAspectRatio='none'%3E%3Cpath d='M3 9 C 60 3, 120 12, 180 6 S 270 4, 297 8' fill='none' stroke='%23ff7f6e' stroke-width='4' stroke-linecap='round' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E");
-        --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 C 3 3.5, 4.5 5.5, 6 6.5 C 7.5 5, 9 3.2, 11 1.2' fill='none' stroke='%23ebe3d5' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E");
-        --grid-paper:
-            repeating-linear-gradient(0deg, transparent 0 23px, rgba(140, 170, 200, 0.16) 23px 24px),
-            repeating-linear-gradient(90deg, transparent 0 23px, rgba(140, 170, 200, 0.16) 23px 24px);
+        --pen-line: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 14' preserveAspectRatio='none'%3E%3Cpath d='M3 9 C 60 3, 120 12, 180 6 S 270 4, 297 8' fill='none' stroke='%23ff7aa8' stroke-width='4' stroke-linecap='round' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E");
+        --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 C 3 3.5, 4.5 5.5, 6 6.5 C 7.5 5, 9 3.2, 11 1.2' fill='none' stroke='%23f0f6fc' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E");
+        --grid-paper: 
+        repeating-linear-gradient(0deg, transparent 0 23px, rgba(200, 210, 240, 0.08) 23px 24px),
+        repeating-linear-gradient(90deg, transparent 0 23px, rgba(200, 210, 240, 0.08) 23px 24px);
+        --yellow: #7c4dff;
+        --on-yellow: #ffffff;
     }
 }
 :root[data-theme="dark"] {
     color-scheme: dark;
-    --paper: #23201c;
-    --paper-2: #2d2a25;
-    --paper-3: #1c1916;
-    --ink: #ebe3d5;
-    --ink-soft: #a99e8e;
-    --ink-faint: #7d7366;
-    --line: rgba(140, 170, 200, 0.16);
-    --margin: rgba(232, 120, 120, 0.4);
-    --red: #ff7f6e;
-    --red-soft: #5a2f29;
-    --hi: rgba(255, 212, 59, 0.28);
-    --pink: #4d2f3c;
-    --blue: #233a50;
-    --blue-ink: #8cb6ff;
-    --green: #26432e;
-    --green-ink: #6fd49a;
-    --orange: #4f3a20;
-    --purple: #3a3057;
-    --card: #36322c;
-    --card-hi: #3d3831;
-    --note: #453c22;
-    --frame: #4b453d;
-    --title: #ffd98a;
-    --on-red: #2b2520;
-    --shadow-ink: #0b0a09;
-    --tape: rgba(255, 212, 59, 0.42);
-    --tape-pink: rgba(255, 170, 200, 0.42);
-    --tape-edge: rgba(0, 0, 0, 0.35);
-    --stamp-bg: rgba(0, 0, 0, 0.18);
-    --hover-yellow: #3d3727;
-    --match-bg: #2a3a2d;
-    --red-soft-hi: #6b3830;
+    --paper: #0d1117;
+    --paper-2: #161d2b;
+    --paper-3: #0a0e14;
+    --ink: #f0f6fc;
+    --ink-soft: #a3adc2;
+    --ink-faint: #6e7891;
+    --line: rgba(200, 210, 240, 0.08);
+    --margin: rgba(255, 122, 168, 0.38);
+    --red: #ff7aa8;
+    --red-soft: #4a1d30;
+    --hi: rgba(150, 110, 255, 0.42);
+    --pink: #3d1f33;
+    --blue: #16294a;
+    --blue-ink: #79c0ff;
+    --green: #12301f;
+    --green-ink: #7ee787;
+    --orange: #3d2a14;
+    --purple: #2a2150;
+    --card: #1d2537;
+    --card-hi: #232c42;
+    --note: #2a2350;
+    --frame: #323b52;
+    --title: #d4c4ff;
+    --on-red: #0d1117;
+    --shadow-ink: #010409;
+    --tape: rgba(150, 110, 255, 0.5);
+    --tape-pink: rgba(255, 122, 168, 0.45);
+    --tape-edge: rgba(0, 0, 0, 0.4);
+    --stamp-bg: rgba(0, 0, 0, 0.25);
+    --hover-yellow: #261f45;
+    --match-bg: #133024;
+    --red-soft-hi: #5c2440;
     --vk-vocals-ink: #f0b85a;
-    --title-shadow: #b8432f;
+    --title-shadow: #7c4dff;
     --marker-pos: 0 92% / 100% 32%;
-    --pen-line: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 14' preserveAspectRatio='none'%3E%3Cpath d='M3 9 C 60 3, 120 12, 180 6 S 270 4, 297 8' fill='none' stroke='%23ff7f6e' stroke-width='4' stroke-linecap='round' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E");
-    --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 C 3 3.5, 4.5 5.5, 6 6.5 C 7.5 5, 9 3.2, 11 1.2' fill='none' stroke='%23ebe3d5' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E");
-    --grid-paper:
-        repeating-linear-gradient(0deg, transparent 0 23px, rgba(140, 170, 200, 0.16) 23px 24px),
-        repeating-linear-gradient(90deg, transparent 0 23px, rgba(140, 170, 200, 0.16) 23px 24px);
+    --pen-line: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 14' preserveAspectRatio='none'%3E%3Cpath d='M3 9 C 60 3, 120 12, 180 6 S 270 4, 297 8' fill='none' stroke='%23ff7aa8' stroke-width='4' stroke-linecap='round' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E");
+    --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 C 3 3.5, 4.5 5.5, 6 6.5 C 7.5 5, 9 3.2, 11 1.2' fill='none' stroke='%23f0f6fc' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E");
+    --grid-paper: 
+        repeating-linear-gradient(0deg, transparent 0 23px, rgba(200, 210, 240, 0.08) 23px 24px),
+        repeating-linear-gradient(90deg, transparent 0 23px, rgba(200, 210, 240, 0.08) 23px 24px);
+    --yellow: #7c4dff;
+    --on-yellow: #ffffff;
 }
 /*#endregion*/
 

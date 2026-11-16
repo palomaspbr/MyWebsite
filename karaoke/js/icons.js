@@ -199,7 +199,7 @@
   // the choice; here every <button data-theme-toggle> gets its hand-drawn sun/moon and flips the theme, and
   // every <input type="checkbox" data-theme-switch> shows / sets "dark". Pages with translations set
   // KIcons.themeLabel = (dark) => '...' and call KIcons.renderThemeToggles() when the language changes.
-  const PAPER = { light: '#fbf6e9', dark: '#23201c' };
+  const PAPER = { light: '#fbf6e9', dark: '#0d1117' };
   function renderThemeToggles() {
     const T = window.SiteTheme;
     if (!T) return;
