@@ -40,6 +40,10 @@
     --dash: #d8cfc0;            /* dashed rules inside cards */
     --shadow: #2b2520;          /* offset sketch shadow */
     --on-accent: #2b2520;       /* text on yellow buttons */
+    --title: var(--ink);        /* h1/h2 colour */
+    --logo-shadow: var(--yellow);
+    --marker: var(--hi);        /* highlighter behind h2 */
+    --marker-pos: 0 62% / 100% 52%;
     --tape-yellow: rgba(255, 212, 59, 0.6);
     --tape-pink: rgba(255, 222, 235, 0.85);
     --tape-green: rgba(211, 249, 216, 0.85);
@@ -56,8 +60,12 @@
         color-scheme: dark;
         --paper: #23201c;
         --paper-2: #2d2a25;
-        --ink: #f1e9dc;
-        --ink-soft: #b3a898;
+        --ink: #ebe3d5;
+        --ink-soft: #a99e8e;
+        --title: #ffd98a;
+        --logo-shadow: #b8432f;
+        --marker: rgba(255, 212, 59, 0.2);
+        --marker-pos: 0 92% / 100% 30%;
         --line: rgba(140, 170, 200, 0.16);
         --margin: rgba(232, 120, 120, 0.4);
         --red: #ff7f6e;
@@ -79,8 +87,12 @@
     color-scheme: dark;
     --paper: #23201c;
     --paper-2: #2d2a25;
-    --ink: #f1e9dc;
-    --ink-soft: #b3a898;
+    --ink: #ebe3d5;
+    --ink-soft: #a99e8e;
+    --title: #ffd98a;
+    --logo-shadow: #b8432f;
+    --marker: rgba(255, 212, 59, 0.2);
+    --marker-pos: 0 92% / 100% 30%;
     --line: rgba(140, 170, 200, 0.16);
     --margin: rgba(232, 120, 120, 0.4);
     --red: #ff7f6e;
@@ -130,6 +142,7 @@ main {
     padding: 10px 20px 50px 56px;
 }
 
+h1, h2 { color: var(--title); }
 h1, h2, h3 {
     font-family: var(--brush);
     font-weight: normal;
@@ -143,7 +156,7 @@ h3 { font-size: 26px; margin: 26px 0 8px; }
 h2 {
     display: table;
     padding: 0 8px;
-    background: linear-gradient(100deg, transparent 2%, var(--hi) 4%, var(--hi) 94%, transparent 97%) 0 62% / 100% 52% no-repeat;
+    background: linear-gradient(100deg, transparent 2%, var(--marker) 4%, var(--marker) 94%, transparent 97%) var(--marker-pos) no-repeat;
     transform: rotate(-1deg);
 }
 
@@ -306,7 +319,7 @@ main .projects-grid:not(.cards) > p { margin: 0; flex: 1 1 260px; text-align: ce
     padding: 0 6px 12px;
     font-size: clamp(56px, 13vw, 96px);
     line-height: 0.95;
-    text-shadow: 4px 4px 0 var(--yellow);
+    text-shadow: 4px 4px 0 var(--logo-shadow);
     transform: rotate(-3deg);
     background: var(--pen-line) 0 100% / 100% 16px no-repeat;
 }

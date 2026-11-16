@@ -814,6 +814,22 @@
     paintSound();
     sb.addEventListener('click', () => { Sound.toggle(); paintSound(); });
 
+    // Light/dark: shared with the rest of the site (/static/theme.js).
+    const tb = $('#theme-btn');
+    const Theme = window.SiteTheme;
+    if (Theme) {
+      const paintTheme = (dark) => {
+        tb.innerHTML = Theme.icon(dark);
+        tb.setAttribute('aria-label', Theme.label(dark));
+        tb.title = Theme.label(dark);
+      };
+      paintTheme(Theme.isDark());
+      Theme.onChange(paintTheme);
+      tb.addEventListener('click', Theme.toggle);
+    } else {
+      tb.hidden = true;
+    }
+
     // Pencil tick on every button press.
     document.addEventListener('pointerdown', (e) => {
       if (e.target.closest('.btn, .who-btn, .tool, .link-btn, .board li, .result-pick span')) Sound.play('click');

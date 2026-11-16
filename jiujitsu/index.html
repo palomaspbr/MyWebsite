@@ -8,6 +8,8 @@
   <meta name="theme-color" content="#fbf6e9">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='4' y='24' width='56' height='16' rx='3' fill='%232f5fb3' stroke='%232b2520' stroke-width='3'/%3E%3Crect x='40' y='24' width='12' height='16' fill='%232b2520'/%3E%3Crect x='43' y='24' width='2.5' height='16' fill='%23fff'/%3E%3Crect x='47' y='24' width='2.5' height='16' fill='%23fff'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="style.css">
+  <!-- Same light/dark choice as the rest of palomaliz.com.br; the toggle lives in the header. -->
+  <script src="/static/theme.js" data-button="none"></script>
 </head>
 <body>
   <!-- Shared SVG filter that makes every drawing look hand-inked. -->
@@ -40,7 +42,10 @@
       </div>
     </div>
     <div id="me-chip" class="me-chip" hidden></div>
-    <button id="sound-btn" class="icon-btn" type="button" aria-label="Sound on" title="Sound on/off"></button>
+    <div class="top-btns">
+      <button id="theme-btn" class="icon-btn" type="button"></button>
+      <button id="sound-btn" class="icon-btn" type="button" aria-label="Sound on" title="Sound on/off"></button>
+    </div>
   </header>
 
   <main>
