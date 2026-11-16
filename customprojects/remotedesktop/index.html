@@ -35,7 +35,7 @@
         </p>
 
         <div class="rd-box">
-            <p><b>⚠ For personal use on your own network.</b> It is designed for your home LAN or a private VPN such as Tailscale. Don't expose it to the internet with port forwarding (by default it refuses internet connections anyway).</p>
+            <p><b>⚠ For personal use on your own network.</b> It is designed for your home network or a private VPN. Don't expose it to the internet with port forwarding (by default it refuses internet connections anyway).</p>
         </div>
 
         <h3>Features</h3>
@@ -54,7 +54,7 @@
             <tr><td>Encrypted</td><td>Everything goes over HTTPS/WSS (a self-signed certificate is created on first run).</td></tr>
             <tr><td>Password</td><td>A random 12-character password is generated on first run and stored only as a salted hash.</td></tr>
             <tr><td>Brute force</td><td>5 wrong attempts lock that address out for 15 minutes.</td></tr>
-            <tr><td>Local only</td><td>Connections from public internet addresses are refused; only LAN, localhost and VPN (Tailscale) addresses get in.</td></tr>
+            <tr><td>Local only</td><td>Connections from public internet addresses are refused; only LAN, localhost and private VPN addresses get in.</td></tr>
             <tr><td>Sessions</td><td>Signed, expiring, HttpOnly/Secure/SameSite=Strict cookies; Disconnect or a new password revokes them all.</td></tr>
             <tr><td>Web hardening</td><td>Strict Content-Security-Policy, anti-clickjacking, Origin checks, safe upload filenames.</td></tr>
         </table>
@@ -66,7 +66,6 @@
             <li>Right-click <code>allow-firewall.bat</code> → <i>Run as administrator</i> to allow it on your local network.</li>
             <li>On your phone or another computer, open that address, accept the certificate warning the first time (<i>Advanced → Continue</i>), and type the password.</li>
         </ol>
-        <p>Away from home? Install <a href="https://tailscale.com/" target="_blank">Tailscale</a> on both devices and use the PC's Tailscale address. No port forwarding needed.</p>
 
         <h3>How it works</h3>
         <p>The host captures the screen, splits it into 128-pixel tiles, and only JPEG-encodes the tiles that changed. The browser draws them on a canvas and confirms each frame, so a slow network lowers the frame rate instead of building up lag. Mouse and keyboard events go back over the same WebSocket and are injected with the Windows <code>SendInput</code> API. Keys are sent as physical scan codes, so the PC's own keyboard layout interprets them.</p>
