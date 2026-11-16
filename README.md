@@ -25,6 +25,7 @@ customprojects/remotedesktop/  Remote Desktop project page; download zip in stat
 static/style.css               Styles (hand-drawn notebook look, same as Loaf Tower / Jiu-Jitsu)
 static/fonts/                  Caveat Brush + Patrick Hand (OFL)
 static/script.js               Project filter + language toggle
+static/theme.js                Light/dark mode (follows the device; sun/moon button overrides it)
 static/media/, static/files/   Images and the PDF curriculum
 ```
 

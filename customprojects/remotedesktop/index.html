@@ -6,13 +6,14 @@
     <title>Remote Desktop</title>
     <meta name="description" content="A small, self-hosted remote desktop for Windows: control your PC from any browser on your network.">
     <link rel="stylesheet" href="/static/style.css">
+    <script src="/static/theme.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
         .rd-download { margin: 10px 0 6px; }
         .rd-small { font-size: 0.85em; color: var(--ink-soft); word-break: break-all; }
         .rd-box { background: var(--hi); border: 2.5px dashed var(--ink); border-radius: var(--wobble-2); padding: 4px 18px; margin: 18px 0; transform: rotate(-0.5deg); }
         .rd-table { border-collapse: separate; border-spacing: 0; width: 100%; margin: 8px 0; background: var(--paper-2); border: 2px solid var(--ink); border-radius: var(--wobble); box-shadow: 3px 4px 0 -1px var(--ink); }
-        .rd-table td { border-top: 2px dashed #d8cfc0; padding: 6px 12px; vertical-align: top; text-align: left; overflow-wrap: anywhere; }
+        .rd-table td { border-top: 2px dashed var(--dash); padding: 6px 12px; vertical-align: top; text-align: left; overflow-wrap: anywhere; }
         .rd-table tr:first-child td { border-top: none; }
         .rd-table td:first-child { font-family: var(--brush); font-size: 1.1em; overflow-wrap: normal; }
     </style>
