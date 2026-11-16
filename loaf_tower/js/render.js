@@ -383,9 +383,8 @@
       const armed = game.restartArmT != null && T - game.restartArmT < 2.2;
       ctx.save();
       if (armed) { const k = 1 + Math.sin(T * 12) * 0.05; ctx.translate(b.x, b.y); ctx.scale(k, k); ctx.translate(-b.x, -b.y); }
-      D.shape(ctx, D.ellipse(b.r, b.r, 16, b.x, b.y), { fill: armed ? '#ffd43b' : PAL.card, seed: 1400, boil, lw: 3 });
-      const icon = () => LT.Icons.draw(ctx, 'restart', b.x, b.y + 1, b.r * 1.35, { boil });
-      if (armed) D.fixed(icon); else icon(); // dark lines on the yellow button
+      D.shape(ctx, D.ellipse(b.r, b.r, 16, b.x, b.y), { fill: armed ? PAL.btn : PAL.card, seed: 1400, boil, lw: 3 });
+      LT.Icons.draw(ctx, 'restart', b.x, b.y + 1, b.r * 1.35, { boil }); // theme ink: dark on the yellow button, white on the purple one
       ctx.restore();
       const right = b.x > 540; // near the right edge: end the label at the button's right side
       if (armed) D.text(ctx, label, right ? b.x + b.r + 8 : b.x, b.y + b.r + 24, { size: 26, font: LT.FONT_TEXT, color: '#e8590c', seed: 1401, boil, stroke: '#fffdf5', strokeWidth: 6, align: right ? 'right' : 'center' });

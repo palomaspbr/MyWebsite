@@ -538,7 +538,7 @@
         ctx.translate(pressed ? 2 : 0, pressed ? 3 : 0);
         const pts = D.roundRect(b.w, b.h, 16, 3).map((q) => [q[0] + b.x, q[1] + b.y]);
         const yellow = b.id === 'hint';
-        D.shape(ctx, pts, { fill: yellow ? '#ffd43b' : LT.PAL.card, seed: 950 + b.x, boil, lw: 3 });
+        D.shape(ctx, pts, { fill: yellow ? LT.PAL.btn : LT.PAL.card, seed: 950 + b.x, boil, lw: 3 });
         // hand-drawn icon + label, centred together (label shrinks to fit longer translations)
         const label = L[b.id];
         const iw = 40, gap = 6;
@@ -551,7 +551,7 @@
           LT.Icons.draw(ctx, b.id === 'hint' ? 'bulb' : b.id, x0 + iw / 2, b.y + 1, iw, { boil });
           D.text(ctx, label, x0 + iw + gap, b.y + 2, { size, seed: 960 + b.x, boil, align: 'left' });
         };
-        if (yellow) D.fixed(content); else content(); // dark text on yellow in both themes
+        content(); // theme ink: dark on the yellow button, white on the purple one
         ctx.restore();
       }
 

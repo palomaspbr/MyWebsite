@@ -712,7 +712,7 @@
         if (off) ctx.globalAlpha = 0.45;
         ctx.translate(pressed ? 2 : 0, pressed ? 3 : 0);
         if (isAuto) { const k = 1 + Math.sin(T * 5) * 0.03; ctx.translate(b.x, b.y); ctx.scale(k, k); ctx.translate(-b.x, -b.y); } // gentle pulse
-        D.shape(ctx, D.roundRect(b.w, b.h, 16, 3).map((q) => [q[0] + b.x, q[1] + b.y]), { fill: isAuto ? '#ffd43b' : b.id === 'shuffle' ? LT.PAL.greenBtn : LT.PAL.card, seed: 1300 + b.x, boil, lw: 3 });
+        D.shape(ctx, D.roundRect(b.w, b.h, 16, 3).map((q) => [q[0] + b.x, q[1] + b.y]), { fill: isAuto ? LT.PAL.btn : b.id === 'shuffle' ? LT.PAL.greenBtn : LT.PAL.card, seed: 1300 + b.x, boil, lw: 3 });
         const label = L[b.id];
         const iw = 42, gap = 6;
         const left0 = b.x - b.w / 2 + 12, right0 = b.x + b.w / 2 - (isAuto ? 12 : 54); // badge sits right of right0
@@ -724,12 +724,11 @@
           LT.Icons.draw(ctx, isAuto ? 'wand' : b.id, x0 + iw / 2, b.y + 1, iw, { boil });
           D.text(ctx, label, x0 + iw + gap, b.y + 2, { size, seed: 1310 + b.x, boil, align: 'left' });
         };
-        if (isAuto) D.fixed(content); else content(); // dark text on yellow in both themes
+        content(); // theme ink: dark on the yellow button, white on the purple one
         if (isAuto) { ctx.restore(); continue; }
         const bx = b.x + b.w / 2 - 30;
-        D.shape(ctx, D.ellipse(19, 19, 14, bx, b.y), { fill: left > 0 ? '#ffd43b' : LT.PAL.surface, seed: 1320 + b.x, boil, lw: 2.6 });
-        const badge = () => D.text(ctx, `${left}`, bx, b.y + 2, { size: 28, seed: 1330 + b.x, boil });
-        if (left > 0) D.fixed(badge); else badge();
+        D.shape(ctx, D.ellipse(19, 19, 14, bx, b.y), { fill: left > 0 ? LT.PAL.btn : LT.PAL.surface, seed: 1320 + b.x, boil, lw: 2.6 });
+        D.text(ctx, `${left}`, bx, b.y + 2, { size: 28, seed: 1330 + b.x, boil });
         ctx.restore();
       }
 

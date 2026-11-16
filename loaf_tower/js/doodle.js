@@ -19,22 +19,24 @@
     surface: '#e9e4da', greenBtn: '#d3f9d8', bubble: '#ffffff', rim: 'rgba(0,0,0,0)',
     desk: '#ead6b8', deskLine: 'rgba(150,110,70,0.25)', boxTint: 'rgba(201,154,98,0.16)',
     sil: '#d9d2c3', silInk: '#b3a993', silText: '#9b917a',
+    btn: '#ffd43b', // primary canvas buttons and badges (hint, auto-finish, counters, armed restart)
     text: {}, halo: {},
   };
   const DARK = {
-    paper: '#23201c', card: '#2d2a25', ink: '#ebe3d5', soft: '#a99e8e', inkRGB: '235,227,213',
-    rule: 'rgba(140,170,200,0.16)', margin: 'rgba(232,120,120,0.4)',
+    paper: '#0d1117', card: '#161d2b', ink: '#f0f6fc', soft: '#a3adc2', inkRGB: '240,246,252',
+    rule: 'rgba(200,210,240,0.1)', margin: 'rgba(255,122,168,0.38)',
     grain: ['rgba(0,0,0,0.14)', 'rgba(255,255,255,0.03)'],
-    surface: '#36322c', greenBtn: '#2f4733', bubble: '#36322c', rim: 'rgba(235,227,213,0.42)',
-    desk: '#2e2822', deskLine: 'rgba(0,0,0,0.3)', boxTint: 'rgba(201,154,98,0.10)',
-    sil: '#3a352e', silInk: '#5e564b', silText: '#8a7f70',
+    surface: '#1d2537', greenBtn: '#12301f', bubble: '#1d2537', rim: 'rgba(240,246,252,0.42)',
+    desk: '#1a2131', deskLine: 'rgba(0,0,0,0.35)', boxTint: 'rgba(201,154,98,0.10)',
+    sil: '#1d2537', silInk: '#3a4466', silText: '#7a84a0',
+    btn: '#7c4dff',
     // text colours picked for light paper -> brighter versions that read on dark paper
     text: {
-      '#2b2520': '#ebe3d5', '#5c5248': '#a99e8e', '#e8590c': '#ff922b', '#2b8a3e': '#69db7c',
-      '#c2255c': '#f783ac', '#e03131': '#ff7f6e', '#c92a2a': '#ff8787', '#6b4fd8': '#b197fc',
+      '#2b2520': '#f0f6fc', '#5c5248': '#a3adc2', '#e8590c': '#ff922b', '#2b8a3e': '#7ee787',
+      '#c2255c': '#ff8fb1', '#e03131': '#ff7aa8', '#c92a2a': '#ff8787', '#6b4fd8': '#b197fc',
     },
     // light "halo" strokes behind text -> dark paper
-    halo: { '#fffdf5': '#23201c', '#fbf6ea': '#23201c', '#fff8e1': '#23201c' },
+    halo: { '#fffdf5': '#0d1117', '#fbf6ea': '#0d1117', '#fff8e1': '#0d1117' },
   };
   const PAL = (LT.PAL = Object.assign({}, LIGHT));
   D.INK = PAL.ink;
