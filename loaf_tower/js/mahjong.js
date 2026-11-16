@@ -130,7 +130,38 @@
         { id: 'hint', x: 360, y: BTN_Y, w: 206, h: 80 },
         { id: 'shuffle', x: 588, y: BTN_Y, w: 206, h: 80 },
       ];
+      this.autoButton = { id: 'auto', x: 588, y: BTN_Y, w: 206, h: 80 };
       this.restartBtn = { x: 652, y: 150, r: 28 };
+    }
+
+    // Shuffle turns into "auto-finish" once every tile left on the board is free.
+    activeButtons() { return this.canAuto ? [this.buttons[0], this.buttons[1], this.autoButton] : this.buttons; }
+
+    // With every remaining tile free, any two identical tiles can go: pair them up face by face.
+    planAuto() {
+      const board = this.tiles.filter((t) => !t.gone);
+      if (!board.length) return null;
+      const gone = this.goneSet();
+      if (board.some((t) => !freeIn(this.tiles, gone, t.id))) return null;
+      const byType = {};
+      board.forEach((t) => (byType[t.type] = byType[t.type] || []).push(t.id));
+      const pairs = [];
+      for (const ids of Object.values(byType)) {
+        if (ids.length % 2) return null; // can't happen (faces come in pairs), but never start a plan that can't finish
+        for (let i = 0; i < ids.length; i += 2) pairs.push([ids[i], ids[i + 1]]);
+      }
+      return pairs;
+    }
+
+    startAuto() {
+      const plan = this.canAuto && this.planAuto();
+      if (!plan) return false;
+      this.auto = { queue: plan, nextT: this.t + 0.12 };
+      this.canAuto = false;
+      this.sel = null;
+      this.hintPair = null;
+      this.sfx('sparkle');
+      return true;
     }
 
     get L() { return LT.I18N[this.lang] || LT.I18N.en; }
@@ -154,13 +185,13 @@
 
     /* ---------- input ---------- */
     pointer(type, x, y) {
-      if (type !== 'down' || this.state !== 'play') return;
+      if (type !== 'down' || this.state !== 'play' || this.auto) return;
       if (LT.Render.HudRestart.hit(this.restartBtn, x, y)) { // the HUD is not shifted by offY
         if (LT.Render.HudRestart.tap(this, this.restartBtn)) this.emit('restart');
         return;
       }
       y -= this.offY;
-      for (const b of this.buttons) {
+      for (const b of this.activeButtons()) {
         if (Math.abs(x - b.x) < b.w / 2 + 6 && Math.abs(y - b.y) < b.h / 2 + 10) { this.button(b.id); return; }
       }
       if (this.t < (this.flipUntil || 0)) return; // faces are flipping after a shuffle
@@ -216,12 +247,12 @@
 
     button(id) {
       this.pressT = { id, t: this.t };
-      const ok = id === 'undo' ? this.undo() : id === 'hint' ? this.hint() : this.shuffle();
+      const ok = id === 'undo' ? this.undo() : id === 'hint' ? this.hint() : id === 'auto' ? this.startAuto() : this.shuffle();
       if (!ok) this.sfx('tap', { pitch: 0.7 });
     }
 
     undo() {
-      if (this.state !== 'play' || this.undos <= 0 || !this.history.length) return false;
+      if (this.state !== 'play' || this.undos <= 0 || !this.history.length || this.auto) return false;
       const [a, b] = this.history.pop();
       for (const id of [a, b]) { this.tiles[id].gone = false; this.tiles[id].backT = this.t; }
       this.sel = null;
@@ -302,6 +333,14 @@
         this.sentWin = true;
         this.emit('won', { level: this.level, moves: this.moves, undos: this.used.undo, shuffles: this.used.shuffle, hints: this.used.hint, unlocked: this.unlocked || [] });
       }
+      // auto-finish: match the planned pairs one after another
+      if (this.auto && this.state === 'play' && this.t >= this.auto.nextT) {
+        const pair = this.auto.queue.shift();
+        if (!pair || this.tiles[pair[0]].gone || this.tiles[pair[1]].gone) this.auto = null;
+        else { this.match(pair[0], pair[1]); this.auto.nextT = this.t + 0.22; }
+      }
+      if (this.state !== 'play') this.auto = null;
+      this.canAuto = !this.auto && this.state === 'play' && this.t >= (this.flipUntil || 0) && !!this.planAuto();
       for (const p of this.particles) { p.life += dt; p.x += p.vx; p.y += p.vy; p.vy += 0.2; p.rot += 0.2; }
       this.particles = this.particles.filter((p) => p.life < p.max);
       this.banners = this.banners.filter((b) => this.t - b.t0 < b.dur);
@@ -359,24 +398,26 @@
         if (sc > 0.01) drawTile(ctx, f.type, LT.lerp(f.from[0], f.to[0], q), LT.lerp(f.from[1], f.to[1], q), sc, boil);
       }
       // buttons with remaining-use badges (shuffle pulses when there are no moves)
-      for (const b of this.buttons) {
+      for (const b of this.activeButtons()) {
+        const isAuto = b.id === 'auto';
         const left = this.left(b.id);
-        const off = left <= 0 || this.state !== 'play';
+        const off = (!isAuto && left <= 0) || this.state !== 'play' || !!this.auto;
         const pressed = this.pressT && this.pressT.id === b.id && T - this.pressT.t < 0.12;
         ctx.save();
         if (off) ctx.globalAlpha = 0.45;
         ctx.translate(pressed ? 2 : 0, pressed ? 3 : 0);
-        if (b.id === 'shuffle' && this.stuck && !off) { const k = 1 + Math.sin(T * 6) * 0.04; ctx.translate(b.x, b.y); ctx.scale(k, k); ctx.translate(-b.x, -b.y); }
-        D.shape(ctx, D.roundRect(b.w, b.h, 16, 3).map((q) => [q[0] + b.x, q[1] + b.y]), { fill: b.id === 'hint' ? '#ffd43b' : b.id === 'shuffle' ? '#d3f9d8' : '#fffdf5', seed: 1500 + b.x, boil, lw: 3 });
+        if ((b.id === 'shuffle' && this.stuck && !off) || isAuto) { const k = 1 + Math.sin(T * (isAuto ? 5 : 6)) * (isAuto ? 0.03 : 0.04); ctx.translate(b.x, b.y); ctx.scale(k, k); ctx.translate(-b.x, -b.y); }
+        D.shape(ctx, D.roundRect(b.w, b.h, 16, 3).map((q) => [q[0] + b.x, q[1] + b.y]), { fill: isAuto || b.id === 'hint' ? '#ffd43b' : b.id === 'shuffle' ? '#d3f9d8' : '#fffdf5', seed: 1500 + b.x, boil, lw: 3 });
         const label = L[b.id];
         const iw = 38, gap = 5;
-        const left0 = b.x - b.w / 2 + 10, right0 = b.x + b.w / 2 - 48;
+        const left0 = b.x - b.w / 2 + 10, right0 = b.x + b.w / 2 - (isAuto ? 10 : 48); // no badge on auto-finish
         ctx.font = `32px ${LT.FONT_TITLE}`;
         const size = Math.min(32, (32 * (right0 - left0 - iw - gap)) / ctx.measureText(label).width);
         ctx.font = `${size}px ${LT.FONT_TITLE}`;
         const x0 = (left0 + right0) / 2 - (iw + gap + ctx.measureText(label).width) / 2;
-        LT.Icons.draw(ctx, b.id === 'hint' ? 'bulb' : b.id, x0 + iw / 2, b.y + 1, iw, { boil });
+        LT.Icons.draw(ctx, b.id === 'hint' ? 'bulb' : isAuto ? 'wand' : b.id, x0 + iw / 2, b.y + 1, iw, { boil });
         D.text(ctx, label, x0 + iw + gap, b.y + 2, { size, seed: 1510 + b.x, boil, align: 'left' });
+        if (isAuto) { ctx.restore(); continue; }
         const bx = b.x + b.w / 2 - 27;
         D.shape(ctx, D.ellipse(17, 17, 14, bx, b.y), { fill: left > 0 ? '#ffd43b' : '#e9e4da', seed: 1520 + b.x, boil, lw: 2.6 });
         D.text(ctx, `${left}`, bx, b.y + 2, { size: 26, seed: 1530 + b.x, boil });

@@ -49,7 +49,7 @@
   LT.I18N = {
     en: {
       tagline: 'stack the cats. don’t let them fall.',
-      play: 'Play', again: 'Again', menu: 'Menu', catdex: 'Catdex', share: 'Share',
+      play: 'Play', again: 'Again', menu: 'Main menu', catdex: 'Catdex', share: 'Share',
       clip: 'Save the collapse', clipMaking: 'Making your clip…',
       audio: 'Audio', music: 'Music', sfx: 'Sound effects', on: 'on', off: 'off',
       clipReady: 'Your clip is ready!', download: 'Download', shareClip: 'Share clip', close: 'Close',
@@ -112,7 +112,7 @@
     },
     pt: {
       tagline: 'empilhe os gatos. não deixe cair.',
-      play: 'Jogar', again: 'De novo', menu: 'Menu', catdex: 'Gatodéx', share: 'Compartilhar',
+      play: 'Jogar', again: 'De novo', menu: 'Menu principal', catdex: 'Gatodéx', share: 'Compartilhar',
       clip: 'Salvar o desabamento', clipMaking: 'Fazendo seu vídeo…',
       audio: 'Áudio', music: 'Música', sfx: 'Efeitos', on: 'sim', off: 'não',
       clipReady: 'Seu vídeo está pronto!', download: 'Baixar', shareClip: 'Compartilhar vídeo', close: 'Fechar',
