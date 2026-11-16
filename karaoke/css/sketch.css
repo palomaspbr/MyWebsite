@@ -43,8 +43,8 @@
     --wobble-2: 15px 255px 15px 225px / 225px 15px 255px 15px;
     --wobble-sm: 12px 4px 10px 5px / 5px 10px 4px 12px;
     --blob: 50% 45% 52% 48% / 48% 52% 45% 50%;
-    --shadow: 4px 5px 0 -1px var(--ink);
-    --shadow-sm: 3px 3px 0 -1px var(--ink);
+    --shadow: 4px 5px 0 -1px var(--shadow-ink);
+    --shadow-sm: 3px 3px 0 -1px var(--shadow-ink);
     --hand: 'Patrick Hand', 'Comic Sans MS', 'Segoe Print', cursive;
     --brush: 'Caveat Brush', 'Patrick Hand', 'Segoe Print', cursive;
     --pen-line: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 14' preserveAspectRatio='none'%3E%3Cpath d='M3 9 C 60 3, 120 12, 180 6 S 270 4, 297 8' fill='none' stroke='%23c0392b' stroke-width='4' stroke-linecap='round' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E");
@@ -54,6 +54,114 @@
     --grid-paper:
         repeating-linear-gradient(0deg, transparent 0 23px, rgba(201, 219, 233, 0.7) 23px 24px),
         repeating-linear-gradient(90deg, transparent 0 23px, rgba(201, 219, 233, 0.7) 23px 24px);
+    /* Surfaces and inks that change in dark mode (light values = the original look). */
+    --card: #fff;                 /* inputs, index cards, chips */
+    --card-hi: #fffef3;           /* their hover / focus */
+    --note: var(--hi);            /* sticky notes (solid, they sit over other things) */
+    --frame: #fff;                /* photo frames around thumbnails */
+    --title: var(--ink);          /* big brush titles */
+    --on-yellow: #2b2520;         /* text on --yellow, which stays bright in both themes */
+    --on-red: #fff;               /* text on --red badges */
+    --shadow-ink: var(--ink);     /* offset sketch shadows, scrims */
+    --tape: rgba(255, 242, 168, 0.85);
+    --tape-pink: rgba(255, 222, 235, 0.9);
+    --tape-edge: rgba(43, 37, 32, 0.25);
+    --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 C 3 3.5, 4.5 5.5, 6 6.5 C 7.5 5, 9 3.2, 11 1.2' fill='none' stroke='%232b2520' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+
+/* Dark mode: follows the device unless the karaoke's own sun/moon toggle picked a theme
+   (/static/theme.js with data-key="karaoke_theme" sets <html data-theme>). Same palette as the
+   portfolio's dark mode. Tokens only defined here (--stamp-bg, --hover-yellow, --match-bg, --red-soft-hi,
+   --vk-vocals-ink, --title-shadow, --marker-pos) are read as var(--x, <light value>), so the light look
+   stays exactly the same. QR codes keep a white card in both themes (they must stay dark-on-light).
+   The printable song book (print/) does not load the theme and stays light. Keep both blocks in sync. */
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        color-scheme: dark;
+        --paper: #23201c;
+        --paper-2: #2d2a25;
+        --paper-3: #1c1916;
+        --ink: #ebe3d5;
+        --ink-soft: #a99e8e;
+        --ink-faint: #7d7366;
+        --line: rgba(140, 170, 200, 0.16);
+        --margin: rgba(232, 120, 120, 0.4);
+        --red: #ff7f6e;
+        --red-soft: #5a2f29;
+        --hi: rgba(255, 212, 59, 0.28);
+        --pink: #4d2f3c;
+        --blue: #233a50;
+        --blue-ink: #8cb6ff;
+        --green: #26432e;
+        --green-ink: #6fd49a;
+        --orange: #4f3a20;
+        --purple: #3a3057;
+        --card: #36322c;
+        --card-hi: #3d3831;
+        --note: #453c22;
+        --frame: #4b453d;
+        --title: #ffd98a;
+        --on-red: #2b2520;
+        --shadow-ink: #0b0a09;
+        --tape: rgba(255, 212, 59, 0.42);
+        --tape-pink: rgba(255, 170, 200, 0.42);
+        --tape-edge: rgba(0, 0, 0, 0.35);
+        --stamp-bg: rgba(0, 0, 0, 0.18);
+        --hover-yellow: #3d3727;
+        --match-bg: #2a3a2d;
+        --red-soft-hi: #6b3830;
+        --vk-vocals-ink: #f0b85a;
+        --title-shadow: #b8432f;
+        --marker-pos: 0 92% / 100% 32%;
+        --pen-line: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 14' preserveAspectRatio='none'%3E%3Cpath d='M3 9 C 60 3, 120 12, 180 6 S 270 4, 297 8' fill='none' stroke='%23ff7f6e' stroke-width='4' stroke-linecap='round' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E");
+        --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 C 3 3.5, 4.5 5.5, 6 6.5 C 7.5 5, 9 3.2, 11 1.2' fill='none' stroke='%23ebe3d5' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E");
+        --grid-paper:
+            repeating-linear-gradient(0deg, transparent 0 23px, rgba(140, 170, 200, 0.16) 23px 24px),
+            repeating-linear-gradient(90deg, transparent 0 23px, rgba(140, 170, 200, 0.16) 23px 24px);
+    }
+}
+:root[data-theme="dark"] {
+    color-scheme: dark;
+    --paper: #23201c;
+    --paper-2: #2d2a25;
+    --paper-3: #1c1916;
+    --ink: #ebe3d5;
+    --ink-soft: #a99e8e;
+    --ink-faint: #7d7366;
+    --line: rgba(140, 170, 200, 0.16);
+    --margin: rgba(232, 120, 120, 0.4);
+    --red: #ff7f6e;
+    --red-soft: #5a2f29;
+    --hi: rgba(255, 212, 59, 0.28);
+    --pink: #4d2f3c;
+    --blue: #233a50;
+    --blue-ink: #8cb6ff;
+    --green: #26432e;
+    --green-ink: #6fd49a;
+    --orange: #4f3a20;
+    --purple: #3a3057;
+    --card: #36322c;
+    --card-hi: #3d3831;
+    --note: #453c22;
+    --frame: #4b453d;
+    --title: #ffd98a;
+    --on-red: #2b2520;
+    --shadow-ink: #0b0a09;
+    --tape: rgba(255, 212, 59, 0.42);
+    --tape-pink: rgba(255, 170, 200, 0.42);
+    --tape-edge: rgba(0, 0, 0, 0.35);
+    --stamp-bg: rgba(0, 0, 0, 0.18);
+    --hover-yellow: #3d3727;
+    --match-bg: #2a3a2d;
+    --red-soft-hi: #6b3830;
+    --vk-vocals-ink: #f0b85a;
+    --title-shadow: #b8432f;
+    --marker-pos: 0 92% / 100% 32%;
+    --pen-line: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 14' preserveAspectRatio='none'%3E%3Cpath d='M3 9 C 60 3, 120 12, 180 6 S 270 4, 297 8' fill='none' stroke='%23ff7f6e' stroke-width='4' stroke-linecap='round' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E");
+    --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 C 3 3.5, 4.5 5.5, 6 6.5 C 7.5 5, 9 3.2, 11 1.2' fill='none' stroke='%23ebe3d5' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E");
+    --grid-paper:
+        repeating-linear-gradient(0deg, transparent 0 23px, rgba(140, 170, 200, 0.16) 23px 24px),
+        repeating-linear-gradient(90deg, transparent 0 23px, rgba(140, 170, 200, 0.16) 23px 24px);
 }
 /*#endregion*/
 
@@ -106,7 +214,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .pen-underline { display: inline-block; padding-bottom: 8px; background: var(--pen-line) 0 100% / 100% 12px no-repeat; }
 .highlight {
     padding: 0 6px;
-    background: linear-gradient(100deg, transparent 2%, var(--hi) 4%, var(--hi) 94%, transparent 97%) 0 62% / 100% 55% no-repeat;
+    background: linear-gradient(100deg, transparent 2%, var(--hi) 4%, var(--hi) 94%, transparent 97%) var(--marker-pos, 0 62% / 100% 55%) no-repeat;
 }
 /*#endregion*/
 
@@ -132,8 +240,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
     top: -12px; left: 50%;
     width: 86px; height: 24px;
     margin-left: -43px;
-    background: rgba(255, 242, 168, 0.85);
-    border: 1px solid rgba(43, 37, 32, 0.25);
+    background: var(--tape);
+    border: 1px solid var(--tape-edge);
     transform: rotate(-3deg);
 }
 
@@ -155,9 +263,9 @@ button, input, select, textarea { font: inherit; color: inherit; }
     transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.15s ease;
 }
 .btn:hover { color: var(--ink); transform: rotate(-1.2deg) translateY(-1px); }
-.btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 -1px var(--ink); }
+.btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 -1px var(--shadow-ink); }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-.btn.primary { background: var(--yellow); font-family: var(--brush); font-size: 22px; }
+.btn.primary { color: var(--on-yellow); background: var(--yellow); font-family: var(--brush); font-size: 22px; }
 .btn.danger { background: var(--red-soft); }
 .btn.success { background: var(--green); }
 .btn.ghost { box-shadow: none; border-style: dashed; background: transparent; }
@@ -186,12 +294,12 @@ button, input, select, textarea { font: inherit; color: inherit; }
     font: inherit;
     font-size: 19px;
     color: var(--ink);
-    background: #fff;
+    background: var(--card);
     border: 2.5px solid var(--ink);
     border-radius: var(--wobble-2);
     outline: none;
 }
-.field:focus, .sketch-input:focus { background: #fffef3; box-shadow: 0 0 0 3px var(--hi); }
+.field:focus, .sketch-input:focus { background: var(--card-hi); box-shadow: 0 0 0 3px var(--hi); }
 select.field { cursor: pointer; }
 
 .chip {
@@ -200,7 +308,7 @@ select.field { cursor: pointer; }
     gap: 4px;
     padding: 1px 10px;
     font-size: 16px;
-    background: #fff;
+    background: var(--card);
     border: 2px solid var(--ink);
     border-radius: var(--wobble-2);
     white-space: nowrap;
@@ -219,7 +327,7 @@ select.field { cursor: pointer; }
     padding: 0 6px;
     font-size: 14px;
     line-height: 1;
-    color: #fff;
+    color: var(--on-red);
     background: var(--red);
     border: 2px solid var(--ink);
     border-radius: var(--blob);
@@ -240,7 +348,7 @@ select.field { cursor: pointer; }
 .sketch-backdrop {
     position: fixed;
     inset: 0;
-    background: rgba(43, 37, 32, 0.45);
+    background: color-mix(in srgb, var(--shadow-ink) 45%, transparent);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -256,16 +364,16 @@ select.field { cursor: pointer; }
     background-image: var(--notebook);
     border: 2.5px solid var(--ink);
     border-radius: var(--wobble);
-    box-shadow: 6px 7px 0 -1px var(--ink);
+    box-shadow: 6px 7px 0 -1px var(--shadow-ink);
 }
 
 /* Toast: a sticky note. */
 .sticky-note {
     padding: 10px 14px;
-    background: var(--hi);
+    background: var(--note);
     border: 2px solid var(--ink);
     border-radius: 3px 10px 4px 12px / 12px 4px 10px 3px;
-    box-shadow: 3px 4px 0 -1px rgba(43, 37, 32, 0.8);
+    box-shadow: 3px 4px 0 -1px color-mix(in srgb, var(--shadow-ink) 80%, transparent);
     transform: rotate(-1deg);
 }
 .sticky-note.success { background: var(--green); }
@@ -275,7 +383,7 @@ select.field { cursor: pointer; }
 /* Progress bar drawn with a marker. */
 .sketch-progress {
     height: 18px;
-    background: #fff;
+    background: var(--card);
     border: 2.5px solid var(--ink);
     border-radius: var(--wobble-2);
     overflow: hidden;
@@ -292,7 +400,7 @@ select.field { cursor: pointer; }
 .sketch-switch input { opacity: 0; width: 0; height: 0; }
 .sketch-switch span {
     position: absolute; inset: 0;
-    background: #fff;
+    background: var(--card);
     border: 2.5px solid var(--ink);
     border-radius: var(--blob);
     cursor: pointer;
@@ -308,6 +416,7 @@ select.field { cursor: pointer; }
     transition: transform 0.15s ease;
 }
 .sketch-switch input:checked + span { background: var(--yellow); }
+.sketch-switch input:checked + span::before { background: var(--on-yellow); }
 .sketch-switch input:checked + span::before { transform: translateX(23px); }
 
 /* Scrollbars that look like pencil strokes. */
@@ -323,6 +432,10 @@ select.field { cursor: pointer; }
     70% { transform: scale(1.06) rotate(2deg); opacity: 1; }
     100% { transform: scale(1) rotate(0); }
 }
+
+/* Sun/moon toggle (button[data-theme-toggle], wired by /karaoke/js/icons.js from /static/theme.js). */
+[data-theme-toggle] { padding: 7px; }
+[data-theme-toggle] svg { width: 100%; height: 100%; display: block; }
 /*#endregion*/
 
 /* Icons that replaced emojis inherit their container's size (logos, thumbnails, big notices). */

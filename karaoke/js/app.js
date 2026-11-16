@@ -203,6 +203,8 @@ const translations = {
         // Online version: rooms, invites, shared catalog
         addSongsTab: 'Adicionar',
         inviteFriends: 'Convidar amigos',
+        themeDark: 'Mudar para o modo escuro',
+        themeLight: 'Mudar para o modo claro',
         partyCode: 'Código da festa',
         copyLink: 'Copiar link',
         linkCopied: 'Link copiado!',
@@ -407,6 +409,8 @@ const translations = {
         // Online version: rooms, invites, shared catalog
         addSongsTab: 'Añadir',
         inviteFriends: 'Invitar amigos',
+        themeDark: 'Cambiar al modo oscuro',
+        themeLight: 'Cambiar al modo claro',
         partyCode: 'Código de la fiesta',
         copyLink: 'Copiar enlace',
         linkCopied: '¡Enlace copiado!',
@@ -611,6 +615,8 @@ const translations = {
         // Online version: rooms, invites, shared catalog
         addSongsTab: 'Add songs',
         inviteFriends: 'Invite friends',
+        themeDark: 'Switch to dark mode',
+        themeLight: 'Switch to light mode',
         partyCode: 'Party code',
         copyLink: 'Copy link',
         linkCopied: 'Link copied!',
@@ -732,6 +738,12 @@ class KaraokeApp {
                 el.title = t(key);
             }
         });
+
+        // Sun/moon toggle in the navbar (drawn and wired by /karaoke/js/icons.js)
+        if (window.KIcons && KIcons.renderThemeToggles) {
+            KIcons.themeLabel = (dark) => t(dark ? 'themeLight' : 'themeDark');
+            KIcons.renderThemeToggles();
+        }
         
         // Re-render dynamic content
         if (this.catalog && this.catalog.length > 0) {

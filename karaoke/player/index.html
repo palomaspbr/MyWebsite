@@ -7,6 +7,8 @@
     <meta name="robots" content="noindex">
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='24' cy='22' r='14' fill='%23ffd43b' stroke='%232b2520' stroke-width='4'/%3E%3Cpath d='M33 31 L54 56' stroke='%232b2520' stroke-width='9' stroke-linecap='round'/%3E%3C/svg%3E">
     <title>Karaoke Player</title>
+    <!-- Light / dark theme: the karaoke's own choice (localStorage karaoke_theme), else the device's. -->
+    <script src="/static/theme.js" data-key="karaoke_theme" data-button="none"></script>
     <link rel="stylesheet" href="/karaoke/css/sketch.css">
     <style>
         /* TV / projector player. Hand-drawn notebook theme from /karaoke/css/sketch.css; the video
@@ -86,7 +88,7 @@
         .welcome-text {
             margin: 0 0 1.5vh;
             font-size: clamp(56px, 7.5vw, 170px);
-            color: var(--ink);
+            color: var(--title);
         }
         .welcome-text span {
             display: inline-block;
@@ -101,7 +103,7 @@
         }
         .instruction-text span {
             padding: 0 0.3em;
-            background: linear-gradient(100deg, transparent 2%, var(--hi) 4%, var(--hi) 94%, transparent 97%) 0 62% / 100% 60% no-repeat;
+            background: linear-gradient(100deg, transparent 2%, var(--hi) 4%, var(--hi) 94%, transparent 97%) var(--marker-pos, 0 62% / 100% 60%) no-repeat;
             color: var(--ink);
         }
 
@@ -128,7 +130,7 @@
             border-radius: var(--wobble-sm);
             transform: rotate(-5deg);
             opacity: 0.9;
-            text-shadow: 1px 1px 0 rgba(192, 57, 43, 0.35);
+            text-shadow: 1px 1px 0 color-mix(in srgb, var(--red) 35%, transparent);
         }
 
         .connect-box { font-size: clamp(20px, 1.7vw, 40px); }
@@ -149,6 +151,8 @@
             min-width: 0;
         }
 
+        /* QR cards stay dark-on-light in both themes (QR codes must scan): they keep the light inks. */
+        .polaroid, .join-qr { --ink: #2b2520; --ink-soft: #6d6259; --red: #c0392b; color: var(--ink); }
         .polaroid {
             position: relative;
             display: inline-flex;
@@ -158,7 +162,7 @@
             background: #fff;
             border: 2.5px solid var(--ink);
             border-radius: 4px 9px 5px 8px / 9px 4px 8px 5px;
-            box-shadow: 6px 7px 0 -1px var(--ink);
+            box-shadow: 6px 7px 0 -1px var(--shadow-ink);
             transform: rotate(2.5deg);
         }
         .polaroid::before, .polaroid::after {
@@ -167,8 +171,8 @@
             top: -16px;
             width: clamp(70px, 6vw, 130px);
             height: clamp(22px, 2vw, 40px);
-            background: rgba(255, 242, 168, 0.85);
-            border: 1px solid rgba(43, 37, 32, 0.25);
+            background: var(--tape);
+            border: 1px solid var(--tape-edge);
         }
         .polaroid::before { left: -20px; transform: rotate(-35deg); }
         .polaroid::after { right: -20px; transform: rotate(35deg); }
@@ -238,8 +242,8 @@
             top: -14px; left: 2.5vw;
             width: clamp(70px, 6vw, 120px);
             height: clamp(20px, 1.8vw, 34px);
-            background: rgba(255, 222, 235, 0.9);
-            border: 1px solid rgba(43, 37, 32, 0.25);
+            background: var(--tape-pink);
+            border: 1px solid var(--tape-edge);
             transform: rotate(-4deg);
         }
         .now-playing-overlay.visible { transform: translateX(0) rotate(-1.5deg); }
@@ -267,7 +271,7 @@
         }
         .overlay-firstline span {
             padding: 0 0.3em;
-            background: linear-gradient(100deg, transparent 2%, var(--hi) 4%, var(--hi) 94%, transparent 97%) 0 62% / 100% 60% no-repeat;
+            background: linear-gradient(100deg, transparent 2%, var(--hi) 4%, var(--hi) 94%, transparent 97%) var(--marker-pos, 0 62% / 100% 60%) no-repeat;
         }
         .overlay-firstline:empty { display: none; }
 
@@ -314,7 +318,7 @@
             padding: 0 0.6em;
             font-family: var(--brush);
             font-size: clamp(12px, 0.9vw, 21px);
-            color: #fff;
+            color: var(--on-red);
             background: var(--red);
             border: 2px solid var(--ink);
             border-radius: var(--wobble-sm);
@@ -382,7 +386,7 @@
             font-size: clamp(180px, 34vh, 460px);
             line-height: 0.9;
             color: var(--red);
-            text-shadow: 6px 7px 0 var(--ink);
+            text-shadow: 6px 7px 0 var(--title-shadow, var(--ink));
             transform: rotate(-4deg);
             animation: scorePop 0.5s ease;
         }
@@ -404,7 +408,7 @@
             transition: opacity 0.3s ease, transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
         .score-stars svg.show { opacity: 1; transform: scale(1) rotate(var(--tilt, 0deg)); }
-        .score-stars svg path { stroke: var(--ink); stroke-width: 2.6; stroke-linejoin: round; fill: #fff; }
+        .score-stars svg path { stroke: var(--ink); stroke-width: 2.6; stroke-linejoin: round; fill: var(--card); }
         .score-stars svg.on path { fill: var(--yellow); }
 
         /* rating phrase on a sticky note, revealed after the count-up */
@@ -413,10 +417,10 @@
             padding: 1vh 2vw;
             font-family: var(--brush);
             font-size: clamp(34px, 3.6vw, 86px);
-            background: var(--hi);
+            background: var(--note);
             border: 2.5px solid var(--ink);
             border-radius: 3px 10px 4px 12px / 12px 4px 10px 3px;
-            box-shadow: 4px 5px 0 -1px var(--ink);
+            box-shadow: 4px 5px 0 -1px var(--shadow-ink);
             opacity: 0;
             transform: translateY(14px) rotate(2deg);
             transition: opacity 0.5s ease, transform 0.5s ease;
@@ -447,17 +451,17 @@
         }
         .next-player span {
             padding: 0 0.25em;
-            background: linear-gradient(100deg, transparent 2%, var(--hi) 4%, var(--hi) 94%, transparent 97%) 0 62% / 100% 60% no-repeat;
+            background: linear-gradient(100deg, transparent 2%, var(--hi) 4%, var(--hi) 94%, transparent 97%) var(--marker-pos, 0 62% / 100% 60%) no-repeat;
         }
         .next-thumb {
             position: relative;
             width: 85%;
             margin: 3vh 0 1vh;
             padding: 1vh 1vh 3vh;
-            background: #fff;
+            background: var(--frame);
             border: 2.5px solid var(--ink);
             border-radius: 4px 9px 5px 8px / 9px 4px 8px 5px;
-            box-shadow: 5px 6px 0 -1px var(--ink);
+            box-shadow: 5px 6px 0 -1px var(--shadow-ink);
             transform: rotate(-2deg);
         }
         .next-thumb::before {
@@ -466,8 +470,8 @@
             top: -14px; left: 50%;
             width: 32%; height: clamp(20px, 1.8vw, 34px);
             margin-left: -16%;
-            background: rgba(255, 242, 168, 0.85);
-            border: 1px solid rgba(43, 37, 32, 0.25);
+            background: var(--tape);
+            border: 1px solid var(--tape-edge);
             transform: rotate(3deg);
         }
         .next-thumb img {
@@ -503,10 +507,10 @@
             gap: 0.8vw;
             min-width: clamp(240px, 18vw, 420px);
             padding: 1vh 1vw;
-            background: var(--hi);
+            background: var(--note);
             border: 2px solid var(--ink);
             border-radius: 3px 10px 4px 12px / 12px 4px 10px 3px;
-            box-shadow: 3px 4px 0 -1px var(--ink);
+            box-shadow: 3px 4px 0 -1px var(--shadow-ink);
             transform: rotate(-1deg);
             animation: slideInRight 0.3s ease, fadeOut 0.5s ease 4.5s forwards;
         }
@@ -525,7 +529,7 @@
             justify-content: center;
             width: clamp(34px, 2.6vw, 60px);
             height: clamp(34px, 2.6vw, 60px);
-            background: #fff;
+            background: var(--card);
             border: 2px solid var(--ink);
             border-radius: var(--blob);
         }
@@ -563,7 +567,7 @@
             color: var(--ink);
             border: 2.5px solid var(--ink);
             border-radius: 4px 9px 5px 8px / 9px 4px 8px 5px;
-            box-shadow: 5px 6px 0 -1px var(--ink);
+            box-shadow: 5px 6px 0 -1px var(--shadow-ink);
             opacity: 0;
             visibility: hidden;
             pointer-events: none;
@@ -577,8 +581,8 @@
             top: -12px; left: 50%;
             width: 40%; height: 22px;
             margin-left: -20%;
-            background: rgba(255, 242, 168, 0.85);
-            border: 1px solid rgba(43, 37, 32, 0.25);
+            background: var(--tape);
+            border: 1px solid var(--tape-edge);
             transform: rotate(-3deg);
         }
         .join-qr.visible {
@@ -630,7 +634,7 @@
             background: var(--paper-2);
             border: 3px solid var(--ink);
             border-radius: var(--wobble);
-            box-shadow: 7px 8px 0 -1px var(--ink);
+            box-shadow: 7px 8px 0 -1px var(--shadow-ink);
             transform: translate(-50%, -50%) rotate(-1.5deg);
             animation: k-pop 0.35s ease;
         }
@@ -648,15 +652,17 @@
             gap: 12px;
             z-index: 100;
         }
-        .settings-btn, .close-btn {
+        .settings-btn, .close-btn, .theme-btn {
             width: clamp(46px, 3.4vw, 70px);
             height: clamp(46px, 3.4vw, 70px);
             opacity: 0;
             transition: opacity 0.3s ease, transform 0.1s ease, background 0.15s ease;
         }
         .settings-btn .material-icons-round, .close-btn .material-icons-round { font-size: clamp(24px, 1.8vw, 36px); }
-        .settings-btn:hover, .close-btn:hover, .settings-btn:focus-visible, .close-btn:focus-visible,
-        body.user-active .settings-btn, body.user-active .close-btn { opacity: 1; }
+        .theme-btn { padding: clamp(7px, 0.55vw, 11px); }
+        .settings-btn:hover, .close-btn:hover, .theme-btn:hover,
+        .settings-btn:focus-visible, .close-btn:focus-visible, .theme-btn:focus-visible,
+        body.user-active .settings-btn, body.user-active .close-btn, body.user-active .theme-btn { opacity: 1; }
         .close-btn:hover { background: var(--red-soft); }
 
         /* ── Settings panel: a notebook sheet sliding in from the right ── */
@@ -674,7 +680,7 @@
             background-color: var(--paper-2);
             background-image: var(--notebook);
             border-left: 3px solid var(--ink);
-            box-shadow: -6px 0 0 -1px var(--ink);
+            box-shadow: -6px 0 0 -1px var(--shadow-ink);
             transform: translateX(110%);
             transition: transform 0.3s ease;
         }
@@ -751,7 +757,7 @@
             position: fixed;
             inset: 0;
             z-index: 999;
-            background: rgba(43, 37, 32, 0.45);
+            background: color-mix(in srgb, var(--shadow-ink) 45%, transparent);
             opacity: 0;
             pointer-events: none;
             transition: opacity 0.3s;
@@ -770,7 +776,7 @@
             align-items: center;
             justify-content: center;
             padding: 4vh 4vw;
-            background: rgba(43, 37, 32, 0.55);
+            background: color-mix(in srgb, var(--shadow-ink) 55%, transparent);
         }
         .start-screen { z-index: 9999; cursor: pointer; }
         .end-screen { z-index: 9000; cursor: default; }
@@ -783,7 +789,7 @@
             background-image: var(--notebook);
             border: 3px solid var(--ink);
             border-radius: var(--wobble);
-            box-shadow: 9px 10px 0 -1px var(--ink);
+            box-shadow: 9px 10px 0 -1px var(--shadow-ink);
             transform: rotate(-1.2deg);
             animation: k-pop 0.45s ease;
         }
@@ -793,12 +799,12 @@
             top: -18px; left: 50%;
             width: clamp(100px, 10vw, 200px); height: clamp(26px, 2.4vw, 44px);
             margin-left: calc(clamp(100px, 10vw, 200px) / -2);
-            background: rgba(255, 242, 168, 0.88);
-            border: 1px solid rgba(43, 37, 32, 0.25);
+            background: var(--tape);
+            border: 1px solid var(--tape-edge);
             transform: rotate(-3deg);
         }
         .paper-card .card-icon { font-size: clamp(64px, 8vw, 170px); color: var(--red); }
-        .paper-card h1 { margin: 1vh 0; font-size: clamp(44px, 5.6vw, 130px); }
+        .paper-card h1 { margin: 1vh 0; font-size: clamp(44px, 5.6vw, 130px); color: var(--title); }
         .paper-card h1 span { display: inline-block; padding-bottom: 0.1em; background: var(--pen-line) 0 100% / 100% 0.16em no-repeat; }
         .paper-card p { margin: 1vh 0 0; font-size: clamp(20px, 2vw, 46px); color: var(--ink-soft); }
         .paper-card .btn { margin-top: 3vh; font-size: clamp(20px, 1.8vw, 40px); padding: 0.3em 1em; }
@@ -814,7 +820,7 @@
             justify-content: center;
             padding: 16px;
             cursor: default;
-            background: rgba(43, 37, 32, 0.55);
+            background: color-mix(in srgb, var(--shadow-ink) 55%, transparent);
         }
         .k-modal {
             width: min(480px, 100%);
@@ -824,7 +830,7 @@
             background-image: var(--notebook);
             border: 3px solid var(--ink);
             border-radius: var(--wobble);
-            box-shadow: 7px 8px 0 -1px var(--ink);
+            box-shadow: 7px 8px 0 -1px var(--shadow-ink);
             transform: rotate(-0.8deg);
         }
         .k-modal h2 { margin: 0 0 8px; font-size: 38px; }
@@ -856,6 +862,7 @@
     <div id="player-app">
         <!-- Player Buttons (Settings & End party) -->
         <div class="player-buttons">
+            <button class="theme-btn icon-btn" id="themeBtn" type="button" data-theme-toggle></button>
             <button class="settings-btn icon-btn" id="settingsBtn" title="Settings" type="button">
                 <span class="material-icons-round">settings</span>
             </button>
@@ -936,6 +943,18 @@
                         </label>
                     </div>
                     <div class="hint" id="joinQrHint">Shortcut: Q</div>
+                </div>
+
+                <div class="settings-section">
+                    <div class="settings-section-title" id="themeTitle">Look</div>
+                    <div class="settings-toggle">
+                        <label id="themeSwitchLabel" for="configDarkMode">Dark mode</label>
+                        <label class="sketch-switch">
+                            <input type="checkbox" id="configDarkMode" data-theme-switch>
+                            <span></span>
+                        </label>
+                    </div>
+                    <div class="hint" id="themeHint">Applies to every karaoke page. Shortcut: D</div>
                 </div>
 
                 <div class="settings-section" id="jukeboxSection">
@@ -1154,6 +1173,11 @@
                 joinQrCaption: 'Escaneie para entrar',
                 joinQrLabel: 'Mostrar QR code para entrar',
                 joinQrHint: 'Atalho: Q',
+                themeTitle: 'Aparência',
+                themeSwitchLabel: 'Modo escuro',
+                themeHint: 'Vale para todas as páginas do karaokê. Atalho: D',
+                themeDark: 'Mudar para o modo escuro',
+                themeLight: 'Mudar para o modo claro',
                 joinQrNoNetwork: 'Sem festa',
                 scoreCountdown: 'Avançando em {n}s · toque para continuar',
                 scoreLabel: 'Pontuação:',
@@ -1243,6 +1267,11 @@
                 joinQrCaption: 'Escanea para unirte',
                 joinQrLabel: 'Mostrar código QR para unirse',
                 joinQrHint: 'Atajo: Q',
+                themeTitle: 'Apariencia',
+                themeSwitchLabel: 'Modo oscuro',
+                themeHint: 'Vale para todas las páginas del karaoke. Atajo: D',
+                themeDark: 'Cambiar al modo oscuro',
+                themeLight: 'Cambiar al modo claro',
                 joinQrNoNetwork: 'Sin fiesta',
                 scoreCountdown: 'Continuando en {n}s · toca para seguir',
                 scoreLabel: 'Puntuación:',
@@ -1332,6 +1361,11 @@
                 joinQrCaption: 'Scan to join',
                 joinQrLabel: 'Show join QR code',
                 joinQrHint: 'Shortcut: Q',
+                themeTitle: 'Look',
+                themeSwitchLabel: 'Dark mode',
+                themeHint: 'Applies to every karaoke page. Shortcut: D',
+                themeDark: 'Switch to dark mode',
+                themeLight: 'Switch to light mode',
                 joinQrNoNetwork: 'No party',
                 scoreCountdown: 'Advancing in {n}s · tap to continue',
                 scoreLabel: 'Score:',
@@ -1854,6 +1888,13 @@
                         if (this.isTypingTarget(e.target) || this.isModalOpen()) return;
                         e.preventDefault();
                         this.toggleJoinQr();
+                    }
+                    // D: light / dark theme (remembered in this browser for every karaoke page)
+                    if (typeof e.key === 'string' && e.key.toLowerCase() === 'd'
+                        && !e.ctrlKey && !e.altKey && !e.metaKey && !e.repeat && window.SiteTheme) {
+                        if (this.isTypingTarget(e.target) || this.isModalOpen()) return;
+                        e.preventDefault();
+                        SiteTheme.toggle();
                     }
                     // Volume: arrow up / down, M to mute (local to this screen)
                     if ((e.key === 'ArrowUp' || e.key === 'ArrowDown' || (typeof e.key === 'string' && e.key.toLowerCase() === 'm'))
@@ -2937,6 +2978,13 @@
                 document.getElementById('muteBtn').setAttribute('aria-label', t('mute'));
                 document.getElementById('joinQrLabel').textContent = t('joinQrLabel');
                 document.getElementById('joinQrHint').textContent = t('joinQrHint');
+                document.getElementById('themeTitle').textContent = t('themeTitle');
+                document.getElementById('themeSwitchLabel').textContent = t('themeSwitchLabel');
+                document.getElementById('themeHint').textContent = t('themeHint');
+                if (window.KIcons && KIcons.renderThemeToggles) {
+                    KIcons.themeLabel = (dark) => t(dark ? 'themeLight' : 'themeDark');
+                    KIcons.renderThemeToggles();
+                }
                 this.renderJoinQr();
                 document.getElementById('jukeboxTitle').textContent = t('jukeboxMode');
                 document.getElementById('jukeboxToggleText').textContent = t('jukeboxOpen');

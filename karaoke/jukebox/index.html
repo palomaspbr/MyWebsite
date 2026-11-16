@@ -8,8 +8,10 @@
     <title>Karaoke Jukebox</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='24' cy='22' r='14' fill='%23ffd43b' stroke='%232b2520' stroke-width='4'/%3E%3Cpath d='M33 31 L54 56' stroke='%232b2520' stroke-width='9' stroke-linecap='round'/%3E%3C/svg%3E">
     <!-- Online version: shared hand-drawn theme + room helper first. -->
-    <link rel="stylesheet" href="/karaoke/css/sketch.css?v=1">
-    <link rel="stylesheet" href="/karaoke/css/videokind.css?v=2">
+    <!-- Light / dark theme: the karaoke's own choice (localStorage karaoke_theme), else the device's. -->
+    <script src="/static/theme.js" data-key="karaoke_theme" data-button="none"></script>
+    <link rel="stylesheet" href="/karaoke/css/sketch.css?v=2">
+    <link rel="stylesheet" href="/karaoke/css/videokind.css?v=3">
     <script src="/karaoke/js/room.js?v=1"></script>
     <script src="/karaoke/js/icons.js"></script>
     <style>
@@ -54,6 +56,8 @@
             font-size: 44px;
             line-height: 1;
         }
+        .brand > div { flex: 1; min-width: 0; color: var(--title); }
+        .brand .theme-btn { align-self: flex-start; flex: none; }
         .brand .logo { font-size: 42px; display: inline-block; transform: rotate(-12deg); }
         .brand-name {
             display: inline-block;
@@ -87,7 +91,7 @@
             display: inline-block;
             padding: 12px;
             line-height: 0;
-            background: #fff;
+            background: #fff; /* QR codes stay dark-on-light to scan */
             border: 2.5px solid var(--ink);
             border-radius: var(--wobble-sm);
             box-shadow: var(--shadow-sm);
@@ -108,7 +112,7 @@
             letter-spacing: 6px;
             padding: 0 6px 0 12px;
             border-width: 3px;
-            background: rgba(255, 255, 255, 0.7);
+            background: var(--stamp-bg, rgba(255, 255, 255, 0.7));
         }
         .connect-text {
             margin: 12px 0 4px;
@@ -132,7 +136,7 @@
             padding: 10px 12px;
             font-size: 20px;
             color: var(--ink);
-            background: #fff;
+            background: var(--card);
             border: 2.5px solid var(--ink);
             border-radius: var(--wobble-2);
             box-shadow: var(--shadow-sm);
@@ -141,7 +145,7 @@
         }
         .remote-btn:hover { background: var(--hi); transform: rotate(-1.2deg); }
         .remote-btn:active { transform: translate(2px, 2px); box-shadow: none; }
-        .remote-btn.full { grid-column: 1 / -1; background: var(--yellow); font-family: var(--brush); font-size: 26px; }
+        .remote-btn.full { grid-column: 1 / -1; color: var(--on-yellow); background: var(--yellow); font-family: var(--brush); font-size: 26px; }
         .remote-btn.danger { background: var(--red-soft); }
         .remote-btn .material-icons-round { font-size: 26px; }
 
@@ -152,7 +156,7 @@
             flex-direction: column;
             gap: 8px;
             padding: 22px 20px 18px;
-            background: linear-gradient(180deg, transparent 10px, var(--margin) 10px 12px, transparent 12px), #fff;
+            background: linear-gradient(180deg, transparent 10px, var(--margin) 10px 12px, transparent 12px), var(--card);
             border: 2.5px solid var(--ink);
             border-radius: var(--wobble);
             box-shadow: var(--shadow);
@@ -166,8 +170,8 @@
             width: 96px;
             height: 24px;
             margin-left: -48px;
-            background: rgba(255, 242, 168, 0.85);
-            border: 1px solid rgba(43, 37, 32, 0.25);
+            background: var(--tape);
+            border: 1px solid var(--tape-edge);
             transform: rotate(-3deg);
         }
         .np-thumb {
@@ -179,7 +183,7 @@
             justify-content: center;
             font-size: 44px;
             background: var(--paper-3);
-            border: 6px solid #fff;
+            border: 6px solid var(--frame);
             outline: 2px solid var(--ink);
             transform: rotate(1deg);
         }
@@ -232,10 +236,10 @@
         /* Code entry: a big yellow sticky note. */
         .code-hero {
             padding: 24px 30px 26px;
-            background: var(--hi);
+            background: var(--note);
             border: 2.5px solid var(--ink);
             border-radius: 4px 14px 5px 16px / 16px 5px 14px 4px;
-            box-shadow: 6px 7px 0 -1px var(--ink);
+            box-shadow: 6px 7px 0 -1px var(--shadow-ink);
             transform: rotate(-0.5deg);
         }
         .code-hero h2 { margin: 0 0 2px; font-size: 46px; }
@@ -251,13 +255,13 @@
             letter-spacing: 14px;
             text-align: center;
             color: var(--ink);
-            background: #fff;
+            background: var(--card);
             border: 3px solid var(--ink);
             border-radius: var(--wobble-2);
             outline: none;
         }
         .code-input::placeholder { color: var(--ink-faint); opacity: 0.6; }
-        .code-input:focus { box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.8), 0 0 0 8px var(--ink); }
+        .code-input:focus { box-shadow: 0 0 0 5px color-mix(in srgb, var(--card) 80%, transparent), 0 0 0 8px var(--ink); }
         .add-btn {
             display: flex;
             align-items: center;
@@ -265,7 +269,7 @@
             padding: 0 30px;
             font-family: var(--brush);
             font-size: 34px;
-            color: var(--ink);
+            color: var(--on-yellow);
             background: var(--yellow);
             border: 3px solid var(--ink);
             border-radius: var(--wobble);
@@ -284,7 +288,7 @@
             gap: 16px;
             margin-top: 18px;
             padding: 12px 16px;
-            background: #fff;
+            background: var(--card);
             border: 2.5px solid var(--ink);
             border-radius: var(--wobble);
             box-shadow: var(--shadow-sm);
@@ -303,7 +307,7 @@
             justify-content: center;
             font-size: 28px;
             background: var(--paper-3);
-            border: 4px solid #fff;
+            border: 4px solid var(--frame);
             outline: 2px solid var(--ink);
             transform: rotate(-2deg);
         }
@@ -356,7 +360,7 @@
             font-family: var(--brush);
             font-size: 28px;
             text-align: center;
-            color: #fff;
+            color: var(--on-red);
             background: var(--red);
             border: 2.5px solid var(--ink);
             border-radius: var(--blob);
@@ -371,7 +375,7 @@
             border-bottom: 2px solid var(--line);
         }
         .queue-item:first-child {
-            background: linear-gradient(100deg, transparent 1%, rgba(255, 242, 168, 0.85) 2%, rgba(255, 242, 168, 0.85) 97%, transparent 99%);
+            background: linear-gradient(100deg, transparent 1%, color-mix(in srgb, var(--hi) 85%, transparent) 2%, color-mix(in srgb, var(--hi) 85%, transparent) 97%, transparent 99%);
         }
         .queue-pos {
             width: 40px;
@@ -390,7 +394,7 @@
             flex-shrink: 0;
             overflow: hidden;
             background: var(--paper-3);
-            border: 3px solid #fff;
+            border: 3px solid var(--frame);
             outline: 2px solid var(--ink);
             transform: rotate(-2deg);
         }
@@ -421,7 +425,7 @@
             align-items: center;
             justify-content: center;
             padding: 16px;
-            background: rgba(43, 37, 32, 0.45);
+            background: color-mix(in srgb, var(--shadow-ink) 45%, transparent);
         }
         .modal-overlay.open { display: flex; }
         .jb-modal {
@@ -433,7 +437,7 @@
             background-image: repeating-linear-gradient(180deg, transparent 0 31px, var(--line) 31px 32px);
             border: 2.5px solid var(--ink);
             border-radius: var(--wobble);
-            box-shadow: 6px 7px 0 -1px var(--ink);
+            box-shadow: 6px 7px 0 -1px var(--shadow-ink);
             animation: jb-sheet 0.25s ease;
         }
         @keyframes jb-sheet { from { opacity: 0; transform: translateY(16px) rotate(1deg); } to { opacity: 1; transform: none; } }
@@ -450,7 +454,7 @@
             padding: 6px 16px;
             font-size: 20px;
             color: var(--ink);
-            background: #fff;
+            background: var(--card);
             border: 2.5px solid var(--ink);
             border-radius: var(--wobble-2);
             box-shadow: var(--shadow-sm);
@@ -471,7 +475,7 @@
             padding: 8px 14px;
             font-size: 21px;
             color: var(--ink);
-            background: #fff;
+            background: var(--card);
             border: 2.5px solid var(--ink);
             border-radius: var(--wobble-2);
             outline: none;
@@ -481,7 +485,7 @@
             padding: 0 26px;
             font-family: var(--brush);
             font-size: 26px;
-            color: var(--ink);
+            color: var(--on-yellow);
             background: var(--yellow);
             border: 2.5px solid var(--ink);
             border-radius: var(--wobble);
@@ -515,10 +519,10 @@
             max-width: min(640px, 90vw);
             padding: 12px 22px;
             font-size: 22px;
-            background: var(--hi);
+            background: var(--note);
             border: 2.5px solid var(--ink);
             border-radius: 3px 12px 4px 14px / 14px 4px 12px 3px;
-            box-shadow: 4px 5px 0 -1px var(--ink);
+            box-shadow: 4px 5px 0 -1px var(--shadow-ink);
             opacity: 0;
             transform: translateX(-50%) translateY(140px) rotate(-1deg);
             transition: transform 0.3s ease, opacity 0.3s ease;
@@ -538,16 +542,16 @@
             align-items: center;
             justify-content: center;
             padding: 16px;
-            background: rgba(43, 37, 32, 0.5);
+            background: color-mix(in srgb, var(--shadow-ink) 50%, transparent);
         }
         .room-gone-note {
             width: min(560px, 100%);
             padding: 34px 30px 30px;
             text-align: center;
-            background: var(--hi);
+            background: var(--note);
             border: 2.5px solid var(--ink);
             border-radius: 3px 12px 4px 14px / 14px 4px 12px 3px;
-            box-shadow: 6px 7px 0 -1px var(--ink);
+            box-shadow: 6px 7px 0 -1px var(--shadow-ink);
             transform: rotate(-1.5deg);
         }
         .room-gone-note .big { font-size: 60px; display: inline-block; transform: rotate(-12deg); }
@@ -583,6 +587,7 @@
                     <span class="brand-name">Karaoke</span>
                     <small id="jukeboxTag">Jukebox</small>
                 </div>
+                <button class="icon-btn theme-btn" type="button" data-theme-toggle></button>
             </div>
 
             <div class="np-card idle" id="nowPlaying">
@@ -715,6 +720,7 @@
                 added: 'Added "{title}" to the queue', notFound: 'No song found with code {code}',
                 enterCode: 'Type a song code first', cleared: 'Queue cleared', confirmClear: 'Clear the entire queue?', djOnly: 'Only the DJ can do this',
                 pressEnterToAdd: 'Press Enter to add', cancel: 'Cancel',
+                themeDark: 'Switch to dark mode', themeLight: 'Switch to light mode',
                 roomNotFound: 'Party not found', roomNotFoundDesc: 'Party {code} does not exist or has already ended. Check the code or start a new party.',
                 partyEnded: 'The party is over!', partyEndedDesc: 'The DJ ended the party. Thanks for singing!', backToStart: 'Back to the start'
             },
@@ -729,6 +735,7 @@
                 added: '"{title}" adicionada à fila', notFound: 'Nenhuma música com o código {code}',
                 enterCode: 'Digite um código primeiro', cleared: 'Fila limpa', confirmClear: 'Limpar toda a fila?', djOnly: 'Só o DJ pode fazer isso',
                 pressEnterToAdd: 'Pressione Enter para adicionar', cancel: 'Cancelar',
+                themeDark: 'Mudar para o modo escuro', themeLight: 'Mudar para o modo claro',
                 roomNotFound: 'Festa não encontrada', roomNotFoundDesc: 'A festa {code} não existe ou já acabou. Confira o código ou comece uma nova festa.',
                 partyEnded: 'A festa acabou!', partyEndedDesc: 'O DJ encerrou a festa. Obrigado por cantar!', backToStart: 'Voltar ao início'
             },
@@ -743,6 +750,7 @@
                 added: '"{title}" añadida a la cola', notFound: 'No hay canción con el código {code}',
                 enterCode: 'Escribe un código primero', cleared: 'Cola vaciada', confirmClear: '¿Vaciar toda la cola?', djOnly: 'Solo el DJ puede hacer esto',
                 pressEnterToAdd: 'Pulsa Enter para añadir', cancel: 'Cancelar',
+                themeDark: 'Cambiar al modo oscuro', themeLight: 'Cambiar al modo claro',
                 roomNotFound: 'Fiesta no encontrada', roomNotFoundDesc: 'La fiesta {code} no existe o ya terminó. Revisa el código o empieza una fiesta nueva.',
                 partyEnded: '¡La fiesta terminó!', partyEndedDesc: 'El DJ terminó la fiesta. ¡Gracias por cantar!', backToStart: 'Volver al inicio'
             }
@@ -773,6 +781,11 @@
             return s;
         };
         const esc = window.escapeHtml;
+        // Sun/moon toggle next to the brand (drawn and wired by /karaoke/js/icons.js).
+        if (window.KIcons && KIcons.renderThemeToggles) {
+            KIcons.themeLabel = (dark) => t(dark ? 'themeLight' : 'themeDark');
+            KIcons.renderThemeToggles();
+        }
         // Video-type chips in the page language (shared /karaoke/js/videokind.js).
         const vkChips = (song) => window.videoKindChips ? window.videoKindChips(song, LANG) : '';
         // Online version: thumbnails come from YouTube, not from the server.

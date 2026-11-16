@@ -123,7 +123,7 @@
 .material-icons-round > .k-icon-name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .k-icon path { fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
 .k-icon .y { fill: #ffd43b; } .k-icon .p { fill: #ffc9c9; } .k-icon .b { fill: #a5d8ff; }
-.k-icon .g { fill: #b2f2bb; } .k-icon .v { fill: #d0bfff; } .k-icon .w { fill: #fffdf6; } .k-icon .k { fill: currentColor; }
+.k-icon .g { fill: #b2f2bb; } .k-icon .v { fill: #d0bfff; } .k-icon .w { fill: var(--paper-2, #fffdf6); } .k-icon .k { fill: currentColor; }
 .k-icon.k-plain .y, .k-icon.k-plain .p, .k-icon.k-plain .b, .k-icon.k-plain .g, .k-icon.k-plain .v, .k-icon.k-plain .w { fill: none; }
 `;
 
@@ -192,9 +192,50 @@
     (document.body || document.documentElement).appendChild(holder.firstChild);
     scan(document.documentElement);
     observer.observe(document.documentElement, { childList: true, subtree: true, characterData: true });
+    renderThemeToggles();
   }
 
-  window.KIcons = { svg: markup, render, names: () => Object.keys(ICONS).concat(Object.keys(ALIASES)) };
+  // Dark mode toggles. /static/theme.js (loaded in <head> with data-key="karaoke_theme") owns the
+  // choice; here every <button data-theme-toggle> gets its hand-drawn sun/moon and flips the theme, and
+  // every <input type="checkbox" data-theme-switch> shows / sets "dark". Pages with translations set
+  // KIcons.themeLabel = (dark) => '...' and call KIcons.renderThemeToggles() when the language changes.
+  const PAPER = { light: '#fbf6e9', dark: '#23201c' };
+  function renderThemeToggles() {
+    const T = window.SiteTheme;
+    if (!T) return;
+    const dark = T.isDark();
+    const text = (window.KIcons.themeLabel || T.label)(dark);
+    document.querySelectorAll('[data-theme-toggle]').forEach(btn => {
+      if (btn.dataset.themeIcon !== String(dark)) { btn.innerHTML = T.icon(dark); btn.dataset.themeIcon = String(dark); }
+      btn.setAttribute('aria-label', text);
+      btn.title = text;
+    });
+    document.querySelectorAll('input[data-theme-switch]').forEach(cb => { cb.checked = dark; });
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', dark ? PAPER.dark : PAPER.light);
+  }
+  if (window.SiteTheme) {
+    window.SiteTheme.onChange(renderThemeToggles);
+    document.addEventListener('click', ev => {
+      const btn = ev.target.closest && ev.target.closest('[data-theme-toggle]');
+      if (btn) window.SiteTheme.toggle();
+    });
+    document.addEventListener('change', ev => {
+      const cb = ev.target;
+      if (cb && cb.matches && cb.matches('input[data-theme-switch]') && cb.checked !== window.SiteTheme.isDark()) {
+        window.SiteTheme.set(cb.checked ? 'dark' : 'light');
+      }
+    });
+    // Another karaoke window of this browser switched (e.g. the player's gear menu while the jukebox is open).
+    window.addEventListener('storage', ev => {
+      const T = window.SiteTheme;
+      if (ev.key === T.key && (ev.newValue === 'light' || ev.newValue === 'dark') &&
+          ev.newValue !== document.documentElement.getAttribute('data-theme')) T.set(ev.newValue);
+    });
+  }
+
+  window.KIcons = { svg: markup, render, names: () => Object.keys(ICONS).concat(Object.keys(ALIASES)),
+    renderThemeToggles, themeLabel: null };
   if (document.readyState === 'loading') {
     // Draw icons as the parser inserts them, then finish once the DOM is complete.
     observer.observe(document.documentElement, { childList: true, subtree: true, characterData: true });

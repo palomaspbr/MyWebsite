@@ -7,15 +7,19 @@
     <meta name="description" content="Karaoke Night: start a karaoke party, guests queue songs from their phones, the TV plays them.">
     <meta name="theme-color" content="#fbf6e9">
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='24' cy='22' r='14' fill='%23ffd43b' stroke='%232b2520' stroke-width='4'/%3E%3Cpath d='M33 31 L54 56' stroke='%232b2520' stroke-width='9' stroke-linecap='round'/%3E%3C/svg%3E">
+    <!-- Light / dark theme: the karaoke's own choice (localStorage karaoke_theme), else the device's. -->
+    <script src="/static/theme.js" data-key="karaoke_theme" data-button="none"></script>
     <link rel="stylesheet" href="/karaoke/css/sketch.css">
     <style>
-        main { max-width: 760px; margin: 0 auto; padding: 18px 18px 50px 56px; }
+        main { position: relative; max-width: 760px; margin: 0 auto; padding: 18px 18px 50px 56px; }
         .hero { display: flex; align-items: center; gap: 16px; margin-top: 8px; }
         .hero svg.mic { width: 92px; height: 110px; flex: none; transform: rotate(-12deg); }
-        .hero h1 { font-size: clamp(42px, 9vw, 66px); margin: 0; }
+        .hero h1 { font-size: clamp(42px, 9vw, 66px); margin: 0; color: var(--title); }
+        .hero .underline path { stroke: var(--red); }
         .hero .underline { display: block; width: 100%; height: 14px; margin-top: -2px; }
         .tagline { margin: 6px 0 0; color: var(--ink-soft); font-size: 21px; }
         .back { display: inline-block; margin-bottom: 4px; font-size: 18px; }
+        .theme-btn { position: absolute; top: 12px; right: 18px; }
 
         .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin: 28px 0; }
         .card { padding: 18px 18px 20px; }
@@ -40,7 +44,7 @@
         #created { padding: 20px; margin: 10px 0 30px; }
         #created h2 { font-size: 34px; margin: 0 0 6px; }
         .created-grid { display: grid; grid-template-columns: auto 1fr; gap: 20px; align-items: center; }
-        .polaroid { background: #fff; padding: 10px 10px 30px; border: 2px solid var(--ink); border-radius: 4px 10px 6px 12px / 12px 5px 10px 4px; box-shadow: 4px 5px 0 -1px rgba(43,37,32,.85); transform: rotate(-2.5deg); }
+        .polaroid { color: #2b2520; background: #fff; padding: 10px 10px 30px; border: 2px solid var(--ink); border-radius: 4px 10px 6px 12px / 12px 5px 10px 4px; box-shadow: 4px 5px 0 -1px color-mix(in srgb, var(--shadow-ink) 85%, transparent); transform: rotate(-2.5deg); }
         .polaroid #qr { width: 168px; height: 168px; }
         .polaroid #qr img, .polaroid #qr canvas { width: 100% !important; height: 100% !important; }
         .polaroid .cap { text-align: center; font-family: var(--brush); font-size: 22px; margin-top: 4px; }
@@ -48,16 +52,20 @@
         .links { display: flex; flex-direction: column; gap: 10px; }
         .links .btn { justify-content: flex-start; }
         .links small { color: var(--ink-soft); }
+        .links .btn.primary small { color: #6d6259; } /* on yellow: keep the light soft ink in dark mode */
 
-        h2.section { font-size: 34px; margin: 40px 0 12px; display: table; padding: 0 8px; background: linear-gradient(100deg, transparent 2%, var(--hi) 4%, var(--hi) 94%, transparent 97%) 0 62% / 100% 52% no-repeat; transform: rotate(-1deg); }
+        h2.section { font-size: 34px; margin: 40px 0 12px; display: table; padding: 0 8px; background: linear-gradient(100deg, transparent 2%, var(--hi) 4%, var(--hi) 94%, transparent 97%) var(--marker-pos, 0 62% / 100% 52%) no-repeat; transform: rotate(-1deg); }
         .steps { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
         .steps li { display: grid; grid-template-columns: 44px 1fr; gap: 12px; align-items: start; }
-        .steps .num { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-family: var(--brush); font-size: 24px; background: var(--yellow); border: 2.5px solid var(--ink); border-radius: var(--blob); }
-        .note { margin: 22px 0; padding: 12px 16px; background: var(--hi); border: 2.5px dashed var(--ink); border-radius: var(--wobble-2); }
+        .steps .num { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-family: var(--brush); font-size: 24px; color: var(--on-yellow); background: var(--yellow); border: 2.5px solid var(--ink); border-radius: var(--blob); }
+        .note { margin: 22px 0; padding: 12px 16px; background: var(--note); border: 2.5px dashed var(--ink); border-radius: var(--wobble-2); }
         footer { margin-top: 40px; color: var(--ink-soft); font-size: 17px; }
+        footer a { color: var(--ink); }
+        footer a:hover { color: var(--red); }
 
         @media (max-width: 640px) {
             main { padding-left: 50px; padding-right: 14px; }
+            .theme-btn { top: 8px; right: 12px; width: 42px; height: 42px; }
             .cards { grid-template-columns: 1fr; }
             .created-grid { grid-template-columns: 1fr; justify-items: center; text-align: center; }
             .hero svg.mic { width: 64px; height: 78px; }
@@ -74,13 +82,14 @@
     </svg>
     <main>
         <a class="back" href="/">&larr; palomaliz.com.br</a>
+        <button class="icon-btn theme-btn" type="button" data-theme-toggle></button>
         <header class="hero">
             <svg class="mic" viewBox="0 0 90 110" aria-hidden="true">
-                <g filter="url(#rough)" stroke="#2b2520" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+                <g filter="url(#rough)" stroke="currentColor" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
                     <path d="M44 52 L38 104" stroke-width="9"/>
                     <path d="M44 52 L38 104" stroke="#c0392b" stroke-width="4"/>
-                    <circle cx="45" cy="30" r="24" fill="#ffd43b"/>
-                    <path d="M28 18 Q45 30 62 18 M24 32 Q45 44 66 32 M30 46 Q45 54 60 46" fill="none" stroke-width="2"/>
+                    <circle cx="45" cy="30" r="24" fill="#ffd43b" stroke="#2b2520"/>
+                    <path d="M28 18 Q45 30 62 18 M24 32 Q45 44 66 32 M30 46 Q45 54 60 46" fill="none" stroke="#2b2520" stroke-width="2"/>
                     <path d="M74 10 q8 6 4 16 M80 4 q12 10 6 26" fill="none" stroke-width="2.5"/>
                 </g>
             </svg>
@@ -141,7 +150,7 @@
         </ol>
         <p class="note">Songs play as YouTube embeds. A few channels don't allow their videos on other websites; those are hidden from the search, so just pick another version.</p>
 
-        <footer>Made by Paloma. Parties end by themselves after a day without activity.</footer>
+        <footer>Made by Paloma. Thanks to <a href="https://github.com/LuanGBR" target="_blank" rel="noopener">Luan</a> for the inspiration. Parties end by themselves after a day without activity.</footer>
     </main>
 
     <script src="/karaoke/js/room.js"></script>

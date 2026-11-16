@@ -36,14 +36,14 @@
 }
 
 .vk-vocals {
-    color: #9a6a00;
+    color: var(--vk-vocals-ink, #9a6a00);
     background: var(--orange, #ffe0b8);
     border-color: #b07a12;
     border-style: dashed;
 }
 
 .vk-nolyrics {
-    color: #fff;
+    color: var(--on-red, #fff);
     background: var(--red, #c0392b);
     border-color: var(--ink, #2b2520);
 }
