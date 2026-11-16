@@ -265,12 +265,16 @@
       }
       this.cats = this.cats.filter((c) => !c.dead);
 
-      // overflow check
-      let over = false;
+      // overflow check: poking through the line is fine (cats just look worried);
+      // you only lose when a WHOLE settled cat sits above the line.
+      let over = false, edge = false;
       for (const c of this.cats) {
         const b = c.body, r = this.radius(c.tier);
-        if (this.t - c.born > (c.tier >= 11 ? 2.6 : 1.2) && b.position.y - r < BOX.danger && b.speed < 1) { over = true; break; }
+        if (this.t - c.born <= (c.tier >= 11 ? 2.6 : 1.2) || b.speed >= 1) continue;
+        if (b.position.y - r < BOX.danger) edge = true;
+        if (b.position.y + r < BOX.danger) { over = true; break; }
       }
+      this.edge = edge;
       this.dangerT = over ? this.dangerT + dt : Math.max(0, this.dangerT - dt * 2);
       if (this.state === 'play' && this.dangerT > 2.6) {
         this.state = 'over';
@@ -320,7 +324,7 @@
       const warn = this.dangerT > 0.05;
       ctx.save();
       ctx.setLineDash([14, 12]);
-      ctx.strokeStyle = warn ? `rgba(224,49,49,${0.5 + 0.5 * Math.abs(Math.sin(T * 10))})` : 'rgba(224,49,49,0.35)';
+      ctx.strokeStyle = warn ? `rgba(224,49,49,${0.5 + 0.5 * Math.abs(Math.sin(T * 10))})` : this.edge ? `rgba(224,49,49,${0.45 + 0.2 * Math.abs(Math.sin(T * 3))})` : 'rgba(224,49,49,0.35)';
       ctx.lineWidth = 3;
       ctx.beginPath();
       ctx.moveTo(BOX.l + 6, BOX.danger);
