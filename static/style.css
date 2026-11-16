@@ -287,6 +287,8 @@ main .projects-grid:not(.cards), .gallery {
 }
 main .projects-grid:not(.cards) > p { margin: 0; flex: 1 1 260px; text-align: center; }
 .gallery img { flex: 0 1 300px; max-height: 360px; width: auto; object-fit: contain; }
+/* Two photos that belong together: always side by side, sharing the width. */
+.gallery.pair img { flex: 1 1 0; min-width: 0; max-width: 300px; }
 
 @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) main img { filter: brightness(0.92); }
