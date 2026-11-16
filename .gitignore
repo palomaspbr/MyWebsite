@@ -2,3 +2,5 @@
 Thumbs.db
 node_modules/
 .wrangler/
+# local working notes for Claude sessions (never published)
+.notes/
