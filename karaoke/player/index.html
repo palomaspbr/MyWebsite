@@ -285,33 +285,35 @@
             z-index: 20;
         }
 
-        /* ── Up next: a small paper strip top-left ── */
+        /* ── Up next: a small paper strip bottom-right ── */
         .next-song-card {
             position: absolute;
-            top: 2.5vh;
-            left: 2vw;
+            bottom: 2.5vh;
+            right: 1.5vw;
             z-index: 20;
-            width: clamp(240px, 22vw, 520px);
-            padding: 1.2vh 1.2vw 2vh;
+            width: clamp(190px, 16vw, 390px);
+            padding: 1.7vh 0.9vw 1vh;
             background: var(--paper-2);
             border: 2.5px solid var(--ink);
             border-radius: var(--wobble-2);
             box-shadow: var(--shadow-sm);
             opacity: 0;
-            transform: translateY(-30px) rotate(1deg);
-            transition: opacity 0.3s ease, transform 0.3s ease;
+            transform: translateY(30px) rotate(1deg);
+            transition: opacity 0.3s ease, transform 0.3s ease, bottom 0.3s ease;
             display: flex;
             gap: 12px;
             overflow: visible;
         }
         .next-song-card.visible { opacity: 0.92; transform: translateY(0) rotate(1deg); }
+        /* While the gear / end-party buttons show, sit just above them. */
+        body.user-active .next-song-card { bottom: calc(2.5vh + clamp(46px, 3.4vw, 70px) + 1.5vh); }
         .next-song-card .label {
             position: absolute;
-            bottom: -0.9em;
-            left: 1vw;
+            top: -0.9em;
+            left: 0.8vw;
             padding: 0 0.6em;
             font-family: var(--brush);
-            font-size: clamp(15px, 1.2vw, 28px);
+            font-size: clamp(12px, 0.9vw, 21px);
             color: #fff;
             background: var(--red);
             border: 2px solid var(--ink);
@@ -322,14 +324,14 @@
         .next-song-card .info { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
         .next-song-card .title {
             font-family: var(--brush);
-            font-size: clamp(18px, 1.5vw, 36px);
+            font-size: clamp(14px, 1.15vw, 27px);
             line-height: 1.1;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
         .next-song-card .artist, .next-song-card .user {
-            font-size: clamp(14px, 1.05vw, 26px);
+            font-size: clamp(11px, 0.8vw, 20px);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
