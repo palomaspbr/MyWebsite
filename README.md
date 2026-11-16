@@ -29,6 +29,7 @@ static/theme.js                Light/dark mode (follows the device; a sun/moon t
                                Jiu-Jitsu and Karaoke share the key `theme` (switching on one switches all); only Loaf
                                Tower keeps its own choice (`data-key="loaf_theme"`). See the header comment for the API (window.SiteTheme).
 static/media/, static/files/   Images and the PDF curriculum
+tools/card-dark/               How the dark twins of the notebook project cards (card-dark.png) are made (not published)
 ```
 
 To add a project: create `customprojects/<slug>/index.html` (copy an existing one) and add a card to the `projects-grid` in `index.html`.
