@@ -267,6 +267,22 @@ canvas#game {
 .toggle-row .t-check { width: 1.5em; height: 1.5em; }
 .toggle-row.is-off { background: var(--off-bg); }
 .toggle-row.is-off .t-state { color: var(--faint); }
+/* language row: same look as the switches, but it holds a dropdown */
+.lang-row { cursor: default; flex-wrap: wrap; row-gap: 0.3em; }
+.lang-row:active { transform: none; box-shadow: 3px 4px 0 var(--shadow); }
+.lang-select {
+  flex: 1 1 100%;   /* its own line under "Language": "Português (Brasil)" doesn't fit beside it on phones */
+  min-width: 0;
+  padding: 0.15em 0.35em;
+  font-family: 'Patrick Hand', cursive;
+  font-size: 0.72em;
+  color: var(--ink);
+  background: var(--card);
+  border: 2px solid var(--ink);
+  border-radius: 15px 255px 15px 225px / 225px 15px 255px 15px;
+  cursor: pointer;
+}
+.lang-select option { color: var(--ink); background: var(--card); }
 .hint { bottom: 10%; }
 
 /* ---- yarn level menu ---- */

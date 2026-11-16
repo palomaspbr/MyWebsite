@@ -48,6 +48,16 @@
         D.line(ctx, [[44, 22], [22, 44]], { seed: 196, boil: b, lw: 6, ink: RED });
       }
     },
+    globe(ctx, o) {
+      // language: a little globe with a meridian and two parallels
+      const b = o.boil;
+      D.shape(ctx, D.ellipse(38, 38, 18), { fill: '#a5d8ff', seed: 197, boil: b, lw: 5 });
+      D.line(ctx, arc(0, 0, 38, -Math.PI / 2, Math.PI / 2, 2).map(([x, y]) => [x * 0.42, y]), { seed: 198, boil: b, lw: 4 });
+      D.line(ctx, arc(0, 0, 38, Math.PI / 2, Math.PI * 1.5, 2).map(([x, y]) => [x * 0.42, y]), { seed: 199, boil: b, lw: 4 });
+      D.line(ctx, [[-36, 0], [36, 0]], { seed: 200, boil: b, lw: 4 });
+      D.line(ctx, [[-30, -20], [30, -20]], { seed: 201, boil: b, lw: 3.5 });
+      D.line(ctx, [[-30, 20], [30, 20]], { seed: 202, boil: b, lw: 3.5 });
+    },
     music(ctx, o) {
       const b = o.boil;
       D.line(ctx, [[-16, 24], [-16, -30], [30, -40], [30, 14]], { seed: 21, boil: b, lw: 5 });

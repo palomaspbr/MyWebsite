@@ -14,7 +14,9 @@
   };
 
   const params = new URLSearchParams(location.search);
-  let lang = params.get('lang') === 'pt' ? 'pt' : 'en';
+  // ?lang= in the URL wins (reels, shared links), then the choice saved from Settings, then English
+  const okLang = (v) => (v === 'pt' || v === 'en' ? v : null);
+  let lang = okLang(params.get('lang')) || okLang(store.get('lang', null)) || 'en';
   let best = store.get('best', 0);
   let mergeBest = store.get('mergeBest', 0);
   const lvlNum = (v) => Math.max(1, Math.floor(+v) || 1); // guard against junk in storage
@@ -56,6 +58,7 @@
       if (typeof v === 'string') el.textContent = v;
     });
     if (game) game.lang = lang;
+    $('sel-lang').value = lang;
     updateTitle();
   }
 
@@ -879,6 +882,13 @@
     updateTitle();
   };
   $('btn-dark-toggle').onclick = () => { if (window.SiteTheme) window.SiteTheme.toggle(); };
+  // Settings: language dropdown (remembered; a ?lang= in the address bar is updated to match)
+  $('sel-lang').onchange = (e) => {
+    lang = okLang(e.target.value) || 'en';
+    store.set('lang', lang);
+    if (params.has('lang')) { params.set('lang', lang); window.history.replaceState(null, '', `${location.pathname}?${params}${location.hash}`); }
+    applyLang();
+  };
   $('btn-sfx-toggle').onclick = () => {
     audio.init();
     audio.setSfxOn(!audio.sfxOn);
