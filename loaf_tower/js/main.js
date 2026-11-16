@@ -489,7 +489,6 @@
     const p = LT.Board.profile, l = L();
     const pub = p && p.public && p.name;
     $('board-note').textContent = pub ? l.boardPublic(p.name) : l.boardPrivate;
-    show('btn-board-hide', !!pub);
     if (p && p.name && document.activeElement !== $('board-input')) $('board-input').value = p.name; // hidden players keep their name
     accountUI();
   }
@@ -860,7 +859,6 @@
     openBoard(boardGame);
   };
   $('btn-board-save').onclick = () => saveBoardName($('board-input').value.trim());
-  $('btn-board-hide').onclick = () => saveBoardName(null);
   $('board-input').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); saveBoardName($('board-input').value.trim()); }
     else if (e.key === 'Escape') { e.preventDefault(); $('board-input').blur(); show('board', false); }
