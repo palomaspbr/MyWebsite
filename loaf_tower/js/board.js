@@ -5,7 +5,7 @@
   'use strict';
   const LT = window.LT;
   const API = '/loaf_tower/api';
-  const KEY = 'lt.device', PKEY = 'lt.boardProfile';
+  const KEY = 'lt.device', PKEY = 'lt.boardProfile', RKEY = 'lt.resetSeen';
   const TIMEOUT = 6000;
   const ls = {
     get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } },
@@ -56,11 +56,15 @@
     for (const [k, v] of Object.entries(data.scores || {})) if (Number.isInteger(v) && v > 0) scores[k] = v;
     const dex = Array.isArray(data.dex) ? data.dex : [];
     const merge = data.merge && data.merge.at ? data.merge : null;
-    const sig = JSON.stringify([scores, dex.length, merge && merge.at]);
+    const sig = JSON.stringify([scores, dex.length, merge && merge.at, resetSeen()]);
     if ((!Object.keys(scores).length && !dex.length && !merge) || sig === lastSent) return profile; // nothing new to send
-    try { keep((await post('/sync', { device: deviceId(), scores, dex, merge })).profile); lastSent = sig; } catch (e) { /* offline: next time */ }
+    try { keep((await post('/sync', { device: deviceId(), scores, dex, merge, resetSeen: resetSeen() })).profile); lastSent = sig; } catch (e) { /* offline: next time */ }
     return profile;
   }
+  // Admin score fixes: the server sends resetAt; once this device has adopted those exact values it says so
+  // (until then the server ignores its uploads, so old higher records can't come back).
+  function resetSeen() { const r = ls.get(RKEY); return r && r.device === deviceId() ? r.at || 0 : 0; }
+  function ackReset(at) { ls.set(RKEY, { device: deviceId(), at }); lastSent = null; }
   // rename (accounts only)
   async function setName(name) { return keep((await post('/name', { device: deviceId(), name })).profile); }
   const board = (game) => call(`/board?game=${encodeURIComponent(game)}&device=${encodeURIComponent(deviceId())}`);
@@ -94,5 +98,5 @@
     deviceId();
   }
 
-  LT.Board = { deviceId, sync, flush, setName, board, login, signup, setPassword, logout, get profile() { return profile; } };
+  LT.Board = { deviceId, sync, flush, setName, board, login, signup, setPassword, resetSeen, ackReset, logout, get profile() { return profile; } };
 })();

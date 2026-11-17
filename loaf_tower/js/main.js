@@ -611,6 +611,19 @@
     const playingMerge = mode === 'play' && current === 'merge';
     if (m && m.at > store.get('mergeSaveAt', 0) && !playingMerge) { store.set('mergeSave', m.box); store.set('mergeSaveAt', m.at); }
     const s = (p && p.scores) || {};
+    if (p && p.resetAt && p.resetAt > LT.Board.resetSeen()) {
+      // the account's records were fixed by hand: take them exactly (they can be lower than this device's)
+      const v = (x) => (Number.isInteger(x) && x > 0 ? x : 0);
+      best = v(s.tower); store.set('best', best);
+      mergeBest = v(s.merge); store.set('mergeBest', mergeBest);
+      yarnLevel = v(s.yarn) + 1; store.set('yarnLevel', yarnLevel);
+      tileLevel = v(s.tiles) + 1; store.set('tileLevel', tileLevel);
+      mjLevel = v(s.mahjong) + 1; store.set('mjLevel', mjLevel);
+      LT.Board.ackReset(p.resetAt);
+      catchUpRewards();
+      updateTitle();
+      return;
+    }
     const up = (cur, v) => Math.max(cur, Number.isInteger(v) ? v : 0);
     best = up(best, s.tower); store.set('best', best);
     mergeBest = up(mergeBest, s.merge); store.set('mergeBest', mergeBest);
@@ -871,8 +884,16 @@
   $('btn-acc-cancel').onclick = closeAccForm;
   ['acc-name', 'acc-cur', 'acc-pass'].forEach((id) => $(id).addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); closeAccForm(); } }));
   $('acc-form').addEventListener('submit', (e) => { e.preventDefault(); submitAccForm(); });
-  $('btn-acc-logout').onclick = () => {
+  // Logging out leaves this device fresh: its records, Catdex and Merge box belong to the account (saved there),
+  // so they must not be carried into the next account that logs in here.
+  $('btn-acc-logout').onclick = async () => {
+    LT.Board.sync(bests());
+    await LT.Board.flush();
     LT.Board.logout();
+    best = 0; mergeBest = 0; yarnLevel = 1; tileLevel = 1; mjLevel = 1;
+    dex.clear();
+    [['best', 0], ['mergeBest', 0], ['yarnLevel', 1], ['tileLevel', 1], ['mjLevel', 1], ['dex', []], ['mergeSave', null], ['mergeSaveAt', 0]].forEach(([k, val]) => store.set(k, val));
+    updateTitle();
     $('board-input').value = '';
     closeAccForm();
     toast(L().loggedOut);

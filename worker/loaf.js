@@ -44,6 +44,16 @@ const DEFAULT_PASSWORDS = { paloma: 'pbkdf2$10000$WnJrVXbZRA1T7M7TlLTIQg==$CSd5M
 // best scores, Catdex and (newer) Purr Merge box go into the "into" profile, then "from" is deleted.
 const PROFILE_MERGES = [['cods', 'codinho']];
 // One-shot passwords set at the owner's request (salted hash only; applied once, after the merges).
+// One-shot exact score fixes (can lower scores). Sets reset_at, so devices replace their local records
+// with these values instead of pushing old (higher) ones back. 2026-11-16: undo an accidental login of
+// Codinho on Paloma's device, which copied each profile's records into the other.
+const SCORE_FIXES = {
+  marker: 'score_fix_20261116_v1',
+  profiles: {
+    paloma: { tower: 506, yarn: 27, merge: 9277, tiles: 20, mahjong: 20 },
+    codinho: { tower: 778, merge: 8553 },
+  },
+};
 const SET_PASSWORDS = { vass: 'pbkdf2$10000$fuR0pxWQu3F3iSJz4/Iz8Q==$FaEKKNUdrkuAoXMpsx288CDBTKBOJSoXc+9GkqY04xs=', codinho: 'pbkdf2$10000$3QULdLqSThnnDa9HiM9D0A==$/dp1sULYwW9V+rpBuq8c/i7yjz9TUdarLX7A5UOQk+Y=' };
 async function mergeProfiles(db, from, into) {
   const marker = `merge_${from}_into_${into}_v1`;
@@ -92,7 +102,7 @@ async function ensureSchema(db) {
   ]);
   // columns added after launch (ALTER fails harmlessly when the column already exists)
   for (const col of ['pass_hash TEXT', 'fails INTEGER NOT NULL DEFAULT 0', 'fail_at INTEGER NOT NULL DEFAULT 0',
-    'dex TEXT', 'merge_save TEXT', 'merge_at INTEGER NOT NULL DEFAULT 0']) {
+    'dex TEXT', 'merge_save TEXT', 'merge_at INTEGER NOT NULL DEFAULT 0', 'reset_at INTEGER NOT NULL DEFAULT 0']) {
     try { await db.prepare(`ALTER TABLE players ADD COLUMN ${col}`).run(); } catch (_) { /* already there */ }
   }
   // one-shot: the default password goes only to the profile that exists right now, never to a later
@@ -106,6 +116,18 @@ async function ensureSchema(db) {
     await db.batch(stmts);
   }
   for (const [from, into] of PROFILE_MERGES) await mergeProfiles(db, from, into);
+  if (!(await db.prepare('SELECT value FROM meta WHERE key = ?').bind(SCORE_FIXES.marker).first())) {
+    const now = Date.now(), stmts = [];
+    for (const [key, scores] of Object.entries(SCORE_FIXES.profiles)) {
+      const row = await db.prepare('SELECT device FROM players WHERE name_key = ?').bind(key).first();
+      if (!row) continue;
+      stmts.push(db.prepare('DELETE FROM scores WHERE device = ?').bind(row.device));
+      for (const [game, score] of Object.entries(scores)) stmts.push(db.prepare('INSERT INTO scores (device, game, score) VALUES (?, ?, ?)').bind(row.device, game, score));
+      stmts.push(db.prepare('UPDATE players SET reset_at = ? WHERE device = ?').bind(now, row.device));
+    }
+    stmts.push(db.prepare("INSERT OR IGNORE INTO meta (key, value) VALUES (?, datetime('now'))").bind(SCORE_FIXES.marker));
+    await db.batch(stmts);
+  }
   for (const [key, hash] of Object.entries(SET_PASSWORDS)) {
     const marker = `set_password_${key}_v1`;
     if (await db.prepare('SELECT value FROM meta WHERE key = ?').bind(marker).first()) continue;
@@ -222,7 +244,7 @@ async function saveCollection(db, dev, b) {
 }
 
 async function profile(db, dev) {
-  const p = await db.prepare('SELECT name, public, pass_hash, dex, merge_save, merge_at FROM players WHERE device = ?').bind(dev).first();
+  const p = await db.prepare('SELECT name, public, pass_hash, dex, merge_save, merge_at, reset_at FROM players WHERE device = ?').bind(dev).first();
   const rows = (await db.prepare('SELECT game, score FROM scores WHERE device = ?').bind(dev).all()).results || [];
   const scores = {};
   rows.forEach((r) => { scores[r.game] = r.score; });
@@ -230,6 +252,7 @@ async function profile(db, dev) {
   return {
     name: p ? p.name : null, public: !!(p && p.public), hasPassword: !!(p && p.pass_hash), scores,
     dex: parse(p && p.dex, []), merge: { box: parse(p && p.merge_save, null), at: (p && p.merge_at) || 0 },
+    resetAt: (p && p.reset_at) || 0,
   };
 }
 
@@ -243,6 +266,9 @@ async function handle(request, env, path) {
     const b = await body(request);
     const dev = device(b.device);
     const stmts = [db.prepare('INSERT OR IGNORE INTO players (device) VALUES (?)').bind(dev)];
+    // after an admin score fix, ignore what the device uploads until it has adopted the fixed values
+    const rs = await db.prepare('SELECT reset_at FROM players WHERE device = ?').bind(dev).first();
+    if (rs && rs.reset_at && !(Number(b.resetSeen) >= rs.reset_at)) return json({ profile: await profile(db, dev) });
     const scores = b.scores && typeof b.scores === 'object' && !Array.isArray(b.scores) ? b.scores : {};
     for (const [game, max] of Object.entries(GAMES)) {
       const v = scores[game];
@@ -305,18 +331,17 @@ async function handle(request, env, path) {
     if (!row) throw new ApiError(401, 'Wrong name or password.', 'wrong_login');
     if (!row.pass_hash) throw new ApiError(403, 'This profile has no password yet.', 'no_password');
     await verifyOrFail(db, row, b.password);
-    if (dev !== row.device) {
-      // bring this device's scores along (best of both), then drop the device's own profile if it had no name
+    const self = dev !== row.device ? await db.prepare('SELECT name, pass_hash FROM players WHERE device = ?').bind(dev).first() : null;
+    if (self && !self.pass_hash) {
+      // an anonymous (or old name-only) device profile: bring its scores along (best of both) and fold it in.
+      // A device that was logged into ANOTHER account never copies that account's scores over.
       const mine = (await db.prepare('SELECT game, score FROM scores WHERE device = ?').bind(dev).all()).results || [];
       const stmts = mine.map((r) => db.prepare(`INSERT INTO scores (device, game, score) VALUES (?, ?, ?)
         ON CONFLICT (device, game) DO UPDATE SET score = excluded.score, updated_at = datetime('now')
         WHERE excluded.score > scores.score`).bind(row.device, r.game, r.score));
-      const self = await db.prepare('SELECT name, pass_hash FROM players WHERE device = ?').bind(dev).first();
-      if (self && !self.pass_hash) { // nothing to log back into later: fold it into the account
-        stmts.push(db.prepare('DELETE FROM scores WHERE device = ?').bind(dev));
-        stmts.push(db.prepare('DELETE FROM players WHERE device = ?').bind(dev));
-      }
-      if (stmts.length) await db.batch(stmts);
+      stmts.push(db.prepare('DELETE FROM scores WHERE device = ?').bind(dev));
+      stmts.push(db.prepare('DELETE FROM players WHERE device = ?').bind(dev));
+      await db.batch(stmts);
     }
     return json({ device: row.device, profile: await profile(db, row.device) });
   }
