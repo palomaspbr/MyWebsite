@@ -67,7 +67,7 @@
     long: { shape: 'rr', w: 176, h: 52, r: 24, density: 1.3, face: [54, -3], fs: 0.85, paws: true, tail: -1, earSpread: 19,
       label: { en: 'Long Cat', pt: 'Gato Comprido' },
       desc: { en: 'Is long.', pt: 'É comprido.' } },
-    kitten: { shape: 'rr', w: 58, h: 48, r: 22, density: 0.9, face: [0, -2], fs: 0.62, bigEyes: true, tail: 1, ear: 28, earSpread: 30,
+    kitten: { shape: 'rr', w: 58, h: 48, r: 11, density: 0.9, face: [0, -2], fs: 0.62, bigEyes: true, tail: 1, ear: 28, earSpread: 30,
       label: { en: 'Kitten', pt: 'Filhote' },
       desc: { en: 'Tiny. Chaotic. Unbothered.', pt: 'Pequeno. Caótico. Tranquilo.' } },
     chonk: { shape: 'rr', w: 162, h: 100, r: 46, density: 2.4, face: [0, -10], fs: 1.3, paws: true, tail: 1, belly: true,
@@ -76,7 +76,7 @@
     box: { shape: 'rr', w: 180, h: 64, r: 6, density: 1.2, pal: 'box', custom: 'box',
       label: { en: 'Box Cat', pt: 'Gato na Caixa' },
       desc: { en: 'If it fits, it sits. Flat on top.', pt: 'Se cabe, senta. Reto em cima.' } },
-    zoomies: { shape: 'rr', w: 82, h: 72, r: 34, density: 1.3, face: [0, -4], fs: 0.9, paws: true, tail: 1,
+    zoomies: { shape: 'rr', w: 82, h: 72, r: 14, density: 1.3, face: [0, -4], fs: 0.9, paws: true, tail: 1,
       label: { en: 'Zoomies', pt: 'Gato Elétrico' },
       desc: { en: 'Lands… then goes feral for 2 seconds.', pt: 'Cai… e fica doido por 2 segundos.' } },
     perfect: { shape: 'rr', w: 140, h: 72, r: 10, density: 1.4, face: [0, 2], fs: 1, paws: true, pal: 'bread', earSpread: 26,
@@ -161,20 +161,20 @@
   });
 
   /* ---- Purr Merge tiers: round cats that merge into the next tier ----
-     Sizes grow gently (Sun King = 43% of the box width), so the last cat can actually be reached. */
+     Sun King = 52% of the box width: a skilled bot (tools/merge_smart.py) gets it in ~1 of 180 games. */
   const MERGE = [
-    ['bean', 22, 'cream', 'Bean', 'Feijãozinho', 'Smallest cat. Biggest dreams.', 'Menor gato. Maiores sonhos.'],
-    ['kit', 29, 'white', 'Kitty', 'Gatinho', 'Fits in a teacup.', 'Cabe numa xícara.'],
-    ['mochi', 36, 'mochi', 'Mochi', 'Mochi', 'Soft. Squishy. Pink.', 'Macio. Fofo. Rosa.'],
-    ['orange', 43, 'orange', 'Orange Ball', 'Bola Laranja', 'One brain cell, fully round.', 'Um neurônio, bem redondo.'],
-    ['gray', 50, 'gray', 'Smoky', 'Fumaça', 'Grumbles politely.', 'Resmunga com educação.'],
-    ['calico', 58, 'calico', 'Patches', 'Retalhos', 'Three colors, zero chill.', 'Três cores, zero calma.'],
-    ['siamese', 66, 'siamese', 'Duchess', 'Duquesa', 'Expects to be served.', 'Espera ser servida.'],
-    ['tuxedo', 74, 'tuxedo', 'Tux', 'Smoking', 'Dressed for the occasion.', 'Pronto para a festa.'],
-    ['black', 83, 'black', 'Big Void', 'Vazio', 'Stares into your soul.', 'Encara sua alma.'],
-    ['rainbow', 92, 'rainbow', 'Rainbow Orb', 'Orbe Arco-íris', 'Pure joy, compressed.', 'Alegria pura, compactada.'],
-    ['galaxy', 102, 'galaxy', 'Cosmic Orb', 'Orbe Cósmico', 'Merge two to crown a king.', 'Junte dois para coroar um rei.'],
-    ['sun', 113, 'sun', 'Sun King', 'Rei Sol', 'Merge two for a SUPERNOVA.', 'Junte dois: SUPERNOVA!'],
+    ['bean', 23, 'cream', 'Bean', 'Feijãozinho', 'Smallest cat. Biggest dreams.', 'Menor gato. Maiores sonhos.'],
+    ['kit', 30, 'white', 'Kitty', 'Gatinho', 'Fits in a teacup.', 'Cabe numa xícara.'],
+    ['mochi', 38, 'mochi', 'Mochi', 'Mochi', 'Soft. Squishy. Pink.', 'Macio. Fofo. Rosa.'],
+    ['orange', 47, 'orange', 'Orange Ball', 'Bola Laranja', 'One brain cell, fully round.', 'Um neurônio, bem redondo.'],
+    ['gray', 56, 'gray', 'Smoky', 'Fumaça', 'Grumbles politely.', 'Resmunga com educação.'],
+    ['calico', 66, 'calico', 'Patches', 'Retalhos', 'Three colors, zero chill.', 'Três cores, zero calma.'],
+    ['siamese', 76, 'siamese', 'Duchess', 'Duquesa', 'Expects to be served.', 'Espera ser servida.'],
+    ['tuxedo', 86, 'tuxedo', 'Tux', 'Smoking', 'Dressed for the occasion.', 'Pronto para a festa.'],
+    ['black', 98, 'black', 'Big Void', 'Vazio', 'Stares into your soul.', 'Encara sua alma.'],
+    ['rainbow', 110, 'rainbow', 'Rainbow Orb', 'Orbe Arco-íris', 'Pure joy, compressed.', 'Alegria pura, compactada.'],
+    ['galaxy', 123, 'galaxy', 'Cosmic Orb', 'Orbe Cósmico', 'Merge two to crown a king.', 'Junte dois para coroar um rei.'],
+    ['sun', 138, 'sun', 'Sun King', 'Rei Sol', 'Merge two for a SUPERNOVA.', 'Junte dois: SUPERNOVA!'],
   ];
   MERGE.forEach(([key, r, pal, en, pt, den, dpt], i) => {
     TYPES['m' + (i + 1)] = {
