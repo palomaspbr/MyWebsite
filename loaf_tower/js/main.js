@@ -19,6 +19,7 @@
   let lang = okLang(params.get('lang')) || okLang(store.get('lang', null)) || 'en';
   let best = store.get('best', 0);
   let mergeBest = store.get('mergeBest', 0);
+  let runBest0 = mergeBest; // Merge record when this run started (for the "new record" line)
   const lvlNum = (v) => Math.max(1, Math.floor(+v) || 1); // guard against junk in storage
   let yarnLevel = lvlNum(store.get('yarnLevel', 1)); // highest unlocked Yarn Lines level
   let yarnPlaying = yarnLevel;                // the level being played right now
@@ -249,6 +250,7 @@
     else if (id === 'mahjong') game = new LT.MahjongGame(Object.assign(common(), { level: mjPlaying }));
     else {
       game = new LT.MergeGame(Object.assign(common(), { best: mergeBest, save: store.get('mergeSave', null) })); // resume the box
+      runBest0 = mergeBest;
       if (game.badSave) { store.set('mergeSave', null); store.set('mergeSaveAt', Date.now()); } // a broken save is dropped
     }
     const l = L();
@@ -315,6 +317,7 @@
   function towerOver(sum) {
     lastSummary = Object.assign({ mode: 'tower' }, sum);
     if (sum.height > best) { best = sum.height; store.set('best', best); }
+    sendRecords();
     const l = L();
     openOver({
       title: l.over,
@@ -343,10 +346,10 @@
   function mergeOver(sum) {
     store.set('mergeSave', null);
     store.set('mergeSaveAt', Date.now());
-    LT.Board.sync(bests());
     lastSummary = Object.assign({ mode: 'merge' }, sum);
-    const newBest = sum.score > mergeBest;
-    if (newBest) { mergeBest = sum.score; store.set('mergeBest', mergeBest); }
+    const newBest = sum.score > runBest0;
+    if (sum.score > mergeBest) { mergeBest = sum.score; store.set('mergeBest', mergeBest); }
+    sendRecords(); // after the record is updated, so the leaderboard gets the new score right away
     const l = L();
     const bigName = sum.maxTier ? C.catLabel('m' + sum.maxTier, lang) : '';
     openOver({
@@ -362,6 +365,7 @@
     lastSummary = Object.assign({ mode: 'yarn' }, sum);
     yarnLevel = Math.max(yarnLevel, sum.level + 1);
     store.set('yarnLevel', yarnLevel);
+    sendRecords();
     const l = L();
     openOver({
       title: l.solved,
@@ -388,6 +392,7 @@
     lastSummary = Object.assign({ mode: current, won: true }, sum);
     if (current === 'mahjong') { mjLevel = Math.max(mjLevel, sum.level + 1); store.set('mjLevel', mjLevel); }
     else { tileLevel = Math.max(tileLevel, sum.level + 1); store.set('tileLevel', tileLevel); }
+    sendRecords();
     const l = L();
     openOver({
       title: l.solved,
@@ -923,9 +928,10 @@
     updateTitle();
   };
 
-  window.addEventListener('pagehide', saveMerge);
+  const leaving = () => { saveMerge(); liveRecord(Infinity); LT.Board.sync(bests()); LT.Board.flush(); };
+  window.addEventListener('pagehide', leaving);
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) saveMerge();
+    if (document.hidden) leaving();
     paused = document.hidden;
     if (audio.ctx) { if (paused) audio.ctx.suspend(); else audio.ctx.resume(); }
   });
@@ -950,12 +956,27 @@
       }
       if (n >= 5) acc = 0;
     }
+    liveRecord(now);
     if (game) {
       if (current === 'tower') { const sn = game.snapshot(false); sn.hudRestart = mode === 'play'; LT.Render.draw(ctx, sn, { scale, viewH, hud: mode === 'play' }); }
       else game.draw(ctx, { scale, viewH });
     }
     requestAnimationFrame(frame);
   }
+
+  // Records count the moment they're made: saved on this device at once and sent to the
+  // leaderboard within a few seconds (not only at game over or when going Home).
+  let liveCheckAt = 0, liveSyncAt = 0, liveDirty = false;
+  function liveRecord(now) {
+    if (now - liveCheckAt < 1000) return;
+    liveCheckAt = now;
+    if (mode === 'play' && game && game.state === 'play') {
+      if (current === 'tower' && Math.round(game.bestRun || 0) > best) { best = Math.round(game.bestRun); store.set('best', best); liveDirty = true; }
+      if (current === 'merge' && game.score > mergeBest) { mergeBest = game.score; store.set('mergeBest', mergeBest); liveDirty = true; }
+    }
+    if (liveDirty && now - liveSyncAt > 5000) { liveDirty = false; liveSyncAt = now; LT.Board.sync(bests()); }
+  }
+  function sendRecords() { liveDirty = false; LT.Board.sync(bests()); }
 
   async function boot() {
     resize();

@@ -448,12 +448,26 @@
       this.topVel += ((top - this.topSmooth) * k * k - 2 * k * this.topVel) * dt;
       this.topSmooth += this.topVel * dt;
 
+      // No floating cats: a resting (asleep or frozen) cat with nothing under it wakes up and falls.
+      // (Asleep cats don't notice when their support falls away, and the base freeze could lock a
+      // cat that dozed off against the side of the tower in mid-air.)
+      if (this.frame % 15 === 0) {
+        for (const c of this.cats) {
+          if (c.gone || !c.landed || this.t - c.landedT < 0.5) continue;
+          const b = c.body;
+          if (!b.isSleeping && !c.frozen) continue;
+          if (this.supported(c)) continue;
+          if (c.frozen) { M.Body.setStatic(b, false); c.frozen = false; }
+          M.Sleeping.set(b, false);
+        }
+      }
+
       // Settle the base: cats buried deep below the top that have stopped moving become solid.
       if (this.opts.freeze !== false) {
         for (const c of this.cats) {
           if (c.gone || !c.landed || c.frozen || this.t - c.landedT < 1.5) continue;
           const b = c.body;
-          if (b.bounds.min.y > top + (this.opts.freezeDepth || FREEZE_DEPTH) && b.speed < 0.3 && Math.abs(b.angularVelocity) < 0.012) {
+          if (b.bounds.min.y > top + (this.opts.freezeDepth || FREEZE_DEPTH) && b.speed < 0.3 && Math.abs(b.angularVelocity) < 0.012 && this.supported(c)) {
             M.Body.setStatic(b, true);
             c.frozen = true;
           }
@@ -514,6 +528,18 @@
       this.lastBubbleT = this.t;
     }
 
+    // Is something (the platform or another cat) right under this cat? Short rays down from its bottom.
+    supported(c) {
+      const b = c.body, bb = b.bounds, w = bb.max.x - bb.min.x;
+      const others = [this.platform];
+      for (const o of this.cats) if (!o.gone && o !== c) others.push(o.body);
+      for (const f of [0, -0.3, 0.3]) {
+        const x = b.position.x + f * w;
+        if (M.Query.ray(others, { x, y: b.position.y }, { x, y: bb.max.y + 14 }, 3).length) return true;
+      }
+      return false;
+    }
+
     fallen(c) {
       c.gone = true;
       c.goneT = this.t;
@@ -527,8 +553,11 @@
       if (this.firstFallT == null) this.firstFallT = this.t;
       if (c.landed) this.placed = Math.max(0, this.placed - 1);
       this.sfx('fall');
+      // One collapse costs one fish: cats that were already in the tower and fall within LIFE_GRACE
+      // of the fish being lost are free (said so on screen). A newly dropped cat always counts.
+      const grace = this.state === 'play' && !this.opts.strictLives && this.t - this.lastLifeLossT < LIFE_GRACE && c.bornT <= this.lastLifeLossT;
       const stackN = this.toasts.filter((x) => x.screen).length;
-      this.toasts.push({ text: this.L.fell(c.name), screen: true, x: 360, y: 1180 - stackN * 46, t0: this.t, dur: 1.6, size: 34, color: '#c92a2a', dy: -1 });
+      this.toasts.push({ text: grace ? this.L.fellFree(c.name) : this.L.fell(c.name), screen: true, x: 360, y: 1180 - stackN * 46, t0: this.t, dur: 1.6, size: grace ? 30 : 34, color: grace ? '#868e96' : '#c92a2a', dy: -1 });
       const recent = this.falls.filter((f) => this.t - f.t < 2.5).length;
       if (recent >= 3 && this.t - this.collapseShownAt > 3) {
         this.collapseShownAt = this.t;
@@ -537,7 +566,6 @@
         this.shake = 18;
       }
       if (this.state === 'play') {
-        const grace = !this.opts.strictLives && this.t - this.lastLifeLossT < LIFE_GRACE;
         if (!grace) {
           this.lives--;
           this.lastLifeLossT = this.t;

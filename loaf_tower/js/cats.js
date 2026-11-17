@@ -160,20 +160,21 @@
     t.fs = (t.fs || 1) * TOWER_K;
   });
 
-  /* ---- Purr Merge tiers: round cats that merge into the next tier ---- */
+  /* ---- Purr Merge tiers: round cats that merge into the next tier ----
+     Sizes grow gently (Sun King = 43% of the box width), so the last cat can actually be reached. */
   const MERGE = [
-    ['bean', 24, 'cream', 'Bean', 'Feijãozinho', 'Smallest cat. Biggest dreams.', 'Menor gato. Maiores sonhos.'],
-    ['kit', 32, 'white', 'Kitty', 'Gatinho', 'Fits in a teacup.', 'Cabe numa xícara.'],
-    ['mochi', 41, 'mochi', 'Mochi', 'Mochi', 'Soft. Squishy. Pink.', 'Macio. Fofo. Rosa.'],
-    ['orange', 51, 'orange', 'Orange Ball', 'Bola Laranja', 'One brain cell, fully round.', 'Um neurônio, bem redondo.'],
-    ['gray', 62, 'gray', 'Smoky', 'Fumaça', 'Grumbles politely.', 'Resmunga com educação.'],
-    ['calico', 73, 'calico', 'Patches', 'Retalhos', 'Three colors, zero chill.', 'Três cores, zero calma.'],
-    ['siamese', 85, 'siamese', 'Duchess', 'Duquesa', 'Expects to be served.', 'Espera ser servida.'],
-    ['tuxedo', 98, 'tuxedo', 'Tux', 'Smoking', 'Dressed for the occasion.', 'Pronto para a festa.'],
-    ['black', 112, 'black', 'Big Void', 'Vazio', 'Stares into your soul.', 'Encara sua alma.'],
-    ['rainbow', 127, 'rainbow', 'Rainbow Orb', 'Orbe Arco-íris', 'Pure joy, compressed.', 'Alegria pura, compactada.'],
-    ['galaxy', 144, 'galaxy', 'Cosmic Orb', 'Orbe Cósmico', 'Merge two to crown a king.', 'Junte dois para coroar um rei.'],
-    ['sun', 164, 'sun', 'Sun King', 'Rei Sol', 'Merge two for a SUPERNOVA.', 'Junte dois: SUPERNOVA!'],
+    ['bean', 22, 'cream', 'Bean', 'Feijãozinho', 'Smallest cat. Biggest dreams.', 'Menor gato. Maiores sonhos.'],
+    ['kit', 29, 'white', 'Kitty', 'Gatinho', 'Fits in a teacup.', 'Cabe numa xícara.'],
+    ['mochi', 36, 'mochi', 'Mochi', 'Mochi', 'Soft. Squishy. Pink.', 'Macio. Fofo. Rosa.'],
+    ['orange', 43, 'orange', 'Orange Ball', 'Bola Laranja', 'One brain cell, fully round.', 'Um neurônio, bem redondo.'],
+    ['gray', 50, 'gray', 'Smoky', 'Fumaça', 'Grumbles politely.', 'Resmunga com educação.'],
+    ['calico', 58, 'calico', 'Patches', 'Retalhos', 'Three colors, zero chill.', 'Três cores, zero calma.'],
+    ['siamese', 66, 'siamese', 'Duchess', 'Duquesa', 'Expects to be served.', 'Espera ser servida.'],
+    ['tuxedo', 74, 'tuxedo', 'Tux', 'Smoking', 'Dressed for the occasion.', 'Pronto para a festa.'],
+    ['black', 83, 'black', 'Big Void', 'Vazio', 'Stares into your soul.', 'Encara sua alma.'],
+    ['rainbow', 92, 'rainbow', 'Rainbow Orb', 'Orbe Arco-íris', 'Pure joy, compressed.', 'Alegria pura, compactada.'],
+    ['galaxy', 102, 'galaxy', 'Cosmic Orb', 'Orbe Cósmico', 'Merge two to crown a king.', 'Junte dois para coroar um rei.'],
+    ['sun', 113, 'sun', 'Sun King', 'Rei Sol', 'Merge two for a SUPERNOVA.', 'Junte dois: SUPERNOVA!'],
   ];
   MERGE.forEach(([key, r, pal, en, pt, den, dpt], i) => {
     TYPES['m' + (i + 1)] = {
@@ -211,6 +212,7 @@
   }
 
   // Outline points in box coordinates.
+  const CUP_DOME = 34, CUP_P = 4.5; // cupcake dome height and squareness (2 = round)
   function shapePoints(t) {
     if (t.shape === 'rr') return D.roundRect(t.w, t.h, t.r, 5);
     if (t.shape === 'pudim') {
@@ -218,11 +220,12 @@
       return D.roundPoly([[-wt / 2, -h / 2], [wt / 2, -h / 2], [wb / 2, h / 2], [-wb / 2, h / 2]], 15, 4);
     }
     if (t.shape === 'cupcake') {
-      const wt = t.w, wb = t.w * 0.64, h = t.h, dh = 40, top = -h / 2 + dh;
+      // muffin top: a squarish dome (superellipse), flat enough on top for the next cat to sit on
+      const wt = t.w, wb = t.w * 0.64, h = t.h, dh = CUP_DOME, top = -h / 2 + dh;
       const pts = [];
-      for (let i = 0; i <= 12; i++) {
-        const a = Math.PI + (i / 12) * Math.PI;
-        pts.push([Math.cos(a) * (wt / 2), top + Math.sin(a) * dh]);
+      for (let i = 0; i <= 16; i++) {
+        const a = Math.PI + (i / 16) * Math.PI, c = Math.cos(a), sn = Math.sin(a);
+        pts.push([Math.sign(c) * Math.pow(Math.abs(c), 2 / CUP_P) * (wt / 2), top - Math.pow(Math.abs(sn), 2 / CUP_P) * dh]);
       }
       pts.push([wb / 2, h / 2], [-wb / 2, h / 2]);
       return D.roundPoly(pts, 10, 3);
@@ -1018,10 +1021,10 @@
   }
 
   function drawCupcake(ctx, c, t, P, T, boil) {
-    const w = t.w, h = t.h, seed = c.seed, u = t.fs, dh = 40;
+    const w = t.w, h = t.h, seed = c.seed, u = t.fs, dh = CUP_DOME;
     const rim = -h / 2 + dh;
     const pts = getPts('cupcake');
-    const domeY = (x) => rim - dh * Math.sqrt(Math.max(0, 1 - Math.pow(x / (w / 2), 2)));
+    const domeY = (x) => rim - dh * Math.pow(Math.max(0, 1 - Math.pow(Math.abs(x / (w / 2)), CUP_P)), 1 / CUP_P);
     D.rim(ctx, pts, { seed, boil });
     drawEars(ctx, 0, domeY, 20, 30, P.ear, P.inner, seed, boil);
     D.fill(ctx, pts, { fill: P.fill, seed, boil }, () => {

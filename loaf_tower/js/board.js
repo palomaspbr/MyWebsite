@@ -34,7 +34,8 @@
     if (!r.ok) { const err = new Error(j.error || 'HTTP ' + r.status); err.status = r.status; err.code = j.code; throw err; }
     return j;
   }
-  const post = (path, data) => call(path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) });
+  // keepalive: a sync sent while the tab is closing still reaches the server
+  const post = (path, data) => call(path, { method: 'POST', keepalive: true, headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) });
 
   let profile = ls.get(PKEY); // last known profile (shown while offline)
   let pending = null, timer = null, lastSent = null;
