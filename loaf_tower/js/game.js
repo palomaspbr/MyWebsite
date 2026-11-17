@@ -13,7 +13,10 @@
   const DROP_SCREEN_Y = 228;
   const MAX_FALL_V = 9; // terminal velocity (px/step) so cats don't bounce off
   const DROP_GAP = 430; // max distance between the held cat and the tower top
-  const LAZY_SPIN = 0.84, LAZY_SLIDE = 0.86;
+  const LAZY_SPIN = 0.82, LAZY_SLIDE = 0.78; // grippier: landed cats barely slide
+  // Speed caps for cats that already landed (px/step): no cat gets flung across the screen by a
+  // physics hiccup (deep overlap, welds, bouncy pudim); falling off the tower still works (down is free).
+  const MAX_UP_V = 5, MAX_SIDE_V = 8, MAX_SPIN = 0.22;
   const FREEZE_DEPTH = 260;
   const LIFE_GRACE = 2.5; // one collapse = one lost fish, not three
   // Side-to-side peg speed (radians/s): base + extra per cm of tower height, capped.
@@ -93,6 +96,8 @@
       this.sfxSince = [];
       this.nextSpec = this.makeSpec(0);
       this.overEventSent = false;
+      this.restartArmT = null;
+      this.restartBtn = { x: 466, y: 120, r: 28 }; // HUD, between the height and the fish
       M.Events.on(e, 'collisionStart', (ev) => this.onCollide(ev));
       M.Events.on(e, 'beforeUpdate', () => this.beforePhysics());
     }
@@ -111,12 +116,12 @@
       if (MILESTONES[n] && !this.seenThisRun.has(MILESTONES[n])) return MILESTONES[n];
       if (n < 2) return 'loaf';
       // round, rolly cats (curl, kitten, zoomies) are rarer; flat ones (loaf, long, perfect, box) more common
-      const w = [['loaf', 36], ['curl', 5]];
-      if (n >= 3) w.push(['long', 14], ['perfect', 5]);
-      if (n >= 4) w.push(['kitten', 5]);
+      const w = [['loaf', 38], ['curl', 2]];
+      if (n >= 3) w.push(['long', 15], ['perfect', 6]);
+      if (n >= 4) w.push(['kitten', 2]);
       if (n >= 5) w.push(['chonk', 7]);
       if (n > 5) w.push(['box', 6]);
-      if (n > 8) w.push(['zoomies', 2]);
+      if (n > 8) w.push(['zoomies', 1]);
       if (n > 10) w.push(['cupcake', 3]);
       if (n > 13) w.push(['pudim', 3]);
       if (n > 16) w.push(['rainbow', 2.5]);
@@ -235,9 +240,17 @@
         if (c.zoomUntil > this.t && this.frame % 9 === 0) {
           M.Sleeping.set(b, false);
           const dir = (b.position.x > CX ? -1 : 1) * (this.rng() < 0.75 ? 1 : -1);
-          M.Body.applyForce(b, b.position, { x: dir * b.mass * 0.0035, y: -b.mass * 0.004 });
+          M.Body.applyForce(b, b.position, { x: dir * b.mass * 0.0035, y: -b.mass * 0.0028 });
           M.Body.setAngularVelocity(b, b.angularVelocity + dir * 0.015);
         }
+      }
+      for (const c of this.cats) {
+        if (c.gone || !c.landed) continue;
+        const b = c.body, v = b.velocity;
+        const up = c.zoomUntil > this.t ? MAX_UP_V + 2 : MAX_UP_V;
+        const vx = LT.clamp(v.x, -MAX_SIDE_V, MAX_SIDE_V), vy = Math.max(v.y, -up);
+        if (vx !== v.x || vy !== v.y) M.Body.setVelocity(b, { x: vx, y: vy });
+        if (Math.abs(b.angularVelocity) > MAX_SPIN) M.Body.setAngularVelocity(b, Math.sign(b.angularVelocity) * MAX_SPIN);
       }
       // "Lazy cats": landed cats resist sliding and spinning, so towers teeter slowly instead of
       // slipping apart. Badly balanced towers still topple - just dramatically.
@@ -592,7 +605,7 @@
         : null;
       const towerTop = this.towerTop == null ? GROUND_Y : this.towerTop;
       return {
-        t: this.t, camY: this.camY, shake: this.shake, state: this.state, lang: this.lang,
+        t: this.t, restartArmT: this.restartArmT, restartBtn: this.restartBtn, camY: this.camY, shake: this.shake, state: this.state, lang: this.lang,
         lives: this.lives, maxLives: this.opts.lives || 3, height: this.height, bestRun: this.bestRun, best: this.best,
         dropped: this.dropped, placed: this.placed, held, towerTop,
         next: this.nextSpec ? { type: this.nextSpec.type, pal: this.nextSpec.pal, seed: this.nextSpec.seed } : null,

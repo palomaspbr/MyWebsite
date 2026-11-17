@@ -332,9 +332,10 @@
     if (current === 'merge' && mode === 'play' && game && game.serialize) { store.set('mergeSave', game.serialize()); store.set('mergeSaveAt', Date.now()); }
   }
 
-  // HUD restart button (Purr Merge / Meow Match): start the same thing over, fresh.
+  // HUD restart button (Loaf Tower / Purr Merge / Meow Match / Mahjong): start the same thing over, fresh.
   function restartCurrent() {
-    if (current === 'merge') { store.set('mergeSave', null); store.set('mergeSaveAt', Date.now()); startMode('merge'); }
+    if (current === 'tower') startMode('tower');
+    else if (current === 'merge') { store.set('mergeSave', null); store.set('mergeSaveAt', Date.now()); startMode('merge'); }
     else if (current === 'tiles') startMode('tiles', tilePlaying);
     else if (current === 'mahjong') startMode('mahjong', mjPlaying);
   }
@@ -489,7 +490,7 @@
     const p = LT.Board.profile, l = L();
     const pub = p && p.public && p.name;
     $('board-note').textContent = pub ? l.boardPublic(p.name) : l.boardPrivate;
-    if (p && p.name && document.activeElement !== $('board-input')) $('board-input').value = p.name; // hidden players keep their name
+    if (p && p.name && document.activeElement !== $('board-input')) $('board-input').value = p.name;
     accountUI();
   }
   async function openBoard(game) {
@@ -546,27 +547,31 @@
       list.appendChild(li);
     }
   }
-  // name: text = go public with that name; null = hide (Save with an empty box does nothing)
+  // rename (accounts only; Save with an empty box does nothing)
   async function saveBoardName(name) {
     const l = L();
-    if (name === '') { $('board-input').focus(); return; }
+    if (!name) { $('board-input').focus(); return; }
     try {
       await LT.Board.setName(name);
-      toast(name ? l.nameSaved : l.nameHidden);
+      toast(l.nameSaved);
       openBoard(boardGame);
     } catch (e) {
-      const byCode = { name_taken: l.nameTaken, name_short: l.nameShort, name_long: l.nameLong, bad_name: l.nameShort };
+      const byCode = { name_taken: l.nameTaken, name_short: l.nameShort, name_long: l.nameLong, bad_name: l.nameShort, need_account: l.needAccount };
       $('board-note').textContent = byCode[e.code] || (e.status === 409 ? l.nameTaken : l.boardOffline);
     }
   }
 
   /* ---------- leaderboard account: log in (name + password), set / change password, log out ---------- */
-  let accMode = null; // 'login' | 'set' | 'change'
+  let accMode = null; // 'login' | 'signup' | 'set' | 'change'
   function accountUI() {
     const p = LT.Board.profile, l = L();
     const named = !!(p && p.name), locked = named && p.hasPassword;
-    $('acc-line').textContent = locked ? l.loggedInAs(p.name) : named ? l.setPassHint : l.loginHint;
+    // No account = no name on the board: log in or sign up (name + password). Old name-only profiles
+    // keep their name until they add a password.
+    $('acc-line').textContent = locked ? l.loggedInAs(p.name) : named ? l.legacyHint(p.name) : l.loginHint;
+    show('board-name-row', locked); // renaming is for accounts only
     show('btn-acc-login', !locked);
+    show('btn-acc-signup', !named);
     show('btn-acc-pass', named);
     $('btn-acc-pass').textContent = locked ? l.changePassword : l.setPassword;
     show('btn-acc-logout', locked);
@@ -576,16 +581,17 @@
     accMode = m;
     show('acc-form', true);
     show('acc-buttons', false);
-    show('acc-name', m === 'login');
+    show('acc-name', m === 'login' || m === 'signup');
     show('acc-cur', m === 'change');
     $('acc-name').placeholder = l.namePlaceholder;
     $('acc-cur').placeholder = l.currentPassPh;
-    $('acc-pass').placeholder = m === 'login' ? l.passwordPh : l.newPassPh;
+    $('acc-pass').placeholder = m === 'login' || m === 'signup' ? l.passwordPh : l.newPassPh;
+    $('acc-name').setAttribute('autocomplete', 'username');
     $('acc-pass').setAttribute('autocomplete', m === 'login' ? 'current-password' : 'new-password');
-    $('btn-acc-go').textContent = m === 'login' ? l.logIn : l.saveName;
+    $('btn-acc-go').textContent = m === 'login' ? l.logIn : m === 'signup' ? l.signUp : l.saveName;
     $('acc-msg').textContent = '';
     ['acc-cur', 'acc-pass'].forEach((id) => { $(id).value = ''; });
-    if (m === 'login') { $('acc-name').value = ''; $('acc-name').focus(); } else $(m === 'change' ? 'acc-cur' : 'acc-pass').focus();
+    if (m === 'login' || m === 'signup') { $('acc-name').value = ''; $('acc-name').focus(); } else $(m === 'change' ? 'acc-cur' : 'acc-pass').focus();
   }
   function closeAccForm() {
     accMode = null;
@@ -627,6 +633,10 @@
         applyProfileScores(p);
         LT.Board.sync(bests()); // this device's cats / records go up to the account too
         toast(l.loggedIn(p.name || ''));
+      } else if (accMode === 'signup') {
+        const p = await LT.Board.signup($('acc-name').value.trim(), $('acc-pass').value);
+        LT.Board.sync(bests());
+        toast(l.signedUp(p.name || ''));
       } else {
         await LT.Board.setPassword($('acc-pass').value, accMode === 'change' ? $('acc-cur').value : undefined);
         toast(l.passSaved);
@@ -635,7 +645,8 @@
       openBoard(boardGame);
     } catch (e) {
       const byCode = { wrong_login: l.wrongLogin, wrong_password: l.wrongPassword, no_password: l.noPassword, locked: l.loginLocked,
-        pass_short: l.passShort, pass_long: l.passShort, need_name: l.needName };
+        pass_short: l.passShort, pass_long: l.passShort, need_name: l.needName,
+        name_taken: l.nameTaken, name_short: l.nameShort, name_long: l.nameLong, bad_name: l.nameShort, has_account: l.hasAccount };
       msg.textContent = byCode[e.code] || l.boardOffline;
     } finally {
       submitAccForm.busy = false;
@@ -763,7 +774,15 @@
     if (!playing()) return;
     audio.init();
     if (performance.now() - startedAt < 350) return;
-    if (current === 'tower') { game.drop(); return; }
+    if (current === 'tower') {
+      const [x, y] = toLogical(e);
+      if (game.state === 'play' && LT.Render.HudRestart.hit(game.restartBtn, x, y)) { // HUD restart (two taps)
+        if (LT.Render.HudRestart.tap(game, game.restartBtn)) restartCurrent();
+        return;
+      }
+      game.drop();
+      return;
+    }
     if (activePointer != null && activePointer !== e.pointerId) return;
     activePointer = e.pointerId;
     try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
@@ -847,6 +866,7 @@
   $('btn-board').onclick = () => openBoard();
   $('btn-board-close').onclick = () => { closeAccForm(); show('board', false); };
   $('btn-acc-login').onclick = () => openAccForm('login');
+  $('btn-acc-signup').onclick = () => openAccForm('signup');
   $('btn-acc-pass').onclick = () => { const p = LT.Board.profile; openAccForm(p && p.hasPassword ? 'change' : 'set'); };
   $('btn-acc-cancel').onclick = closeAccForm;
   ['acc-name', 'acc-cur', 'acc-pass'].forEach((id) => $(id).addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); closeAccForm(); } }));
@@ -923,7 +943,7 @@
       if (n >= 5) acc = 0;
     }
     if (game) {
-      if (current === 'tower') LT.Render.draw(ctx, game.snapshot(false), { scale, viewH, hud: mode === 'play' });
+      if (current === 'tower') { const sn = game.snapshot(false); sn.hudRestart = mode === 'play'; LT.Render.draw(ctx, sn, { scale, viewH, hud: mode === 'play' }); }
       else game.draw(ctx, { scale, viewH });
     }
     requestAnimationFrame(frame);

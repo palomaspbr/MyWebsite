@@ -8,7 +8,9 @@
      POST /loaf_tower/api/sync   {device, scores: {tower, merge, yarn, tiles, mahjong}, dex: [types], merge: {box, at}}
                                  -> {profile}   (dex = Catdex, kept as a union; merge = the Purr Merge box in
                                  progress, the newest `at` wins; box null = cleared)
-     POST /loaf_tower/api/name   {device, name}   name null = hide from the board (name stays reserved) -> {profile}
+     POST /loaf_tower/api/signup {device, name, password}  create the account: name + password together (the only
+                                 way onto the public board) -> {profile}
+     POST /loaf_tower/api/name   {device, name}   rename; only for profiles that already have a password -> {profile}
      GET  /loaf_tower/api/board?game=tower&device=<id>                                    -> {game, top, me}
      POST /loaf_tower/api/login     {device, name, password}  -> {device, profile}  (this device joins that profile;
                                     its own scores are merged in and the empty device profile is removed)
@@ -37,6 +39,35 @@ const MAX_FAILS = 5, LOCK_SECONDS = 600;
 // The existing "Paloma" profile starts with a default password (only its salted hash lives here;
 // change it from the leaderboard once logged in).
 const DEFAULT_PASSWORDS = { paloma: 'pbkdf2$10000$WnJrVXbZRA1T7M7TlLTIQg==$CSd5Mc35FPFIKlF9Tf7gkoceQv9mg3m/xl2kRN0qL/A=' };
+
+// One-shot admin merges requested by the owner: [from name_key, into name_key]. The "from" profile's
+// best scores, Catdex and (newer) Purr Merge box go into the "into" profile, then "from" is deleted.
+const PROFILE_MERGES = [['cods', 'codinho']];
+// One-shot passwords set at the owner's request (salted hash only; applied once, after the merges).
+const SET_PASSWORDS = { vass: 'pbkdf2$10000$fuR0pxWQu3F3iSJz4/Iz8Q==$FaEKKNUdrkuAoXMpsx288CDBTKBOJSoXc+9GkqY04xs=', codinho: 'pbkdf2$10000$3QULdLqSThnnDa9HiM9D0A==$/dp1sULYwW9V+rpBuq8c/i7yjz9TUdarLX7A5UOQk+Y=' };
+async function mergeProfiles(db, from, into) {
+  const marker = `merge_${from}_into_${into}_v1`;
+  if (await db.prepare('SELECT value FROM meta WHERE key = ?').bind(marker).first()) return;
+  const src = await db.prepare('SELECT device, dex, merge_save, merge_at FROM players WHERE name_key = ?').bind(from).first();
+  const dst = await db.prepare('SELECT device, dex, merge_at FROM players WHERE name_key = ?').bind(into).first();
+  const stmts = [];
+  if (src && dst && src.device !== dst.device) {
+    const rows = (await db.prepare('SELECT game, score FROM scores WHERE device = ?').bind(src.device).all()).results || [];
+    for (const r of rows) stmts.push(db.prepare(`INSERT INTO scores (device, game, score) VALUES (?, ?, ?)
+      ON CONFLICT (device, game) DO UPDATE SET score = excluded.score, updated_at = datetime('now')
+      WHERE excluded.score > scores.score`).bind(dst.device, r.game, r.score));
+    const parse = (s) => { try { const a = JSON.parse(s || '[]'); return Array.isArray(a) ? a : []; } catch (_) { return []; } };
+    const dex = [...new Set([...parse(dst.dex), ...parse(src.dex)])];
+    stmts.push(db.prepare('UPDATE players SET dex = ? WHERE device = ?').bind(JSON.stringify(dex), dst.device));
+    if ((src.merge_at || 0) > (dst.merge_at || 0)) {
+      stmts.push(db.prepare('UPDATE players SET merge_save = ?, merge_at = ? WHERE device = ?').bind(src.merge_save, src.merge_at, dst.device));
+    }
+    stmts.push(db.prepare('DELETE FROM scores WHERE device = ?').bind(src.device));
+    stmts.push(db.prepare('DELETE FROM players WHERE device = ?').bind(src.device));
+  }
+  stmts.push(db.prepare("INSERT OR IGNORE INTO meta (key, value) VALUES (?, datetime('now'))").bind(marker));
+  await db.batch(stmts);
+}
 
 let ready = false;
 async function ensureSchema(db) {
@@ -73,6 +104,15 @@ async function ensureSchema(db) {
       db.prepare('UPDATE players SET pass_hash = ? WHERE name_key = ? AND pass_hash IS NULL').bind(hash, key));
     stmts.push(db.prepare("INSERT OR IGNORE INTO meta (key, value) VALUES ('default_passwords_v1', datetime('now'))"));
     await db.batch(stmts);
+  }
+  for (const [from, into] of PROFILE_MERGES) await mergeProfiles(db, from, into);
+  for (const [key, hash] of Object.entries(SET_PASSWORDS)) {
+    const marker = `set_password_${key}_v1`;
+    if (await db.prepare('SELECT value FROM meta WHERE key = ?').bind(marker).first()) continue;
+    await db.batch([
+      db.prepare('UPDATE players SET pass_hash = ?, fails = 0 WHERE name_key = ?').bind(hash, key),
+      db.prepare("INSERT OR IGNORE INTO meta (key, value) VALUES (?, datetime('now'))").bind(marker),
+    ]);
   }
   ready = true;
 }
@@ -220,19 +260,36 @@ async function handle(request, env, path) {
   if (path === '/name' && request.method === 'POST') {
     const b = await body(request);
     const dev = device(b.device);
+    const row = await db.prepare('SELECT pass_hash FROM players WHERE device = ?').bind(dev).first();
+    if (!row || !row.pass_hash) throw new ApiError(403, 'Sign up with a name and password first.', 'need_account');
+    const { name, key } = cleanName(b.name);
+    try {
+      await db.prepare(`UPDATE players SET name = ?, name_key = ?, public = 1, updated_at = datetime('now') WHERE device = ?`)
+        .bind(name, key, dev).run();
+    } catch (err) {
+      if (/UNIQUE/i.test(String(err && err.message || err))) throw new ApiError(409, 'That name is already taken.', 'name_taken');
+      throw err;
+    }
+    return json({ profile: await profile(db, dev) });
+  }
+
+  if (path === '/signup' && request.method === 'POST') {
+    const b = await body(request);
+    const dev = device(b.device);
+    const { name, key } = cleanName(b.name);
+    const password = cleanPassword(b.password);
     await db.prepare('INSERT OR IGNORE INTO players (device) VALUES (?)').bind(dev).run();
-    if (b.name == null) {
-      // hide from the public board; the name stays reserved for this device
-      await db.prepare(`UPDATE players SET public = 0, updated_at = datetime('now') WHERE device = ?`).bind(dev).run();
-    } else {
-      const { name, key } = cleanName(b.name);
-      try {
-        await db.prepare(`UPDATE players SET name = ?, name_key = ?, public = 1, updated_at = datetime('now') WHERE device = ?`)
-          .bind(name, key, dev).run();
-      } catch (err) {
-        if (/UNIQUE/i.test(String(err && err.message || err))) throw new ApiError(409, 'That name is already taken.', 'name_taken');
-        throw err;
-      }
+    const self = await db.prepare('SELECT pass_hash FROM players WHERE device = ?').bind(dev).first();
+    if (self && self.pass_hash) throw new ApiError(409, 'This device is already logged in. Log out first.', 'has_account');
+    const owner = await db.prepare('SELECT device FROM players WHERE name_key = ?').bind(key).first();
+    if (owner && owner.device !== dev) throw new ApiError(409, 'That name is already taken.', 'name_taken');
+    const hash = await hashPassword(password);
+    try {
+      await db.prepare(`UPDATE players SET name = ?, name_key = ?, public = 1, pass_hash = ?, fails = 0, updated_at = datetime('now')
+          WHERE device = ? AND pass_hash IS NULL`).bind(name, key, hash, dev).run();
+    } catch (err) {
+      if (/UNIQUE/i.test(String(err && err.message || err))) throw new ApiError(409, 'That name is already taken.', 'name_taken');
+      throw err;
     }
     return json({ profile: await profile(db, dev) });
   }

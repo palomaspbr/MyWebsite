@@ -61,7 +61,7 @@
     try { keep((await post('/sync', { device: deviceId(), scores, dex, merge })).profile); lastSent = sig; } catch (e) { /* offline: next time */ }
     return profile;
   }
-  // name = text to go public with that name; null = hide (the name stays reserved)
+  // rename (accounts only)
   async function setName(name) { return keep((await post('/name', { device: deviceId(), name })).profile); }
   const board = (game) => call(`/board?game=${encodeURIComponent(game)}&device=${encodeURIComponent(deviceId())}`);
 
@@ -70,6 +70,12 @@
     const r = await post('/login', { device: deviceId(), name, password });
     device = r.device;
     ls.set(KEY, device);
+    lastSent = null;
+    return keep(r.profile);
+  }
+  // Sign up: name + password together; the only way onto the public board.
+  async function signup(name, password) {
+    const r = await post('/signup', { device: deviceId(), name, password });
     lastSent = null;
     return keep(r.profile);
   }
@@ -88,5 +94,5 @@
     deviceId();
   }
 
-  LT.Board = { deviceId, sync, flush, setName, board, login, setPassword, logout, get profile() { return profile; } };
+  LT.Board = { deviceId, sync, flush, setName, board, login, signup, setPassword, logout, get profile() { return profile; } };
 })();

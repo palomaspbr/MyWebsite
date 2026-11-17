@@ -633,7 +633,7 @@
 
     /* ---------- drawing ---------- */
     drawTile(ctx, type, cx, cy, sc, boil, o) {
-      const img = tileImage(type, boil % 2);
+      const img = tileImage(type, 0); // one fixed frame: tiles stay still (the boil made them jitter)
       const w = img.width / RES, h = img.height / RES;
       ctx.save();
       ctx.translate(cx, cy);

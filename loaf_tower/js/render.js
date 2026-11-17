@@ -242,6 +242,7 @@
     D.text(ctx, `${Math.round(snap.height)} ${L.cm}`, 92, 74, { size: 74, align: 'left', seed: 11, boil, stroke: PAL.paper, strokeWidth: 10 });
     D.text(ctx, `${snap.placed} ${snap.placed === 1 ? L.cat : L.cats}`, 96, 128, { size: 32, font: LT.FONT_TEXT, align: 'left', seed: 12, boil, color: '#5c5248' });
     for (let i = 0; i < snap.maxLives; i++) drawFish(ctx, 520 + i * 62, 62, i < snap.lives, 500 + i * 7, boil);
+    if (snap.restartBtn && snap.state === 'play' && snap.hudRestart) HudRestart.draw(ctx, snap, snap.restartBtn, T, boil, L.tapAgain);
     if (snap.next && snap.state === 'play') {
       D.text(ctx, L.next, 574, 118, { size: 26, font: LT.FONT_TEXT, seed: 13, boil, color: '#5c5248', align: 'right' });
       const t = C.TYPES[snap.next.type];

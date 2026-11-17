@@ -243,8 +243,8 @@
     const verts = pts.map((p) => ({ x: p[0], y: p[1] }));
     const c = M.Vertices.centre(verts);
     const body = M.Bodies.fromVertices(x, y, [verts], {
-      friction: 0.85,
-      frictionStatic: 1.4,
+      friction: 1.1, // grippy fur: stacked cats don't slide off each other (was 0.85)
+      frictionStatic: 3,
       frictionAir: 0.012,
       restitution: t.bouncy ? 0.3 : 0,
       density: 0.001 * t.density,

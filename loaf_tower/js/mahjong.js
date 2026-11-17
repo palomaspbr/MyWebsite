@@ -79,7 +79,7 @@
   }
 
   function drawTile(ctx, type, cx, cy, sc, boil, o) {
-    const img = K.tileImage(type, boil % 2);
+    const img = K.tileImage(type, 0); // tiles stay still
     ctx.save();
     ctx.translate(cx, cy);
     ctx.scale(sc * (o && o.sx != null ? o.sx : 1), sc);
