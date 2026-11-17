@@ -47,13 +47,18 @@ const PROFILE_MERGES = [['cods', 'codinho']];
 // One-shot exact score fixes (can lower scores). Sets reset_at, so devices replace their local records
 // with these values instead of pushing old (higher) ones back. 2026-11-16: undo an accidental login of
 // Codinho on Paloma's device, which copied each profile's records into the other.
-const SCORE_FIXES = {
-  marker: 'score_fix_20261116_v1',
-  profiles: {
-    paloma: { tower: 506, yarn: 27, merge: 9277, tiles: 20, mahjong: 20 },
-    codinho: { tower: 778, merge: 8553 },
+// replace: true wipes the profile's other scores; otherwise only the listed games change.
+// 2026-11-17: Paloma's Merge 17387 (made while Merge was briefly too easy) goes back to 9277.
+const SCORE_FIXES = [
+  {
+    marker: 'score_fix_20261116_v1', replace: true,
+    profiles: {
+      paloma: { tower: 506, yarn: 27, merge: 9277, tiles: 20, mahjong: 20 },
+      codinho: { tower: 778, merge: 8553 },
+    },
   },
-};
+  { marker: 'score_fix_20261117_merge_v1', profiles: { paloma: { merge: 9277 } } },
+];
 const SET_PASSWORDS = { vass: 'pbkdf2$10000$fuR0pxWQu3F3iSJz4/Iz8Q==$FaEKKNUdrkuAoXMpsx288CDBTKBOJSoXc+9GkqY04xs=', codinho: 'pbkdf2$10000$3QULdLqSThnnDa9HiM9D0A==$/dp1sULYwW9V+rpBuq8c/i7yjz9TUdarLX7A5UOQk+Y=' };
 async function mergeProfiles(db, from, into) {
   const marker = `merge_${from}_into_${into}_v1`;
@@ -116,16 +121,20 @@ async function ensureSchema(db) {
     await db.batch(stmts);
   }
   for (const [from, into] of PROFILE_MERGES) await mergeProfiles(db, from, into);
-  if (!(await db.prepare('SELECT value FROM meta WHERE key = ?').bind(SCORE_FIXES.marker).first())) {
+  for (const fix of SCORE_FIXES) {
+    if (await db.prepare('SELECT value FROM meta WHERE key = ?').bind(fix.marker).first()) continue;
     const now = Date.now(), stmts = [];
-    for (const [key, scores] of Object.entries(SCORE_FIXES.profiles)) {
+    for (const [key, scores] of Object.entries(fix.profiles)) {
       const row = await db.prepare('SELECT device FROM players WHERE name_key = ?').bind(key).first();
       if (!row) continue;
-      stmts.push(db.prepare('DELETE FROM scores WHERE device = ?').bind(row.device));
-      for (const [game, score] of Object.entries(scores)) stmts.push(db.prepare('INSERT INTO scores (device, game, score) VALUES (?, ?, ?)').bind(row.device, game, score));
+      if (fix.replace) stmts.push(db.prepare('DELETE FROM scores WHERE device = ?').bind(row.device));
+      for (const [game, score] of Object.entries(scores)) {
+        stmts.push(db.prepare(`INSERT INTO scores (device, game, score) VALUES (?, ?, ?)
+          ON CONFLICT (device, game) DO UPDATE SET score = excluded.score, updated_at = datetime('now')`).bind(row.device, game, score));
+      }
       stmts.push(db.prepare('UPDATE players SET reset_at = ? WHERE device = ?').bind(now, row.device));
     }
-    stmts.push(db.prepare("INSERT OR IGNORE INTO meta (key, value) VALUES (?, datetime('now'))").bind(SCORE_FIXES.marker));
+    stmts.push(db.prepare("INSERT OR IGNORE INTO meta (key, value) VALUES (?, datetime('now'))").bind(fix.marker));
     await db.batch(stmts);
   }
   for (const [key, hash] of Object.entries(SET_PASSWORDS)) {
