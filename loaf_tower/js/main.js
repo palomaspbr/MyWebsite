@@ -490,7 +490,6 @@
     const p = LT.Board.profile, l = L();
     const pub = p && p.public && p.name;
     $('board-note').textContent = pub ? l.boardPublic(p.name) : l.boardPrivate;
-    if (p && p.name && document.activeElement !== $('board-input')) $('board-input').value = p.name;
     accountUI();
   }
   async function openBoard(game) {
@@ -505,7 +504,6 @@
       b.onclick = () => openBoard(g);
       tabs.appendChild(b);
     });
-    $('board-input').placeholder = l.namePlaceholder;
     show('board', true);
     const list = $('board-list');
     list.innerHTML = '';
@@ -547,29 +545,16 @@
       list.appendChild(li);
     }
   }
-  // rename (accounts only; Save with an empty box does nothing)
-  async function saveBoardName(name) {
-    const l = L();
-    if (!name) { $('board-input').focus(); return; }
-    try {
-      await LT.Board.setName(name);
-      toast(l.nameSaved);
-      openBoard(boardGame);
-    } catch (e) {
-      const byCode = { name_taken: l.nameTaken, name_short: l.nameShort, name_long: l.nameLong, bad_name: l.nameShort, need_account: l.needAccount };
-      $('board-note').textContent = byCode[e.code] || (e.status === 409 ? l.nameTaken : l.boardOffline);
-    }
-  }
 
   /* ---------- leaderboard account: log in (name + password), set / change password, log out ---------- */
-  let accMode = null; // 'login' | 'signup' | 'set' | 'change'
+  let accMode = null; // 'login' | 'signup' | 'set' | 'change' | 'rename'
   function accountUI() {
     const p = LT.Board.profile, l = L();
     const named = !!(p && p.name), locked = named && p.hasPassword;
     // No account = no name on the board: log in or sign up (name + password). Old name-only profiles
     // keep their name until they add a password.
     $('acc-line').textContent = locked ? l.loggedInAs(p.name) : named ? l.legacyHint(p.name) : l.loginHint;
-    show('board-name-row', locked); // renaming is for accounts only
+    show('btn-acc-name', locked); // renaming is for accounts only; the name itself is plain text
     show('btn-acc-login', !locked);
     show('btn-acc-signup', !named);
     show('btn-acc-pass', named);
@@ -581,8 +566,9 @@
     accMode = m;
     show('acc-form', true);
     show('acc-buttons', false);
-    show('acc-name', m === 'login' || m === 'signup');
+    show('acc-name', m === 'login' || m === 'signup' || m === 'rename');
     show('acc-cur', m === 'change');
+    show('acc-pass', m !== 'rename');
     $('acc-name').placeholder = l.namePlaceholder;
     $('acc-cur').placeholder = l.currentPassPh;
     $('acc-pass').placeholder = m === 'login' || m === 'signup' ? l.passwordPh : l.newPassPh;
@@ -591,7 +577,8 @@
     $('btn-acc-go').textContent = m === 'login' ? l.logIn : m === 'signup' ? l.signUp : l.saveName;
     $('acc-msg').textContent = '';
     ['acc-cur', 'acc-pass'].forEach((id) => { $(id).value = ''; });
-    if (m === 'login' || m === 'signup') { $('acc-name').value = ''; $('acc-name').focus(); } else $(m === 'change' ? 'acc-cur' : 'acc-pass').focus();
+    if (m === 'rename') { const p = LT.Board.profile; $('acc-name').value = (p && p.name) || ''; $('acc-name').focus(); $('acc-name').select(); }
+    else if (m === 'login' || m === 'signup') { $('acc-name').value = ''; $('acc-name').focus(); } else $(m === 'change' ? 'acc-cur' : 'acc-pass').focus();
   }
   function closeAccForm() {
     accMode = null;
@@ -646,6 +633,11 @@
         applyProfileScores(p);
         LT.Board.sync(bests()); // this device's cats / records go up to the account too
         toast(l.loggedIn(p.name || ''));
+      } else if (accMode === 'rename') {
+        const name = $('acc-name').value.trim();
+        if (!name) { msg.textContent = l.nameShort; $('acc-name').focus(); return; }
+        await LT.Board.setName(name);
+        toast(l.nameSaved);
       } else if (accMode === 'signup') {
         const p = await LT.Board.signup($('acc-name').value.trim(), $('acc-pass').value);
         LT.Board.sync(bests());
@@ -659,7 +651,7 @@
     } catch (e) {
       const byCode = { wrong_login: l.wrongLogin, wrong_password: l.wrongPassword, no_password: l.noPassword, locked: l.loginLocked,
         pass_short: l.passShort, pass_long: l.passShort, need_name: l.needName,
-        name_taken: l.nameTaken, name_short: l.nameShort, name_long: l.nameLong, bad_name: l.nameShort, has_account: l.hasAccount };
+        name_taken: l.nameTaken, name_short: l.nameShort, name_long: l.nameLong, bad_name: l.nameShort, has_account: l.hasAccount, need_account: l.needAccount };
       msg.textContent = byCode[e.code] || l.boardOffline;
     } finally {
       submitAccForm.busy = false;
@@ -894,16 +886,11 @@
     dex.clear();
     [['best', 0], ['mergeBest', 0], ['yarnLevel', 1], ['tileLevel', 1], ['mjLevel', 1], ['dex', []], ['mergeSave', null], ['mergeSaveAt', 0]].forEach(([k, val]) => store.set(k, val));
     updateTitle();
-    $('board-input').value = '';
     closeAccForm();
     toast(L().loggedOut);
     openBoard(boardGame);
   };
-  $('btn-board-save').onclick = () => saveBoardName($('board-input').value.trim());
-  $('board-input').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); saveBoardName($('board-input').value.trim()); }
-    else if (e.key === 'Escape') { e.preventDefault(); $('board-input').blur(); show('board', false); }
-  });
+  $('btn-acc-name').onclick = () => openAccForm('rename');
   $('btn-over-dex').onclick = openDex;
   $('btn-dex-close').onclick = () => show('dex', false);
   $('btn-clip-close').onclick = () => { if (!clipBusy) show('clip', false); };
