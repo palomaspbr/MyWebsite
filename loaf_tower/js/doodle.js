@@ -85,11 +85,15 @@
 
   // Offset each point by a little hash noise. `boil` changes a few times a second,
   // which makes the lines shimmer like frame-by-frame hand animation.
+  // D.BOIL_MIX (0..1, optional): how far a boil frame moves away from frame 0 (subtler shimmer).
+  D.BOIL_MIX = null;
   D.wobble = function (pts, seed, boil, amp) {
     const out = new Array(pts.length);
+    const m = D.BOIL_MIX;
+    const n = m == null || !boil ? (s, i) => H(s, i, boil) : (s, i) => H(s, i, 0) * (1 - m) + H(s, i, boil) * m;
     for (let i = 0; i < pts.length; i++) {
       const p = pts[i];
-      out[i] = [p[0] + H(seed, i, boil) * amp, p[1] + H(seed + 7919, i, boil) * amp];
+      out[i] = [p[0] + n(seed, i) * amp, p[1] + n(seed + 7919, i) * amp];
     }
     return out;
   };

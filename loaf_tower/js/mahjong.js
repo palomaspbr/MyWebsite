@@ -78,8 +78,9 @@
     return { spec, tiles, pairs };
   }
 
+  let drawT = 0; // game time of the frame being drawn (set in draw)
   function drawTile(ctx, type, cx, cy, sc, boil, o) {
-    const img = K.tileImage(type, 0); // tiles stay still
+    const img = K.tileImage(type, K.tileFrame(drawT, cx, cy)); // gentle, staggered shimmer
     ctx.save();
     ctx.translate(cx, cy);
     ctx.scale(sc * (o && o.sx != null ? o.sx : 1), sc);
@@ -349,6 +350,7 @@
     /* ---------- drawing ---------- */
     draw(ctx, view) {
       const T = this.t, boil = Math.floor(T * 8) % 4;
+      drawT = T;
       const viewH = view.viewH || LT.H;
       const L = this.L;
       ctx.save();

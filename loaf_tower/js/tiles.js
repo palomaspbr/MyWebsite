@@ -311,8 +311,11 @@
   }
 
   // Cached tile images: one small canvas per face and boil frame (2 frames keep the lines alive).
+  // Frame 1 sits close to frame 0 (BOIL_MIX), and tileFrame() flips each tile slowly at its own moment,
+  // so the board breathes gently instead of jittering all at once.
   const RES = 2.2, PAD = 6;
   const tileCache = {};
+  const tileFrame = (T, cx, cy) => Math.floor(T * 2.5 + Math.abs(Math.sin(cx * 12.9898 + cy * 78.233)) * 2) & 1;
   function tileImage(type, boil) {
     const k = type + '|' + boil;
     if (tileCache[k]) return tileCache[k];
@@ -324,12 +327,16 @@
     g.translate(PAD + TW / 2, PAD + TH / 2);
     const seed = FACE_NAMES.indexOf(type) * 17 + 300;
     D.fixed(() => { // tiles are objects: cream face, dark ink in both themes (so the cache never changes)
+      const mix = D.BOIL_MIX;
+      D.BOIL_MIX = 0.4;
+      try {
       D.shape(g, D.roundRect(TW, TH, 14, 3).map((p) => [p[0] + 5, p[1] + 6]), { fill: SIDE, seed: seed + 1, boil, lw: 3 });
       D.shape(g, D.roundRect(TW, TH, 14, 3), { fill: FACE, seed, boil, lw: 3.2 });
       g.save();
       g.scale(0.66, 0.66);
       FACES[type](g, boil);
       g.restore();
+      } finally { D.BOIL_MIX = mix; }
     });
     tileCache[k] = cv;
     return cv;
@@ -633,7 +640,7 @@
 
     /* ---------- drawing ---------- */
     drawTile(ctx, type, cx, cy, sc, boil, o) {
-      const img = tileImage(type, 0); // one fixed frame: tiles stay still (the boil made them jitter)
+      const img = tileImage(type, tileFrame(this.t, cx, cy));
       const w = img.width / RES, h = img.height / RES;
       ctx.save();
       ctx.translate(cx, cy);
@@ -756,5 +763,5 @@
   TileGame.TRAY = TRAY;
   LT.TileGame = TileGame;
   // shared pieces for the Mahjong mode (js/mahjong.js)
-  LT.TileKit = { build, overlaps, shuffleArr, FACE_NAMES, tileImage, rr, REWARDS, TW, TH, PAD, RES };
+  LT.TileKit = { build, overlaps, shuffleArr, FACE_NAMES, tileImage, tileFrame, rr, REWARDS, TW, TH, PAD, RES };
 })();
