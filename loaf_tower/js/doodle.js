@@ -86,11 +86,15 @@
   // Offset each point by a little hash noise. `boil` changes a few times a second,
   // which makes the lines shimmer like frame-by-frame hand animation.
   // D.BOIL_MIX (0..1, optional): how far a boil frame moves away from frame 0 (subtler shimmer).
+  // Applies to lines, fills, shading and lettering.
   D.BOIL_MIX = null;
+  function HB(s, i, boil) {
+    const m = D.BOIL_MIX;
+    return m == null || !boil ? H(s, i, boil) : H(s, i, 0) * (1 - m) + H(s, i, boil) * m;
+  }
   D.wobble = function (pts, seed, boil, amp) {
     const out = new Array(pts.length);
-    const m = D.BOIL_MIX;
-    const n = m == null || !boil ? (s, i) => H(s, i, boil) : (s, i) => H(s, i, 0) * (1 - m) + H(s, i, boil) * m;
+    const n = (s, i) => HB(s, i, boil);
     for (let i = 0; i < pts.length; i++) {
       const p = pts[i];
       out[i] = [p[0] + n(seed, i) * amp, p[1] + n(seed + 7919, i) * amp];
@@ -290,7 +294,7 @@
     ctx.lineCap = 'round';
     ctx.beginPath();
     for (let x = -w / 2 - 20, i = 0; x < w / 2 + 10; x += 8, i++) {
-      const j = H(seed, i, boil) * 1.5;
+      const j = HB(seed, i, boil) * 1.5;
       ctx.moveTo(x + j, h / 2 + 4);
       ctx.lineTo(x + 16 + j, h / 2 - h * 0.28 + H(seed + 3, i, 0) * 3);
     }
@@ -312,8 +316,8 @@
     let cx = o.align === 'left' ? x : o.align === 'right' ? x - total : x - total / 2;
     const boil = o.boil || 0, seed = o.seed || 7;
     for (let i = 0; i < chars.length; i++) {
-      const jr = H(seed, i, boil) * (o.jitter == null ? 0.06 : o.jitter);
-      const jy = H(seed + 5, i, boil) * size * 0.03;
+      const jr = HB(seed, i, boil) * (o.jitter == null ? 0.06 : o.jitter);
+      const jy = HB(seed + 5, i, boil) * size * 0.03;
       ctx.save();
       ctx.translate(cx + widths[i] / 2, y + jy);
       ctx.rotate(jr);

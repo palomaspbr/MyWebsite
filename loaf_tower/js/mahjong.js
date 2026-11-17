@@ -348,8 +348,14 @@
     }
 
     /* ---------- drawing ---------- */
+    // like Meow Match: the HUD, tray and buttons boil slower and softer than the tiles
     draw(ctx, view) {
-      const T = this.t, boil = Math.floor(T * 8) % 4;
+      const mix = D.BOIL_MIX;
+      D.BOIL_MIX = K.UI_BOIL_MIX;
+      try { this.drawScene(ctx, view); } finally { D.BOIL_MIX = mix; }
+    }
+    drawScene(ctx, view) {
+      const T = this.t, boil = Math.floor(T * K.UI_BOIL_FPS) % 4;
       drawT = T;
       const viewH = view.viewH || LT.H;
       const L = this.L;

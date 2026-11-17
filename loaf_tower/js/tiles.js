@@ -315,7 +315,8 @@
   // so the board breathes gently instead of jittering all at once.
   const RES = 2.2, PAD = 6;
   const tileCache = {};
-  const tileFrame = (T, cx, cy) => Math.floor(T * 2.5 + Math.abs(Math.sin(cx * 12.9898 + cy * 78.233)) * 2) & 1;
+  const UI_BOIL_MIX = 0.4, UI_BOIL_FPS = 5;
+  const tileFrame = (T, cx, cy) => Math.floor(T * 3.5 + Math.abs(Math.sin(cx * 12.9898 + cy * 78.233)) * 2) & 1;
   function tileImage(type, boil) {
     const k = type + '|' + boil;
     if (tileCache[k]) return tileCache[k];
@@ -328,7 +329,7 @@
     const seed = FACE_NAMES.indexOf(type) * 17 + 300;
     D.fixed(() => { // tiles are objects: cream face, dark ink in both themes (so the cache never changes)
       const mix = D.BOIL_MIX;
-      D.BOIL_MIX = 0.4;
+      D.BOIL_MIX = 0.65; // tiles: lively but soft
       try {
       D.shape(g, D.roundRect(TW, TH, 14, 3).map((p) => [p[0] + 5, p[1] + 6]), { fill: SIDE, seed: seed + 1, boil, lw: 3 });
       D.shape(g, D.roundRect(TW, TH, 14, 3), { fill: FACE, seed, boil, lw: 3.2 });
@@ -654,8 +655,14 @@
       ctx.restore();
     }
 
+    // The rest of the screen (HUD, tray, buttons) boils slower and softer than the tiles.
     draw(ctx, view) {
-      const T = this.t, boil = Math.floor(T * 8) % 4;
+      const mix = D.BOIL_MIX;
+      D.BOIL_MIX = UI_BOIL_MIX;
+      try { this.drawScene(ctx, view); } finally { D.BOIL_MIX = mix; }
+    }
+    drawScene(ctx, view) {
+      const T = this.t, boil = Math.floor(T * UI_BOIL_FPS) % 4;
       const viewH = view.viewH || LT.H;
       const L = this.L;
       ctx.save();
@@ -763,5 +770,5 @@
   TileGame.TRAY = TRAY;
   LT.TileGame = TileGame;
   // shared pieces for the Mahjong mode (js/mahjong.js)
-  LT.TileKit = { build, overlaps, shuffleArr, FACE_NAMES, tileImage, tileFrame, rr, REWARDS, TW, TH, PAD, RES };
+  LT.TileKit = { build, overlaps, shuffleArr, FACE_NAMES, tileImage, tileFrame, UI_BOIL_MIX, UI_BOIL_FPS, rr, REWARDS, TW, TH, PAD, RES };
 })();
