@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Floating Foundry</title>
+  <meta name="description" content="Floating Foundry: um incremental de automação numa ilha flutuante. Colete, construa esteiras e máquinas e expanda sua ilha no céu. Protótipo feito em Unity, por Paloma Liz.">
+  <meta name="theme-color" content="#6cc6da">
+  <meta property="og:title" content="Floating Foundry">
+  <meta property="og:description" content="Incremental de automação numa ilha flutuante — protótipo jogável no navegador.">
+  <meta property="og:url" content="https://palomaliz.com.br/incremental/">
+  <meta name="robots" content="noindex">
+  <style>
+    @font-face {
+      font-family: 'Patrick Hand';
+      src: url('/static/fonts/PatrickHand-Regular.ttf') format('truetype');
+      font-display: swap;
+    }
+    :root {
+      --sky-top: #6cc6da;
+      --sky-mid: #b5e6ee;
+      --sky-bottom: #ebd3ee;
+      --ink: #4a3f66;
+      --ink-soft: #7a6e96;
+      --pink: #f49ac1;
+      --teal: #6cc6c0;
+      --paper: #fff9f2;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0; width: 100%; height: 100%;
+      overflow: hidden; overscroll-behavior: none;
+      background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 55%, var(--sky-bottom) 100%);
+      font-family: 'Patrick Hand', system-ui, sans-serif; color: var(--ink);
+      -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+    }
+    #unity-canvas {
+      position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100dvh;
+      display: block; touch-action: none; outline: none; background: transparent;
+    }
+    #loader {
+      position: fixed; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 18px; padding: 24px;
+      transition: opacity .5s ease;
+    }
+    #loader.done { opacity: 0; pointer-events: none; }
+    .island { width: 132px; height: 132px; animation: bob 3.2s ease-in-out infinite; }
+    @keyframes bob { 50% { transform: translateY(-10px); } }
+    h1 { margin: 0; font-size: clamp(40px, 9vw, 72px); font-weight: normal; letter-spacing: 1px;
+         color: #fff; text-shadow: 0 3px 0 rgba(74,63,102,.25); }
+    .tag { margin: -8px 0 6px; font-size: clamp(18px, 4vw, 24px); color: var(--ink); opacity: .8; text-align: center; }
+    .bar { width: min(340px, 78vw); height: 18px; border-radius: 12px; background: rgba(255,255,255,.55);
+           overflow: hidden; box-shadow: inset 0 2px 0 rgba(74,63,102,.08); }
+    .fill { height: 100%; width: 0; border-radius: 12px; background: linear-gradient(90deg, var(--pink), var(--teal));
+            transition: width .2s ease; }
+    #status { font-size: 20px; color: var(--ink-soft); min-height: 26px; text-align: center; }
+    #error { display: none; max-width: 520px; background: var(--paper); border-radius: 18px; padding: 16px 20px;
+             font-size: 20px; text-align: center; box-shadow: 0 6px 0 rgba(74,63,102,.12); }
+    #fs {
+      position: fixed; right: max(12px, env(safe-area-inset-right)); bottom: max(12px, env(safe-area-inset-bottom));
+      width: 44px; height: 44px; border: 0; border-radius: 14px; background: rgba(255,255,255,.75);
+      color: var(--ink); font-size: 22px; cursor: pointer; display: none; z-index: 5;
+    }
+    #fs.show { display: block; }
+    @media (pointer: coarse), (max-aspect-ratio: 1/1) { #fs.show { display: none; } }
+  </style>
+</head>
+<body>
+  <canvas id="unity-canvas" tabindex="-1"></canvas>
+
+  <div id="loader">
+    <svg class="island" viewBox="0 0 120 120" aria-hidden="true">
+      <ellipse cx="60" cy="112" rx="34" ry="5" fill="#4a3f66" opacity=".12"/>
+      <path d="M18 52 h84 l-10 18 l-14 24 l-10 16 l-8-12 l-12-16 l-14-14 z" fill="#a87260"/>
+      <path d="M30 70 l12 14 l12 16 l8 12 l10-16 l10-18 z" fill="#5c8e9a"/>
+      <rect x="16" y="44" width="88" height="12" rx="4" fill="#93d38c"/>
+      <rect x="70" y="48" width="8" height="64" fill="#c9b8f5" opacity=".85"/>
+      <rect x="38" y="22" width="5" height="24" fill="#7a5245"/>
+      <circle cx="40" cy="20" r="14" fill="#f49ac1"/><circle cx="52" cy="26" r="10" fill="#f7b8d3"/><circle cx="30" cy="28" r="9" fill="#e77fae"/>
+      <path d="M78 26 l6 -14 l6 14 l-6 14 z" fill="#8ff3f7"/>
+    </svg>
+    <h1>Floating Foundry</h1>
+    <p class="tag">Automatize e expanda sua ilha no céu</p>
+    <div class="bar"><div class="fill" id="fill"></div></div>
+    <div id="status">Carregando…</div>
+    <div id="error"></div>
+  </div>
+
+  <button id="fs" title="Tela cheia" aria-label="Tela cheia">⛶</button>
+
+  <script>
+    (function () {
+      var canvas = document.getElementById('unity-canvas');
+      var fill = document.getElementById('fill');
+      var status = document.getElementById('status');
+      var loader = document.getElementById('loader');
+      var errorBox = document.getElementById('error');
+      var fsBtn = document.getElementById('fs');
+      var buildUrl = 'Build';
+      var name = 'WebGL';
+      var config = {
+        dataUrl: buildUrl + '/' + name + '.data.unityweb',
+        frameworkUrl: buildUrl + '/' + name + '.framework.js.unityweb',
+        codeUrl: buildUrl + '/' + name + '.wasm.unityweb',
+        streamingAssetsUrl: 'StreamingAssets',
+        companyName: 'Paloma Liz',
+        productName: 'Floating Foundry',
+        productVersion: '0.1',
+        // Cap the resolution on phones (the game renders a pixel-art look anyway).
+        devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2),
+        matchWebGLToCanvasSize: true,
+        showBanner: function (msg, type) {
+          if (type === 'error') showError(msg);
+          else console.warn(msg);
+        }
+      };
+
+      function showError(msg) {
+        status.textContent = '';
+        errorBox.style.display = 'block';
+        errorBox.textContent = 'Não foi possível iniciar o jogo: ' + msg;
+      }
+
+      if (!('WebAssembly' in window)) {
+        showError('seu navegador não suporta WebAssembly.');
+        return;
+      }
+
+      var script = document.createElement('script');
+      script.src = buildUrl + '/' + name + '.loader.js';
+      script.onload = function () {
+        createUnityInstance(canvas, config, function (p) {
+          fill.style.width = Math.round(p * 100) + '%';
+          status.textContent = p < 0.9 ? 'Carregando… ' + Math.round(p * 100) + '%' : 'Preparando a ilha…';
+        }).then(function (instance) {
+          window.unityInstance = instance;
+          loader.classList.add('done');
+          setTimeout(function () { loader.style.display = 'none'; }, 600);
+          fsBtn.classList.add('show');
+          fsBtn.onclick = function () { instance.SetFullscreen(1); };
+          canvas.focus();
+        }).catch(function (e) { showError(e && e.message ? e.message : String(e)); });
+      };
+      script.onerror = function () { showError('falha ao baixar os arquivos do jogo.'); };
+      document.body.appendChild(script);
+
+      // Keep the page from scrolling/zooming on mobile while playing.
+      document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+      canvas.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+    })();
+  </script>
+</body>
+</html>

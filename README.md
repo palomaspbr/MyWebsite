@@ -17,6 +17,9 @@ karaoke/                       Karaoke Night: online karaoke parties (/karaoke)
                                pages: index (create/join), sing (guests), player (TV), control (DJ), jukebox, print
 worker/karaoke/                Its API: rooms (Durable Objects), catalog (D1), YouTube search, metadata
 tests/karaoke/                 Its unit tests (node --test) and API smoke test
+incremental/                   Floating Foundry, Unity WebGL prototype of an incremental factory game (/incremental,
+                               not linked from the home page). Built and copied by tools/deploy.sh in the game's
+                               own folder; Build/*.unityweb are gzip files the Unity loader decompresses itself
 wrangler.jsonc                 Cloudflare config: static assets + the Worker only on /jiujitsu/api/*
 .assetsignore                  Repo files that are not published (tests, worker source, READMEs...)
 tests/jiujitsu/                Its API, stats and browser tests
