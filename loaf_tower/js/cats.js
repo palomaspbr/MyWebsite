@@ -61,6 +61,7 @@
     loaf: { shape: 'rr', w: 118, h: 66, r: 28, density: 1.4, face: [0, -4], fs: 1, paws: true, tail: 1,
       label: { en: 'Classic Loaf', pt: 'Pãozinho' },
       desc: { en: 'A reliable brick of cat.', pt: 'Um tijolinho confiável de gato.' } },
+    // removed from the game (no longer dropped or listed in the Catdex); kept so old saves still draw
     curl: { shape: 'rr', w: 90, h: 78, r: 38, density: 1.4, face: [-8, -6], fs: 0.95, tailFront: true,
       label: { en: 'Cinnamon Roll', pt: 'Rocambole' },
       desc: { en: 'Curled up. Rolls a little.', pt: 'Enroladinho. Rola um pouco.' } },
@@ -186,7 +187,7 @@
   });
 
   const DEX_SECTIONS = [
-    { id: 'tower', label: { en: 'Loaf Tower', pt: 'Torre de Gatos' }, types: ['loaf', 'curl', 'long', 'kitten', 'chonk', 'box', 'zoomies', 'perfect', 'cupcake', 'pudim', 'rainbow', 'galaxy'] },
+    { id: 'tower', label: { en: 'Loaf Tower', pt: 'Torre de Gatos' }, types: ['loaf', 'long', 'kitten', 'chonk', 'box', 'zoomies', 'perfect', 'cupcake', 'pudim', 'rainbow', 'galaxy'] },
     { id: 'yarn', label: { en: 'Yarn Lines', pt: 'Linhas de Lã' }, types: ['y1', 'y2', 'y3', 'y4', 'y5', 'y6', 'y7', 'y8', 'y9', 'y10', 'y11', 'y12'] },
     { id: 'merge', label: { en: 'Purr Merge', pt: 'Junta Gato' }, types: MERGE.map((_, i) => 'm' + (i + 1)) },
     { id: 'tiles', label: { en: 'Meow Match', pt: 'Combina Miau' }, types: ['t1', 't2', 't3', 't4', 't5', 't6'] },

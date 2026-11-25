@@ -17,6 +17,9 @@
   // Speed caps for cats that already landed (px/step): no cat gets flung across the screen by a
   // physics hiccup (deep overlap, welds, bouncy pudim); falling off the tower still works (down is free).
   const MAX_UP_V = 5, MAX_SIDE_V = 8, MAX_SPIN = 0.22;
+  // Rainbow welds: stiff, well-damped joints. Springy ones (0.5 / 0.1) kept the welded cats wobbling
+  // and awake, so they crept and slid around the tower. Welded cats also get extra "glue" damping.
+  const WELD_STIFF = 1, WELD_DAMP = 0.4, GLUE_SLIDE = 0.55, GLUE_SPIN = 0.6;
   const FREEZE_DEPTH = 260;
   const LIFE_GRACE = 2.5; // one collapse = one lost fish, not three
   // Side-to-side peg speed (radians/s): base + extra per cm of tower height, capped.
@@ -61,6 +64,7 @@
       this.bubbles = [];
       this.banners = [];
       this.pendingWelds = [];
+      this.dormantWelds = []; // rainbow welds parked while their cats rest (see restWelds)
       this.t = 0;
       this.frame = 0;
       this.lives = this.opts.lives || 3;
@@ -115,8 +119,8 @@
     pickType(n) {
       if (MILESTONES[n] && !this.seenThisRun.has(MILESTONES[n])) return MILESTONES[n];
       if (n < 2) return 'loaf';
-      // round, rolly cats (curl, kitten, zoomies) are rarer; flat ones (loaf, long, perfect, box) more common
-      const w = [['loaf', 38], ['curl', 2]];
+      // flat cats (loaf, long, perfect, box) are common; the round Cinnamon Roll was removed (2026-11-25)
+      const w = [['loaf', 40]];
       if (n >= 3) w.push(['long', 15], ['perfect', 6]);
       if (n >= 4) w.push(['kitten', 2]);
       if (n >= 5) w.push(['chonk', 7]);
@@ -258,8 +262,9 @@
         if (c.gone || !c.landed || c.zoomUntil > this.t || this.t - c.landedT < 0.2) continue;
         const b = c.body;
         if (b.isSleeping) continue;
-        M.Body.setAngularVelocity(b, b.angularVelocity * LAZY_SPIN);
-        if (b.speed < 2) M.Body.setVelocity(b, { x: b.velocity.x * LAZY_SLIDE, y: b.velocity.y });
+        const glued = c.welds > 0;
+        M.Body.setAngularVelocity(b, b.angularVelocity * (glued ? GLUE_SPIN : LAZY_SPIN));
+        if (b.speed < 2) M.Body.setVelocity(b, { x: b.velocity.x * (glued ? GLUE_SLIDE : LAZY_SLIDE), y: b.velocity.y });
       }
       if (this.calmUntil > this.t) {
         for (const c of this.cats) {
@@ -353,6 +358,9 @@
       const oc = this.byBody.get(other);
       if (oc && oc.gone) return;
       const a = c.body;
+      // one weld per pair: re-welding the same pair (contacts repeat every frame) stacked joints recorded
+      // at slightly different poses, which then pulled against each other forever (jitter / slow sliding)
+      if (this.allWelds().some((k) => (k.bodyA === a && k.bodyB === other) || (k.bodyA === other && k.bodyB === a))) return;
       const dx = other.position.x - a.position.x, dy = other.position.y - a.position.y;
       const len = Math.hypot(dx, dy);
       const perp = { x: (-dy / (len || 1)) * 22, y: (dx / (len || 1)) * 22 };
@@ -363,7 +371,7 @@
           bodyA: a, bodyB: other,
           pointA: { x: wa.x - a.position.x, y: wa.y - a.position.y },
           pointB: { x: wa.x - other.position.x, y: wa.y - other.position.y },
-          length: 0, stiffness: 0.5, damping: 0.1, render: { visible: false },
+          length: 0, stiffness: WELD_STIFF, damping: WELD_DAMP, render: { visible: false },
         });
       };
       const cons = [mk(perp), mk({ x: -perp.x, y: -perp.y })];
@@ -373,6 +381,39 @@
       this.sfx('ding', { note: 88 + Math.min(c.welds, 6) * 3 }); // capped: keeps the partials audible
       this.burst((a.position.x + other.position.x) / 2, (a.position.y + other.position.y) / 2, 8, 'rainbow');
     }
+
+    // Matter wakes every body a constraint pulls on, every step, so welded cats could never sleep:
+    // the whole welded group kept jiggling and crept/slid around. Once a weld's cats have been still
+    // for ~0.75 s the weld is parked (cats can sleep); it snaps back as soon as either cat is pushed.
+    restWelds() {
+      // "still" by real displacement since the last check (a body hanging on a joint reports a fake
+      // speed: gravity adds velocity, the joint puts the position back)
+      const moved = (b) => {
+        const p = b.ltLast, now = { x: b.position.x, y: b.position.y, a: b.angle };
+        b.ltLast = now;
+        return !p || Math.hypot(now.x - p.x, now.y - p.y) > 0.25 || Math.abs(now.a - p.a) > 0.003;
+      };
+      const still = (b) => b.isStatic || !moved(b);
+      const moving = (b) => !b.isStatic && !b.isSleeping && (b.speed > 0.1 || b.angularSpeed > 0.002); // any creep: the weld was holding it
+      for (const k of M.Composite.allConstraints(this.engine.world)) {
+        if (!k.ltA) continue;
+        // a joint to a sleeping cat misbehaves in Matter (the sleeper ignores the pull): keep both ends awake
+        for (const [x, y] of [[k.bodyA, k.bodyB], [k.bodyB, k.bodyA]]) if (x.isSleeping && !y.isSleeping && !y.isStatic) M.Sleeping.set(x, false);
+        const sa = still(k.bodyA), sb = still(k.bodyB);
+        k.calm = sa && sb ? (k.calm || 0) + 5 : 0;
+        if (k.calm >= 45) {
+          // park the weld and let the pair rest like any settled cat (asleep until something hits it)
+          M.Composite.remove(this.engine.world, k); this.dormantWelds.push(k);
+          for (const x of [k.bodyA, k.bodyB]) if (!x.isStatic) { M.Body.setVelocity(x, { x: 0, y: 0 }); M.Body.setAngularVelocity(x, 0); M.Sleeping.set(x, true); }
+        }
+      }
+      this.dormantWelds = this.dormantWelds.filter((k) => {
+        if (!this.byBody.has(k.bodyA) || (k.ltB && !this.byBody.has(k.bodyB))) return false; // a cat fell
+        if (moving(k.bodyA) || moving(k.bodyB)) { k.calm = 0; M.Composite.add(this.engine.world, k); return false; }
+        return true;
+      });
+    }
+    allWelds() { return M.Composite.allConstraints(this.engine.world).filter((k) => k.ltA).concat(this.dormantWelds); }
 
     burst(x, y, n, kind) {
       const cols = {
@@ -413,6 +454,7 @@
 
       for (const [c, other] of this.pendingWelds) this.weld(c, other);
       this.pendingWelds.length = 0;
+      if (this.frame % 5 === 0) this.restWelds();
 
       // loads (who is sitting on whom)
       for (const c of this.cats) c.load = 0;
@@ -456,7 +498,7 @@
           if (c.gone || !c.landed || this.t - c.landedT < 0.5) continue;
           const b = c.body;
           if (!b.isSleeping && !c.frozen) continue;
-          if (this.supported(c)) continue;
+          if (this.supported(c) || this.heldByWeld(c)) continue;
           if (c.frozen) { M.Body.setStatic(b, false); c.frozen = false; }
           M.Sleeping.set(b, false);
         }
@@ -540,6 +582,18 @@
       return false;
     }
 
+    // a rainbow-welded cat hanging on a cat that is itself supported is held, not floating
+    heldByWeld(c) {
+      for (const k of this.allWelds()) {
+        const o = k.bodyA === c.body ? k.bodyB : k.bodyB === c.body ? k.bodyA : null;
+        if (!o) continue;
+        if (o === this.platform || o.isStatic) return true;
+        const oc = this.byBody.get(o);
+        if (oc && !oc.gone && this.supported(oc)) return true;
+      }
+      return false;
+    }
+
     fallen(c) {
       c.gone = true;
       c.goneT = this.t;
@@ -548,6 +602,7 @@
         if (k.bodyA === c.body || k.bodyB === c.body) M.Composite.remove(this.engine.world, k);
       }
       this.byBody.delete(c.body);
+      this.dormantWelds = this.dormantWelds.filter((k) => k.bodyA !== c.body && k.bodyB !== c.body);
       if (this.state === 'demo') return;
       this.falls.push({ t: this.t, cat: c, blame: this.lastDrop });
       if (this.firstFallT == null) this.firstFallT = this.t;
@@ -638,7 +693,7 @@
         dropped: this.dropped, placed: this.placed, held, towerTop,
         next: this.nextSpec ? { type: this.nextSpec.type, pal: this.nextSpec.pal, seed: this.nextSpec.seed } : null,
         cats,
-        welds: M.Composite.allConstraints(this.engine.world).filter((k) => k.ltA).map((k) => {
+        welds: this.allWelds().map((k) => {
           const pa = M.Vector.add(k.bodyA.position, k.pointA), pb = M.Vector.add(k.bodyB.position, k.pointB);
           return [pa.x, pa.y, pb.x, pb.y];
         }),
