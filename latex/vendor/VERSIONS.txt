@@ -1,0 +1,17 @@
+Third-party code bundled for /latex. Built by C:\latex\tools\vendor\build.mjs (see C:\latex\docs\VENDOR.md).
+Do not edit these files by hand.
+
+@codemirror/state@6.7.6  (MIT)
+@codemirror/view@6.44.0  (MIT)
+@codemirror/language@6.13.1  (MIT)
+@codemirror/commands@6.11.2  (MIT)
+@codemirror/search@6.7.3  (MIT)
+@codemirror/autocomplete@6.20.4  (MIT)
+@codemirror/lint@6.9.8  (MIT)
+@lezer/highlight@1.2.5  (MIT)
+yjs@13.6.33  (MIT)
+y-codemirror.next@0.3.6  (MIT)
+y-protocols@1.0.7  (MIT)
+lib0@0.2.120  (MIT)
+fflate@0.8.3  (MIT)
+pdfjs-dist@6.5.438  (Apache-2.0)

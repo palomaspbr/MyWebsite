@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>LaTeX Notebook</title>
+    <meta name="description" content="LaTeX Notebook: an online LaTeX editor with live PDF preview.">
+    <meta name="robots" content="noindex">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M14 6 L42 5 L54 17 L55 58 L14 59 Z' fill='%23fffdf6' stroke='%232b2520' stroke-width='4' stroke-linejoin='round'/%3E%3Ctext x='33' y='46' font-family='Georgia,serif' font-size='26' font-style='italic' text-anchor='middle' fill='%23c0392b'%3ETeX%3C/text%3E%3C/svg%3E">
+    <!-- Light / dark theme: shared with the whole site (localStorage "theme"), else the device's. -->
+    <script src="/static/theme.js" data-button="none"></script>
+    <link rel="stylesheet" href="/latex/css/sketch.css">
+    <link rel="stylesheet" href="/latex/vendor/pdfjs/pdf_viewer.css">
+    <link rel="stylesheet" href="/latex/css/editor.css">
+</head>
+<body class="ed">
+    <div class="loading-screen" id="loading">
+        <div class="big" data-i18n="app.name">LaTeX Notebook</div>
+        <div class="muted"><span class="spin">✎</span> <span data-i18n="common.loading">Loading…</span></div>
+    </div>
+
+    <header class="topbar">
+        <a class="icon-btn" href="/latex/" id="back" data-i18n-title="ed.projects"><i data-icon="back"></i></a>
+        <a class="brand" href="/latex/" data-i18n="app.name">LaTeX Notebook</a>
+        <button type="button" class="proj-name" id="proj-name"></button>
+        <span class="save-state" id="save-state"><span class="dot"></span><span class="txt"></span></span>
+        <div class="spacer"></div>
+        <span class="collab-faces" id="faces"></span>
+        <div class="seg layout" role="group" data-i18n-aria="ed.layout">
+            <button type="button" data-layout="code" data-i18n-title="ed.layout_code"><i data-icon="code_only"></i></button>
+            <button type="button" data-layout="both" data-i18n-title="ed.layout_both"><i data-icon="columns"></i></button>
+            <button type="button" data-layout="pdf" data-i18n-title="ed.layout_pdf"><i data-icon="pdf_only"></i></button>
+        </div>
+        <div class="compile-group">
+            <button type="button" class="btn primary" id="compile"><i data-icon="play" class="ic-play"></i><span class="spin">✎</span><span class="txt" data-i18n="ed.recompile">Recompile</span></button>
+            <button type="button" class="btn primary" id="compile-menu" data-i18n-title="ed.compile_menu"><i data-icon="chevron_down"></i></button>
+        </div>
+        <button type="button" class="btn" id="share"><i data-icon="share"></i><span class="txt" data-i18n="ed.share">Share</span></button>
+        <button type="button" class="icon-btn" id="menu-btn" data-i18n-title="ed.menu"><i data-icon="menu"></i></button>
+        <button type="button" class="icon-btn" id="theme-btn"></button>
+    </header>
+
+    <div class="workspace" id="workspace" data-layout="both" data-mobile="editor">
+        <aside class="sidebar" id="sidebar">
+            <div class="side-head">
+                <h3 data-i18n="ed.files">Files</h3>
+                <button type="button" class="tool" id="new-file" data-i18n-title="ed.new_file"><i data-icon="new_file"></i></button>
+                <button type="button" class="tool" id="new-folder" data-i18n-title="ed.new_folder"><i data-icon="new_folder"></i></button>
+                <button type="button" class="tool" id="upload" data-i18n-title="ed.upload"><i data-icon="upload"></i></button>
+                <input type="file" id="upload-input" multiple hidden>
+            </div>
+            <div class="tree" id="tree" role="tree" tabindex="-1"></div>
+            <div class="outline-wrap" id="outline-wrap">
+                <div class="side-head">
+                    <h3 data-i18n="ed.outline">Outline</h3>
+                    <button type="button" class="tool fold" id="outline-fold" data-i18n-title="ed.outline"><i data-icon="chevron_down"></i></button>
+                </div>
+                <div class="outline" id="outline"></div>
+            </div>
+        </aside>
+        <div class="gutter g-side" data-resize="side"></div>
+
+        <section class="pane editor-pane" id="editor-pane">
+            <div class="ed-toolbar" id="ed-toolbar">
+                <span class="crumb" id="crumb"></span>
+                <button type="button" class="tool" data-cmd="undo" data-i18n-title="ed.toolbar.undo"><i data-icon="chevron_left"></i></button>
+                <button type="button" class="tool" data-cmd="redo" data-i18n-title="ed.toolbar.redo"><i data-icon="chevron_right"></i></button>
+                <span class="sep"></span>
+                <button type="button" class="tool" data-cmd="bold" data-i18n-title="ed.toolbar.bold"><b>B</b></button>
+                <button type="button" class="tool" data-cmd="italic" data-i18n-title="ed.toolbar.italic"><i class="t">I</i></button>
+                <button type="button" class="tool" data-cmd="section" data-i18n-title="ed.toolbar.section"><span class="tex">§</span></button>
+                <span class="sep"></span>
+                <button type="button" class="tool" data-cmd="ul" data-i18n-title="ed.toolbar.ul"><i data-icon="list_ul"></i></button>
+                <button type="button" class="tool" data-cmd="ol" data-i18n-title="ed.toolbar.ol"><i data-icon="list_ol"></i></button>
+                <span class="sep"></span>
+                <button type="button" class="tool" data-cmd="math" data-i18n-title="ed.toolbar.math"><span class="tex">$x$</span></button>
+                <button type="button" class="tool" data-cmd="dmath" data-i18n-title="ed.toolbar.dmath"><i data-icon="sigma"></i></button>
+                <button type="button" class="tool" data-cmd="figure" data-i18n-title="ed.toolbar.figure"><i data-icon="image"></i></button>
+                <button type="button" class="tool" data-cmd="table" data-i18n-title="ed.toolbar.table"><i data-icon="table"></i></button>
+                <span class="sep"></span>
+                <button type="button" class="tool" data-cmd="ref" data-i18n-title="ed.toolbar.ref"><i data-icon="tag"></i></button>
+                <button type="button" class="tool" data-cmd="cite" data-i18n-title="ed.toolbar.cite"><i data-icon="quote"></i></button>
+                <button type="button" class="tool" data-cmd="link" data-i18n-title="ed.toolbar.link"><i data-icon="link"></i></button>
+                <button type="button" class="tool" data-cmd="comment" data-i18n-title="ed.toolbar.comment"><span class="tex">%</span></button>
+                <button type="button" class="tool" data-cmd="find" data-i18n-title="ed.find"><i data-icon="search"></i></button>
+                <span class="grow"></span>
+                <button type="button" class="tool" data-cmd="topdf" data-i18n-title="ed.goto_pdf"><i data-icon="to_pdf"></i></button>
+            </div>
+            <div class="cm-host" id="cm-host"></div>
+            <div class="binary-view" id="binary-view" hidden></div>
+            <div class="no-file" id="no-file" hidden data-i18n="ed.no_file"></div>
+            <div class="statusbar">
+                <span id="st-pos"></span>
+                <button type="button" id="st-words" data-i18n-title="ed.words"><i data-icon="hash"></i><span></span></button>
+                <button type="button" id="st-lint" hidden></button>
+                <span class="ro" id="st-ro" hidden data-i18n="ed.read_only"></span>
+                <span class="grow"></span>
+                <button type="button" id="st-quota" data-i18n-title="ed.quota_note"></button>
+            </div>
+        </section>
+        <div class="gutter g-pdf" data-resize="pdf"></div>
+
+        <section class="pane pdf-pane" id="pdf-pane">
+            <div class="pdf-toolbar">
+                <button type="button" class="tool" id="logs-btn" aria-pressed="false"><i data-icon="logs"></i><span data-i18n="ed.logs">Logs</span><span class="badge" id="err-badge" hidden></span><span class="badge warn" id="warn-badge" hidden></span></button>
+                <span class="grow"></span>
+                <span class="page-box"><input class="field" id="page-input" type="text" inputmode="numeric" data-i18n-aria="ed.page"><span class="muted" id="page-total"></span></span>
+                <button type="button" class="tool" id="zoom-out" data-i18n-title="ed.zoom_out"><i data-icon="zoom_out"></i></button>
+                <button type="button" class="tool zoom-val" id="zoom-val"></button>
+                <button type="button" class="tool" id="zoom-in" data-i18n-title="ed.zoom_in"><i data-icon="zoom_in"></i></button>
+                <button type="button" class="tool" id="fit" data-i18n-title="ed.fit"><i data-icon="fit_width"></i></button>
+                <button type="button" class="tool" id="dl-pdf" data-i18n-title="ed.download_pdf"><i data-icon="download"></i></button>
+            </div>
+            <div class="pdf-banner" id="pdf-banner" hidden></div>
+            <div class="pdf-area">
+                <div class="pdf-scroll" id="pdf-scroll"></div>
+                <div class="pdf-empty" id="pdf-empty">
+                    <div class="paper-doodle"></div>
+                    <div id="pdf-empty-msg"></div>
+                </div>
+                <div class="compiling-veil" id="veil" hidden><span class="spin">✎</span><span data-i18n="ed.compiling">Compiling…</span></div>
+                <div class="logs" id="logs" hidden></div>
+            </div>
+        </section>
+    </div>
+
+    <nav class="mobile-tabs" id="mobile-tabs">
+        <button type="button" data-pane="files"><i data-icon="folder"></i><span data-i18n="ed.files">Files</span></button>
+        <button type="button" data-pane="editor"><i data-icon="edit"></i><span data-i18n="ed.editor">Editor</span></button>
+        <button type="button" data-pane="pdf"><i data-icon="file_pdf"></i><span data-i18n="ed.pdf">PDF</span><span class="badge" id="m-err-badge" hidden></span></button>
+    </nav>
+
+    <script type="module" src="/latex/js/editor.js"></script>
+</body>
+</html>

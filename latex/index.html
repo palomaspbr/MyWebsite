@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>LaTeX Notebook</title>
+    <meta name="description" content="LaTeX Notebook: write LaTeX in your browser, see the PDF next to it, and edit together in real time. Free, no account.">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M14 6 L42 5 L54 17 L55 58 L14 59 Z' fill='%23fffdf6' stroke='%232b2520' stroke-width='4' stroke-linejoin='round'/%3E%3Ctext x='33' y='46' font-family='Georgia,serif' font-size='26' font-style='italic' text-anchor='middle' fill='%23c0392b'%3ETeX%3C/text%3E%3C/svg%3E">
+    <!-- Light / dark theme: shared with the whole site (localStorage "theme"), else the device's. -->
+    <script src="/static/theme.js" data-button="none"></script>
+    <link rel="stylesheet" href="/latex/css/sketch.css">
+    <link rel="stylesheet" href="/latex/css/dashboard.css">
+</head>
+<body class="dash">
+<main>
+    <div class="top">
+        <a class="back" href="/" data-i18n="app.back_site">Back to palomaliz.com.br</a>
+        <div class="top-right">
+            <button type="button" class="icon-btn lang-btn" id="lang-btn"></button>
+            <button type="button" class="icon-btn" id="theme-btn"></button>
+        </div>
+    </div>
+
+    <header class="hero">
+        <svg class="doodle" viewBox="0 0 96 112" aria-hidden="true">
+            <g fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+                <path d="M10 8 L62 6 L84 28 L86 104 L12 106 Z" fill="var(--card)"/>
+                <path d="M61 7 L62 29 L84 28"/>
+                <path d="M22 44 L72 43 M22 56 L70 55 M22 68 L60 67 M22 80 L66 79 M22 92 L48 91" stroke="var(--line)" stroke-width="2.4"/>
+            </g>
+            <text x="46" y="38" font-family="Georgia, 'Times New Roman', serif" font-size="22" font-style="italic" text-anchor="middle" fill="var(--red)">TeX</text>
+            <g transform="rotate(38 70 70)">
+                <path d="M64 30 L76 30 L76 92 L70 104 L64 92 Z" fill="#ffd43b" stroke="#2b2520" stroke-width="3" stroke-linejoin="round"/>
+                <path d="M64 92 L76 92" stroke="#2b2520" stroke-width="3"/>
+                <path d="M64 38 L76 38" stroke="#2b2520" stroke-width="2"/>
+            </g>
+        </svg>
+        <div>
+            <h1 data-i18n="app.name">LaTeX Notebook</h1>
+            <p class="tagline" data-i18n="app.tagline">Write LaTeX in your browser and see the PDF right next to it.</p>
+        </div>
+    </header>
+
+    <div class="actions-row">
+        <button type="button" class="btn primary" id="new-btn"><i data-icon="add"></i><span data-i18n="dash.new">New project</span></button>
+        <button type="button" class="btn" id="upload-btn"><i data-icon="upload"></i><span data-i18n="dash.upload">Upload project</span></button>
+        <button type="button" class="btn ghost" id="join-btn"><i data-icon="link"></i><span data-i18n="dash.join">Open a shared link</span></button>
+        <input type="file" id="upload-input" accept=".zip,.tex,.bib,.cls,.sty,.png,.jpg,.jpeg,.pdf,.eps,.svg,application/zip" multiple hidden>
+        <input class="field search" id="search" type="search" data-i18n-placeholder="dash.search">
+    </div>
+
+    <h2 class="section" data-i18n="dash.your_projects">Your projects</h2>
+    <ul class="projects" id="projects"></ul>
+
+    <h2 class="section" data-i18n="dash.templates">Start from a template</h2>
+    <div class="templates" id="templates"></div>
+
+    <section class="how">
+        <h3 data-i18n="dash.how_title">How it works</h3>
+        <ol>
+            <li data-i18n-html="dash.how_1"></li>
+            <li data-i18n-html="dash.how_2"></li>
+            <li data-i18n-html="dash.how_3"></li>
+        </ol>
+    </section>
+
+    <footer class="dash-foot">
+        <p id="storage"></p>
+        <p data-i18n="dash.credits"></p>
+        <p><a href="/">palomaliz.com.br</a></p>
+    </footer>
+</main>
+<script type="module" src="/latex/js/dashboard.js"></script>
+</body>
+</html>

@@ -1,0 +1,121 @@
+/* latex/css/dashboard.css — the project list (/latex/). Notebook page like the rest of the site. */
+body.dash {
+    background-image:
+        linear-gradient(90deg, transparent 38px, var(--margin) 38px, var(--margin) 40px, transparent 40px),
+        repeating-linear-gradient(180deg, transparent 0 31px, var(--line) 31px 32px);
+    background-attachment: local;
+    min-height: 100vh;
+}
+.dash main { position: relative; max-width: 980px; margin: 0 auto; padding: 16px 20px 50px 58px; }
+.dash .top { display: flex; align-items: center; gap: 10px; justify-content: space-between; }
+.dash .back { font-size: 18px; }
+.dash .top-right { display: flex; gap: 10px; align-items: center; }
+.dash .lang-btn { width: auto; padding: 0 10px; font-size: 16px; border-radius: var(--wobble-2); }
+
+.hero { display: flex; align-items: center; gap: 18px; margin: 14px 0 4px; }
+.hero svg.doodle { width: 96px; height: 112px; flex: none; transform: rotate(-8deg); }
+.hero h1 { margin: 0; font-size: clamp(44px, 8vw, 68px); text-shadow: 3px 3px 0 var(--yellow); transform: rotate(-1.5deg); display: inline-block; }
+:root[data-theme="dark"] .hero h1 { text-shadow: 3px 3px 0 #7c4dff; }
+.hero .tagline { margin: 8px 0 0; color: var(--ink-soft); font-size: 21px; }
+
+.actions-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 24px 0 8px; }
+.actions-row .search { flex: 1 1 220px; max-width: 340px; margin-left: auto; }
+
+h2.section {
+    display: table; margin: 34px 0 14px; padding: 0 8px; font-size: 34px;
+    background: linear-gradient(100deg, transparent 2%, var(--hi) 4%, var(--hi) 94%, transparent 97%) var(--marker-pos) no-repeat;
+    transform: rotate(-1deg);
+}
+
+.projects { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+.proj {
+    position: relative;
+    display: flex; align-items: center; gap: 14px;
+    padding: 10px 12px 10px 16px;
+    background: var(--paper-2);
+    border: 2.5px solid var(--ink);
+    border-radius: var(--wobble);
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.proj:nth-child(even) { border-radius: var(--wobble-2); }
+.proj:hover { transform: translateY(-2px) rotate(-0.3deg); box-shadow: 5px 6px 0 -1px var(--shadow-ink); }
+.proj .ic.doc { font-size: 34px; }
+.proj .info { flex: 1; min-width: 0; }
+.proj a.name {
+    display: block; font-family: var(--brush); font-size: 25px; line-height: 1.15;
+    color: var(--ink); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.proj a.name::after { content: ''; position: absolute; inset: 0; border-radius: inherit; }
+.proj a.name:hover { color: var(--red); }
+.proj .meta { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; font-size: 16px; color: var(--ink-soft); }
+.proj .tools { position: relative; z-index: 1; display: flex; gap: 2px; }
+.empty-note {
+    padding: 16px 20px; font-size: 19px;
+    background: var(--note); border: 2.5px dashed var(--ink); border-radius: var(--wobble-2);
+}
+
+.templates { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 26px 20px; margin: 18px 0; }
+.tpl {
+    position: relative;
+    display: flex; flex-direction: column; gap: 4px;
+    padding: 18px 14px 12px;
+    text-align: left; font: inherit; color: var(--ink);
+    background: var(--paper-2);
+    border: 2.5px solid var(--ink);
+    border-radius: var(--wobble);
+    box-shadow: var(--shadow-sm);
+    cursor: pointer;
+    transform: rotate(-0.8deg);
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.tpl:nth-child(3n+2) { transform: rotate(0.7deg); border-radius: var(--wobble-2); }
+.tpl:nth-child(3n) { transform: rotate(-0.3deg); }
+.tpl:hover { transform: translateY(-4px) rotate(0); box-shadow: 5px 7px 0 -1px var(--shadow-ink); }
+.tpl::before {
+    content: ''; position: absolute; top: -12px; left: 50%; width: 70px; height: 22px;
+    background: var(--tape); border: 1.5px solid var(--tape-edge); transform: translateX(-50%) rotate(-4deg);
+}
+.tpl:nth-child(3n+2)::before { background: var(--tape-pink); transform: translateX(-50%) rotate(3deg); }
+.tpl:nth-child(3n)::before { background: var(--tape-green); }
+.tpl .ic { font-size: 30px; }
+.tpl b { font-family: var(--brush); font-weight: normal; font-size: 23px; line-height: 1.1; }
+.tpl span { font-size: 16px; color: var(--ink-soft); line-height: 1.25; }
+
+.how { margin: 30px 0 10px; padding: 16px 22px 12px; background: var(--note); border: 2.5px solid var(--ink); border-radius: var(--wobble-2); box-shadow: var(--shadow); transform: rotate(-0.5deg); position: relative; }
+.how::before { content: ''; position: absolute; top: -13px; left: 50%; width: 100px; height: 24px; background: var(--tape-blue); border: 1.5px solid var(--tape-edge); transform: translateX(-50%) rotate(3deg); }
+.how h3 { margin: 0 0 6px; font-size: 26px; }
+.how ol { margin: 0; padding-left: 1.3em; }
+.how li { margin: 4px 0; }
+.how li::marker { color: var(--red); font-family: var(--brush); }
+
+footer.dash-foot { margin-top: 40px; padding-top: 12px; border-top: 2.5px dashed var(--ink-soft); color: var(--ink-soft); font-size: 16px; text-align: center; }
+footer.dash-foot p { margin: 4px 0; }
+
+.drop-zone {
+    position: fixed; inset: 0; z-index: 800;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--brush); font-size: 36px;
+    background: color-mix(in srgb, var(--paper) 82%, transparent);
+    border: 4px dashed var(--red);
+    pointer-events: none;
+}
+.tpl-pick { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin: 8px 0; }
+.tpl-pick label {
+    display: flex; flex-direction: column; gap: 2px; padding: 8px 10px;
+    font-size: 16px; line-height: 1.2;
+    background: var(--card); border: 2px solid var(--ink-faint); border-radius: var(--wobble-sm); cursor: pointer;
+}
+.tpl-pick input { position: absolute; opacity: 0; pointer-events: none; }
+.tpl-pick label:has(input:checked) { border-color: var(--ink); background: var(--hi); }
+.tpl-pick label:has(input:focus-visible) { outline: 3px dashed var(--red); }
+.tpl-pick b { font-weight: normal; font-family: var(--brush); font-size: 19px; }
+
+@media (max-width: 640px) {
+    body.dash { background-image: repeating-linear-gradient(180deg, transparent 0 31px, var(--line) 31px 32px); }
+    .dash main { padding: 12px 14px 40px; }
+    .hero svg.doodle { width: 64px; height: 76px; }
+    .actions-row .search { max-width: none; margin-left: 0; }
+    .proj { flex-wrap: wrap; }
+    .proj .tools { width: 100%; justify-content: flex-end; }
+}
