@@ -498,9 +498,26 @@
           if (c.gone || !c.landed || this.t - c.landedT < 0.5) continue;
           const b = c.body;
           if (!b.isSleeping && !c.frozen) continue;
-          if (this.supported(c) || this.heldByWeld(c)) continue;
-          if (c.frozen) { M.Body.setStatic(b, false); c.frozen = false; }
+          if (this.supported(c) || this.heldByWeld(c) || (c.type === 'rainbow' && this.touchesSolid(c))) continue;
+          if (c.frozen) { M.Body.setStatic(b, false); c.frozen = false; c.thaws = (c.thaws || 0) + 1; }
           M.Sleeping.set(b, false);
+        }
+      }
+
+      // Rainbow glue: once a landed rainbow cat has stopped, it sticks where it is (static). Welds to
+      // moving cats (rigid joints, contacts and other welds forming loops) otherwise pushed each other
+      // forever, so the rainbow slid endlessly. Cats welded to it are pinned to a fixed point instead.
+      // If its support goes, the no-floating check above unfreezes it and it falls with its friends.
+      if (this.frame % 6 === 0) {
+        for (const c of this.cats) {
+          if (c.type !== 'rainbow' || c.gone || !c.landed || c.frozen || this.t - c.landedT < 0.5) continue;
+          const b = c.body, p = c.stickP;
+          c.stickP = { x: b.position.x, y: b.position.y, a: b.angle };
+          if (!p || Math.hypot(b.position.x - p.x, b.position.y - p.y) > 0.8 || Math.abs(b.angle - p.a) > 0.012) continue;
+          if (!(this.supported(c) || this.heldByWeld(c) || this.touchesSolid(c))) continue;
+          M.Body.setStatic(b, true);
+          c.frozen = true;
+          c.stickP = null;
         }
       }
 
@@ -590,6 +607,20 @@
         if (o === this.platform || o.isStatic) return true;
         const oc = this.byBody.get(o);
         if (oc && !oc.gone && this.supported(oc)) return true;
+      }
+      return false;
+    }
+
+    // touching (side or bottom) the platform, a frozen cat, or a cat that is itself supported
+    touchesSolid(c) {
+      for (const p of this.engine.pairs.list) {
+        if (!p.isActive) continue;
+        const a = p.bodyA.parent, b = p.bodyB.parent;
+        const o = a === c.body ? b : b === c.body ? a : null;
+        if (!o) continue;
+        if (o === this.platform || o.isStatic) return true;
+        const oc = this.byBody.get(o);
+        if (oc && !oc.gone && oc.landed && this.supported(oc)) return true;
       }
       return false;
     }
