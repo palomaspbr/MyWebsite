@@ -8,7 +8,6 @@ My personal website, built with plain HTML / CSS and JavaScript (no framework, n
 index.html                     Home page (project cards)
 customprojects/<slug>/index.html  One page per project
 cookie.html                    Easter egg (/cookie)
-curriculum.html                Curriculum (EN / PT)
 404.html                       Not found page
 loaf_tower/                    Loaf Tower, a cat-stacking browser game (/loaf_tower)
 jiujitsu/                      Chacrinha Jiu-Jitsu, leaderboard for casual BJJ rolls (/jiujitsu)
@@ -31,11 +30,10 @@ customprojects/remotedesktop/  Remote Desktop project page; download zip in stat
                                (built and copied by the remote-desktop repo's tools/release.ps1)
 static/style.css               Styles (hand-drawn notebook look, same as Loaf Tower / Jiu-Jitsu)
 static/fonts/                  Caveat Brush + Patrick Hand (OFL)
-static/script.js               Curriculum language toggle
 static/theme.js                Light/dark mode (follows the device; a sun/moon toggle overrides it). Portfolio pages,
                                Jiu-Jitsu and Karaoke share the key `theme` (switching on one switches all); only Loaf
                                Tower keeps its own choice (`data-key="loaf_theme"`). See the header comment for the API (window.SiteTheme).
-static/media/, static/files/   Images and the PDF curriculum
+static/media/, static/files/   Images and the PDF CV
 tools/card-dark/               How the dark twins of the notebook project cards (card-dark.png) are made (not published)
 ```
 
