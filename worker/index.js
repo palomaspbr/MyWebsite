@@ -1,10 +1,12 @@
 import { handleLoaf, LOAF_PREFIX } from './loaf.js';
 import { handleKaraoke, KARAOKE_PREFIX } from './karaoke/index.js';
 import { handleLatex, LATEX_PREFIX } from './latex/index.js';
+import { handleMyDrive, MYDRIVE_PREFIX } from './mydrive/index.js';
 
 // Karaoke rooms and shared LaTeX projects are Durable Objects; the classes must be exported from the main module.
 export { KaraokeRoom } from './karaoke/room.js';
 export { LatexRoom } from './latex/room.js';
+export { MyDriveStore } from './mydrive/store.js';
 
 /* The site's Worker (wrangler.jsonc). Static files are served straight from the assets;
    this script only runs for /loaf_tower/api/* (the Loaf Tower leaderboard, worker/loaf.js),
@@ -598,6 +600,8 @@ export default {
     if (url.pathname.startsWith(KARAOKE_PREFIX)) return handleKaraoke(request, env);
     // LaTeX Notebook (worker/latex/): shared projects (real-time collaboration)
     if (url.pathname.startsWith(LATEX_PREFIX)) return handleLatex(request, env);
+    // MyDrive (worker/mydrive/): Paloma's private file storage, behind a login
+    if (url.pathname.startsWith(MYDRIVE_PREFIX)) return handleMyDrive(request, env);
     if (url.pathname !== API_PREFIX && !url.pathname.startsWith(API_PREFIX + '/')) {
       // Not the API: hand back to the static assets (normally never reached, see wrangler.jsonc).
       return env.ASSETS.fetch(request);

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<!-- Home page card of MyDrive (800x600). Render: python tools/mydrive/render_card.py (light + dark).
+     Open with #dark for the dark twin. Same style as the other notebook cards (copied from the LaTeX card). -->
+<style>
+  @font-face { font-family: 'Caveat Brush'; src: url('../../static/fonts/CaveatBrush-Regular.ttf'); }
+  @font-face { font-family: 'Patrick Hand'; src: url('../../static/fonts/PatrickHand-Regular.ttf'); }
+  html, body { margin: 0; padding: 0; }
+  svg { display: block; }
+  :root {
+    --paper: #fbf6e9; --rule: #c9dbe9; --margin: #e8a0a0; --ink: #2b2520; --sheet: #fffdf6; --screen: #ffffff;
+    --pen: #c0392b; --soft: #6d6259; --title: #2b2520; --shadow: #2b2520; --cloud: #d0ebff; --blue: #2f5fb3;
+    --tape: rgba(255, 212, 59, 0.6); --tape2: rgba(255, 222, 235, 0.9); --yellow: #ffd43b; --green: #d3f9d8; --pink: #ffdeeb;
+  }
+  body.dark {
+    --paper: #0d1117; --rule: rgba(200, 210, 240, 0.08); --margin: rgba(255, 122, 168, 0.38); --ink: #f0f6fc; --sheet: #161d2b; --screen: #1d2537;
+    --pen: #ff7aa8; --soft: #a3adc2; --title: #d4c4ff; --shadow: #010409; --cloud: #16294a; --blue: #79c0ff;
+    --tape: rgba(150, 110, 255, 0.55); --tape2: rgba(255, 122, 168, 0.5); --yellow: #7c4dff; --green: #12301f; --pink: #3d1f33;
+  }
+  .title { font-family: 'Caveat Brush'; font-size: 84px; fill: var(--title); }
+  .hand { font-family: 'Patrick Hand'; font-size: 24px; fill: var(--soft); }
+</style>
+</head>
+<body>
+<script>if (location.hash === '#dark') document.body.className = 'dark';</script>
+<svg width="800" height="600" viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="rough" x="-5%" y="-10%" width="110%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="2" seed="7" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="3" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+  </defs>
+
+  <!-- Notebook paper with the red margin line. -->
+  <rect width="800" height="600" style="fill: var(--paper)"/>
+  <g style="fill: var(--rule)">
+    <rect y="31" width="800" height="1.6"/><rect y="63" width="800" height="1.6"/><rect y="95" width="800" height="1.6"/>
+    <rect y="127" width="800" height="1.6"/><rect y="159" width="800" height="1.6"/><rect y="191" width="800" height="1.6"/>
+    <rect y="223" width="800" height="1.6"/><rect y="255" width="800" height="1.6"/><rect y="287" width="800" height="1.6"/>
+    <rect y="319" width="800" height="1.6"/><rect y="351" width="800" height="1.6"/><rect y="383" width="800" height="1.6"/>
+    <rect y="415" width="800" height="1.6"/><rect y="447" width="800" height="1.6"/><rect y="479" width="800" height="1.6"/>
+    <rect y="511" width="800" height="1.6"/><rect y="543" width="800" height="1.6"/><rect y="575" width="800" height="1.6"/>
+  </g>
+  <rect x="58" width="2.4" height="600" style="fill: var(--margin)"/>
+
+  <!-- Title -->
+  <text class="title" x="96" y="112" transform="rotate(-2 96 112)">MyDrive</text>
+  <path d="M94 138 C 150 130, 230 142, 300 132 S 360 128, 380 134" fill="none" style="stroke: var(--pen)" stroke-width="5" stroke-linecap="round" filter="url(#rough)"/>
+  <!-- Padlock next to the title -->
+  <g filter="url(#rough)" transform="rotate(8 430 86)">
+    <path d="M416 76 C 416 52, 446 52, 446 76" fill="none" style="stroke: var(--ink)" stroke-width="5" stroke-linecap="round"/>
+    <path d="M406 76 L456 75 L458 116 L407 117 Z" style="fill: var(--yellow); stroke: var(--ink)" stroke-width="4" stroke-linejoin="round"/>
+    <circle cx="432" cy="94" r="5" style="fill: var(--ink)"/><path d="M432 96 L432 106" style="stroke: var(--ink)" stroke-width="4" stroke-linecap="round"/>
+  </g>
+
+  <!-- Cloud (top right) -->
+  <g filter="url(#rough)">
+    <path d="M520 190 C 478 192, 470 146, 506 136 C 502 96, 560 82, 578 114 C 594 74, 668 84, 662 134 C 700 136, 704 190, 664 190 Z" style="fill: var(--shadow)" transform="translate(7 8)"/>
+    <path d="M520 190 C 478 192, 470 146, 506 136 C 502 96, 560 82, 578 114 C 594 74, 668 84, 662 134 C 700 136, 704 190, 664 190 Z" style="fill: var(--cloud); stroke: var(--ink)" stroke-width="4.5" stroke-linejoin="round"/>
+  </g>
+  <!-- small files inside the cloud -->
+  <g filter="url(#rough)">
+    <path d="M548 128 L572 127 L580 135 L580 170 L548 171 Z" style="fill: var(--screen); stroke: var(--ink)" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M552 164 L560 152 L566 158 L570 154 L577 164 Z" style="fill: var(--green); stroke: var(--ink)" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M598 124 L622 123 L630 131 L630 166 L598 167 Z" style="fill: var(--screen); stroke: var(--ink)" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M608 136 L608 156 L622 146 Z" style="fill: var(--yellow); stroke: var(--ink)" stroke-width="2.5" stroke-linejoin="round"/>
+  </g>
+
+  <!-- Laptop (left) -->
+  <g filter="url(#rough)" transform="rotate(-3 230 400)">
+    <path d="M118 290 L338 286 L340 430 L120 434 Z" style="fill: var(--shadow)" transform="translate(7 8)"/>
+    <path d="M118 290 L338 286 L340 430 L120 434 Z" style="fill: var(--sheet); stroke: var(--ink)" stroke-width="4.5" stroke-linejoin="round"/>
+    <path d="M136 306 L322 303 L323 414 L137 417 Z" style="fill: var(--screen); stroke: var(--ink)" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M92 436 L366 430 L384 466 L80 472 Z" style="fill: var(--shadow)" transform="translate(7 8)"/>
+    <path d="M92 436 L366 430 L384 466 L80 472 Z" style="fill: var(--sheet); stroke: var(--ink)" stroke-width="4.5" stroke-linejoin="round"/>
+    <path d="M196 452 L264 451" style="stroke: var(--ink)" stroke-width="3" stroke-linecap="round"/>
+    <!-- upload arrow on the laptop screen -->
+    <path d="M230 392 L230 330 M206 352 L230 326 L254 352" fill="none" style="stroke: var(--pen)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M194 398 L266 397" style="stroke: var(--pen)" stroke-width="5" stroke-linecap="round"/>
+  </g>
+
+  <!-- Phone (right) -->
+  <g filter="url(#rough)" transform="rotate(5 640 420)">
+    <path d="M578 262 L690 260 L694 554 L582 556 Z" style="fill: var(--shadow)" transform="translate(7 8)"/>
+    <path d="M578 262 L690 260 L694 554 L582 556 Z" style="fill: var(--sheet); stroke: var(--ink)" stroke-width="4.5" stroke-linejoin="round"/>
+    <path d="M592 286 L676 285 L678 520 L594 521 Z" style="fill: var(--screen); stroke: var(--ink)" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M622 272 L648 272" style="stroke: var(--ink)" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="636" cy="538" r="7" style="fill: none; stroke: var(--ink)" stroke-width="3"/>
+    <!-- download arrow on the phone screen -->
+    <path d="M636 330 L636 410 M610 386 L636 414 L662 386" fill="none" style="stroke: var(--blue)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M608 436 L664 435" style="stroke: var(--blue)" stroke-width="5" stroke-linecap="round"/>
+    <path d="M606 470 L664 469 M606 492 L648 491" style="stroke: var(--soft)" stroke-width="4" stroke-linecap="round"/>
+  </g>
+  <!-- tape on the phone -->
+  <path d="M600 252 L668 248 L670 272 L602 276 Z" style="fill: var(--tape)" stroke="rgba(43,37,32,.3)" stroke-width="1.5" transform="rotate(-6 635 262)"/>
+
+  <!-- Dashed arrows: laptop -> cloud -> phone -->
+  <path d="M300 270 C 340 200, 420 160, 476 160" fill="none" style="stroke: var(--ink)" stroke-width="4" stroke-linecap="round" stroke-dasharray="2 11" filter="url(#rough)"/>
+  <path d="M458 144 L480 160 L458 176" fill="none" style="stroke: var(--ink)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" filter="url(#rough)"/>
+  <path d="M708 186 C 740 210, 742 238, 716 262" fill="none" style="stroke: var(--ink)" stroke-width="4" stroke-linecap="round" stroke-dasharray="2 11" filter="url(#rough)"/>
+  <path d="M732 254 L712 266 L708 244" fill="none" style="stroke: var(--ink)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" filter="url(#rough)"/>
+
+  <text class="hand" x="300" y="208" transform="rotate(-14 300 208)">upload</text>
+  <text class="hand" x="98" y="540" transform="rotate(-2 98 540)">original quality, private</text>
+</svg>
+</body>
+</html>

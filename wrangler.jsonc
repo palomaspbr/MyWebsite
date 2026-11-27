@@ -1,6 +1,7 @@
 // Cloudflare Worker for palomaliz.com.br (Workers Builds deploys this on every push to master).
 // Everything is static except /jiujitsu/api/* (Chacrinha Jiu-Jitsu API, worker/index.js), /loaf_tower/api/* (Loaf Tower leaderboard, worker/loaf.js)
-// /karaoke/api/* (Karaoke rooms + catalog, worker/karaoke/) and /latex/api/* (shared LaTeX Notebook projects, worker/latex/).
+// /karaoke/api/* (Karaoke rooms + catalog, worker/karaoke/), /latex/api/* (shared LaTeX Notebook projects, worker/latex/)
+// and /mydrive/api/* (MyDrive private storage, worker/mydrive/; secret MYDRIVE_PASSWORD set in the dashboard).
 // Free plan only: static asset requests are free and unlimited; only API calls count as Worker requests.
 {
   "$schema": "https://unpkg.com/wrangler@4.158.0/config-schema.json",
@@ -11,7 +12,7 @@
   "assets": {
     "directory": ".",
     "binding": "ASSETS",
-    "run_worker_first": ["/jiujitsu/api/*", "/loaf_tower/api/*", "/karaoke/api/*", "/latex/api/*"],
+    "run_worker_first": ["/jiujitsu/api/*", "/loaf_tower/api/*", "/karaoke/api/*", "/latex/api/*", "/mydrive/api/*"],
     "not_found_handling": "404-page"
   },
   "d1_databases": [
@@ -23,15 +24,17 @@
     { "binding": "KARAOKE_DB", "database_name": "karaoke", "database_id": "1368dd4e-d36f-4947-920d-506851a307f6" }
   ],
   // One Durable Object per karaoke party (worker/karaoke/room.js) and per shared LaTeX project
-  // (worker/latex/room.js). Free plan: SQLite-backed classes only.
+  // (worker/latex/room.js), plus the single MyDrive store (worker/mydrive/store.js). Free plan: SQLite-backed classes only.
   "durable_objects": {
     "bindings": [
       { "name": "KARAOKE_ROOM", "class_name": "KaraokeRoom" },
-      { "name": "LATEX_ROOM", "class_name": "LatexRoom" }
+      { "name": "LATEX_ROOM", "class_name": "LatexRoom" },
+      { "name": "MYDRIVE", "class_name": "MyDriveStore" }
     ]
   },
   "migrations": [
     { "tag": "karaoke-v1", "new_sqlite_classes": ["KaraokeRoom"] },
-    { "tag": "latex-v1", "new_sqlite_classes": ["LatexRoom"] }
+    { "tag": "latex-v1", "new_sqlite_classes": ["LatexRoom"] },
+    { "tag": "mydrive-v1", "new_sqlite_classes": ["MyDriveStore"] }
   ]
 }

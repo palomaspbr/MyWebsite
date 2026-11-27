@@ -1,0 +1,134 @@
+/* mydrive/css/drive.css — the MyDrive page (login, upload box, file list). Notebook page like
+   /latex (the page frame below is copied from latex/css/dashboard.css). */
+body.dash {
+    background-image:
+        linear-gradient(90deg, transparent 38px, var(--margin) 38px, var(--margin) 40px, transparent 40px),
+        repeating-linear-gradient(180deg, transparent 0 31px, var(--line) 31px 32px);
+    background-attachment: local;
+    min-height: 100vh;
+}
+.dash main { position: relative; max-width: 880px; margin: 0 auto; padding: 16px 20px 50px 58px; }
+.dash .top { display: flex; align-items: center; gap: 10px; justify-content: space-between; }
+.dash .back { font-size: 18px; }
+.dash .top-right { display: flex; gap: 10px; align-items: center; }
+.dash .top-right .btn .ic { font-size: 18px; }
+
+.hero { display: flex; align-items: center; gap: 18px; margin: 14px 0 4px; }
+.hero svg.doodle { width: 112px; height: 94px; flex: none; transform: rotate(-6deg); }
+.hero h1 { margin: 0; font-size: clamp(44px, 8vw, 68px); text-shadow: 3px 3px 0 var(--yellow); transform: rotate(-1.5deg); display: inline-block; }
+:root[data-theme="dark"] .hero h1 { text-shadow: 3px 3px 0 #7c4dff; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .hero h1 { text-shadow: 3px 3px 0 #7c4dff; } }
+.hero .tagline { margin: 8px 0 0; color: var(--ink-soft); font-size: 21px; }
+
+h2.section {
+    display: table; margin: 30px 0 14px; padding: 0 8px; font-size: 34px;
+    background: linear-gradient(100deg, transparent 2%, var(--hi) 4%, var(--hi) 94%, transparent 97%) var(--marker-pos) no-repeat;
+    transform: rotate(-1deg);
+}
+.loading { font-size: 20px; color: var(--ink-soft); margin: 30px 0; }
+
+/* Login card */
+.login { max-width: 380px; margin: 30px 0 10px; padding: 18px 24px 22px; background: var(--paper-2); transform: rotate(-0.6deg); }
+.login h2 { margin: 0 0 10px; font-size: 32px; display: flex; align-items: center; gap: 8px; }
+.login form { display: grid; gap: 6px; }
+.login label { font-size: 18px; margin-top: 4px; }
+.login .field { width: 100%; font-size: 19px; }
+.login .err { min-height: 1.3em; margin: 4px 0 0; color: var(--red); font-size: 17px; }
+.login .btn { justify-self: start; margin-top: 4px; }
+
+/* Upload box */
+.drop {
+    position: relative;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    margin: 26px 0 10px; padding: 26px 16px 22px;
+    text-align: center; cursor: pointer;
+    background: var(--note);
+    border-style: dashed;
+    transform: rotate(-0.4deg);
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.drop:hover, .drop:focus-within { transform: translateY(-2px) rotate(-0.4deg); box-shadow: 5px 6px 0 -1px var(--shadow-ink); }
+.drop:focus-within { outline: 3px dashed var(--red); outline-offset: 4px; }
+.drop input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.drop .ic { font-size: 46px; }
+.drop b { font-family: var(--brush); font-weight: normal; font-size: 30px; line-height: 1.1; }
+.drop span { color: var(--ink-soft); font-size: 18px; }
+.drop .hint-phone { display: none; }
+@media (hover: none) { .drop .hint-desk { display: none; } .drop .hint-phone { display: inline; } }
+
+/* Uploads in progress */
+.uploads { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.uploads li {
+    display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center;
+    padding: 6px 12px; background: var(--paper-2);
+    border: 2px solid var(--ink); border-radius: var(--wobble-sm);
+}
+.uploads .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 17px; }
+.uploads .pct { font-size: 16px; color: var(--ink-soft); }
+.uploads .bar { grid-column: 1 / -1; }
+.uploads li.error { border-color: var(--red); }
+.uploads li.error .pct { color: var(--red); }
+.uploads li.done { opacity: 0.7; }
+
+.bar { height: 12px; background: var(--paper-3); border: 2px solid var(--ink); border-radius: 8px 4px 9px 3px / 4px 9px 3px 8px; overflow: hidden; }
+.bar span { display: block; height: 100%; width: 0; background: var(--yellow); transition: width 0.2s ease; }
+.uploads li.done .bar span { background: var(--green-ink); }
+.uploads li.error .bar span { background: var(--red); }
+
+/* Buttons + storage meter */
+.actions-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 22px 0 6px; }
+.meter { flex: 1 1 200px; max-width: 280px; margin-left: auto; display: grid; gap: 2px; }
+.meter small { font-size: 16px; color: var(--ink-soft); text-align: right; }
+.meter.full .bar span { background: var(--red); }
+
+/* File list */
+.files { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.files li {
+    display: flex; align-items: center; gap: 12px;
+    padding: 8px 10px 8px 14px;
+    background: var(--paper-2);
+    border: 2.5px solid var(--ink);
+    border-radius: var(--wobble);
+    box-shadow: var(--shadow-sm);
+}
+.files li:nth-child(even) { border-radius: var(--wobble-2); }
+.files li > .ic { font-size: 32px; flex: none; }
+.files .info { flex: 1; min-width: 0; }
+.files .name {
+    display: block; font-family: var(--brush); font-size: 22px; line-height: 1.15;
+    color: var(--ink); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.files a.name:hover { color: var(--red); }
+.files .meta { font-size: 16px; color: var(--ink-soft); }
+.files .tools { display: flex; gap: 6px; flex: none; }
+.files .tools .icon-btn { text-decoration: none; color: var(--ink); }
+.files .tools .del:hover { color: var(--red); }
+
+.empty-note {
+    padding: 16px 20px; font-size: 19px;
+    background: var(--note); border: 2.5px dashed var(--ink); border-radius: var(--wobble-2);
+}
+footer.dash-foot { margin-top: 40px; padding-top: 12px; border-top: 2.5px dashed var(--ink-soft); color: var(--ink-soft); font-size: 16px; text-align: center; }
+footer.dash-foot p { margin: 4px 0; }
+
+.drop-zone {
+    position: fixed; inset: 0; z-index: 800;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--brush); font-size: 40px;
+    background: color-mix(in srgb, var(--paper) 82%, transparent);
+    border: 4px dashed var(--red);
+    pointer-events: none;
+}
+.sheet .msg { font-size: 19px; }
+
+@media (max-width: 640px) {
+    body.dash { background-image: repeating-linear-gradient(180deg, transparent 0 31px, var(--line) 31px 32px); }
+    .dash main { padding: 12px 14px 40px; }
+    .hero svg.doodle { width: 78px; height: 66px; }
+    .hero .tagline { font-size: 18px; }
+    .actions-row .btn { flex: 1 1 auto; justify-content: center; }
+    .meter { max-width: none; margin-left: 0; flex-basis: 100%; }
+    .meter small { text-align: left; }
+    .files li { padding: 8px 8px 8px 10px; gap: 8px; }
+    .files .name { font-size: 20px; }
+}

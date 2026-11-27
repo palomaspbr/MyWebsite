@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>MyDrive</title>
+    <meta name="description" content="MyDrive: Paloma's private cloud. Upload from the computer, download on the phone, byte for byte.">
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M16 50 C6 50 4 36 14 33 C12 20 28 15 33 24 C38 12 56 16 53 31 C62 33 61 50 50 50 Z' fill='%23d0ebff' stroke='%232b2520' stroke-width='4' stroke-linejoin='round'/%3E%3Cpath d='M32 45 L32 29 M25 35 L32 28 L39 35' fill='none' stroke='%23c0392b' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+    <!-- Light / dark theme: shared with the whole site (localStorage "theme"), else the device's. -->
+    <script src="/static/theme.js" data-button="none"></script>
+    <link rel="stylesheet" href="/mydrive/css/sketch.css">
+    <link rel="stylesheet" href="/mydrive/css/drive.css">
+</head>
+<body class="dash">
+<main>
+    <div class="top">
+        <a class="back" href="/">&larr; palomaliz.com.br</a>
+        <div class="top-right">
+            <button type="button" class="btn small ghost" id="logout-btn" hidden><i data-icon="lock"></i><span>Sair</span></button>
+            <button type="button" class="icon-btn" id="theme-btn"></button>
+        </div>
+    </div>
+
+    <header class="hero">
+        <svg class="doodle" viewBox="0 0 120 100" aria-hidden="true">
+            <g fill="none" stroke="currentColor" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round">
+                <path d="M28 80 C10 81 6 58 22 53 C19 33 44 25 52 40 C58 18 92 22 90 47 C106 48 108 78 90 80 Z" fill="var(--blue)"/>
+                <path d="M41 70 C44 58 40 50 41 44 M34 51 L41 43 L48 51" stroke="var(--red)" stroke-width="4"/>
+                <path d="M74 44 C72 54 75 62 74 70 M67 63 L74 71 L81 63" stroke="var(--blue-ink)" stroke-width="4"/>
+            </g>
+            <path d="M84 9 L88 18 L97 20 L89 25 L91 34 L84 29 L77 34 L79 25 L71 20 L80 18 Z" fill="var(--yellow)" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" transform="rotate(12 84 22)"/>
+        </svg>
+        <div>
+            <h1>MyDrive</h1>
+            <p class="tagline">Do computador para o celular, sem perder qualidade.</p>
+        </div>
+    </header>
+
+    <!-- Login -->
+    <section id="login-view" class="login sketch" hidden>
+        <h2><i data-icon="lock"></i> Entrar</h2>
+        <form id="login-form" autocomplete="on">
+            <label for="login-user">Usuário</label>
+            <input class="field" id="login-user" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+            <label for="login-pass">Senha</label>
+            <input class="field" id="login-pass" name="password" type="password" autocomplete="current-password" required>
+            <p class="err" id="login-err" aria-live="polite"></p>
+            <button type="submit" class="btn primary" id="login-btn">Entrar</button>
+        </form>
+    </section>
+
+    <!-- Drive -->
+    <section id="drive-view" hidden>
+        <label class="drop sketch" id="drop">
+            <input type="file" id="file-input" multiple>
+            <i data-icon="upload"></i>
+            <b>Enviar arquivos</b>
+            <span class="hint-desk">Arraste aqui ou clique para escolher</span>
+            <span class="hint-phone">Toque para escolher</span>
+        </label>
+
+        <ul class="uploads" id="uploads" aria-live="polite"></ul>
+
+        <div class="actions-row">
+            <button type="button" class="btn primary" id="all-btn"><i data-icon="download"></i><span>Baixar tudo</span></button>
+            <button type="button" class="btn danger" id="wipe-btn"><i data-icon="delete"></i><span>Deletar tudo</span></button>
+            <div class="meter" id="meter" title="Espaço usado">
+                <div class="bar"><span id="meter-fill"></span></div>
+                <small id="meter-text"></small>
+            </div>
+        </div>
+
+        <h2 class="section">Arquivos</h2>
+        <ul class="files" id="files"></ul>
+        <p class="empty-note" id="empty" hidden>Nada aqui ainda. Envie um arquivo pelo computador e baixe no celular.</p>
+    </section>
+
+    <p class="loading" id="loading">Carregando…</p>
+
+    <footer class="dash-foot">
+        <p>Arquivos guardados exatamente como enviados (sem compressão), no Cloudflare.</p>
+        <p><a href="/">palomaliz.com.br</a></p>
+    </footer>
+</main>
+<div class="drop-zone" id="drop-zone" hidden>Solte para enviar</div>
+<script type="module" src="/mydrive/js/app.js"></script>
+</body>
+</html>
